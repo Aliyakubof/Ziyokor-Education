@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { games, generatePin, generateStudentId } from './store';
 import { query } from './db';
 import { schema } from './schema';
-import { GameSession, Player } from './types';
+import { Player } from './types';
 
 const app = express();
 const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:5173'].filter(Boolean) as string[];
