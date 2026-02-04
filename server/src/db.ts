@@ -7,6 +7,7 @@ const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:
 
 export const pool = new Pool({
     connectionString,
+    ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false }
 });
 
 export const query = (text: string, params?: any[]) => pool.query(text, params);

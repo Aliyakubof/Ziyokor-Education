@@ -93,6 +93,7 @@ app.get('/api/admin/teachers', async (req, res) => {
         const result = await query('SELECT * FROM teachers');
         res.json(result.rows);
     } catch (err) {
+        console.error('Error fetching teachers:', err);
         res.status(500).json({ error: 'Error fetching teachers' });
     }
 });
@@ -117,6 +118,7 @@ app.get('/api/unit-quizzes', async (req, res) => {
         const result = await query('SELECT * FROM unit_quizzes');
         res.json(result.rows);
     } catch (err) {
+        console.error('Error fetching unit quizzes:', err);
         res.status(500).json({ error: 'Error fetching unit quizzes' });
     }
 });
