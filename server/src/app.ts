@@ -33,12 +33,35 @@ const io = new Server(httpServer, {
 // Database Initialization
 async function initDb() {
     try {
-        await query(schema);
+        // Split schema into individual statements
+        const statements = schema
+            .split(';')
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+
+        for (const statement of statements) {
+            await query(statement);
+        }
         console.log('Database initialized successfully');
     } catch (err) {
         console.error('Error initializing database:', err);
     }
 }
+
+// Health Check
+app.get('/api/health', async (req, res) => {
+    try {
+        const result = await query('SELECT NOW()');
+        res.json({
+            status: 'ok',
+            time: result.rows[0].now,
+            env: process.env.NODE_ENV || 'development'
+        });
+    } catch (err: any) {
+        console.error('Database connection error:', err);
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
 
 // Authentication
 app.post('/api/login', async (req, res) => {
@@ -92,9 +115,9 @@ app.get('/api/admin/teachers', async (req, res) => {
     try {
         const result = await query('SELECT * FROM teachers');
         res.json(result.rows);
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error fetching teachers:', err);
-        res.status(500).json({ error: 'Error fetching teachers' });
+        res.status(500).json({ error: 'Error fetching teachers', details: err.message });
     }
 });
 
@@ -117,9 +140,9 @@ app.get('/api/unit-quizzes', async (req, res) => {
     try {
         const result = await query('SELECT * FROM unit_quizzes');
         res.json(result.rows);
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error fetching unit quizzes:', err);
-        res.status(500).json({ error: 'Error fetching unit quizzes' });
+        res.status(500).json({ error: 'Error fetching unit quizzes', details: err.message });
     }
 });
 
@@ -200,8 +223,9 @@ app.get('/api/quizzes/:id', async (req, res) => {
         const result = await query('SELECT * FROM quizzes WHERE id = $1', [req.params.id]);
         if (result.rowCount === 0) return res.status(404).send('Quiz not found');
         res.json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: 'Error fetching quiz' });
+    } catch (err: any) {
+        console.error('Error fetching quiz:', err);
+        res.status(500).json({ error: 'Error fetching quiz', details: err.message });
     }
 });
 
