@@ -39,15 +39,25 @@ const AdminPanel = () => {
     }, []);
 
     const fetchTeachers = async () => {
-        const res = await apiFetch('/api/admin/teachers');
-        const data = await res.json();
-        setTeachers(data);
+        try {
+            const res = await apiFetch('/api/admin/teachers');
+            const data = await res.json();
+            setTeachers(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error fetching teachers:', err);
+            setTeachers([]);
+        }
     };
 
     const fetchUnitQuizzes = async () => {
-        const res = await apiFetch('/api/unit-quizzes');
-        const data = await res.json();
-        setUnitQuizzes(data);
+        try {
+            const res = await apiFetch('/api/unit-quizzes');
+            const data = await res.json();
+            setUnitQuizzes(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error fetching unit quizzes:', err);
+            setUnitQuizzes([]);
+        }
     };
 
     const handleCreateTeacher = async (e: React.FormEvent) => {
@@ -84,11 +94,11 @@ const AdminPanel = () => {
 
     // Update the return to include logout button next to Orqaga
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
+        <div className="p-8 max-w-6xl mx-auto relative min-h-screen">
+            <div className="flex justify-between items-center mb-12">
                 <button
                     onClick={() => navigate('/')}
-                    className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    className="flex items-center gap-2 text-slate-400 hover:text-white transition-all hover:translate-x-[-4px]"
                 >
                     <ArrowLeft size={20} /> Orqaga
                 </button>
@@ -98,66 +108,72 @@ const AdminPanel = () => {
                         logout();
                         navigate('/login');
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all border border-red-500/20"
+                    className="flex items-center gap-2 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl transition-all border border-red-500/10 font-bold"
                 >
                     <LogOut size={18} /> Chiqish
                 </button>
             </div>
 
-            <header className="mb-12">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
+            <header className="mb-16 relative">
+                <div className="absolute -top-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+                <h1 className="text-5xl font-black bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent mb-4">
                     Admin Panel
                 </h1>
-                <p className="text-slate-400 mt-2">O'qituvchilar va Unit Quizlarni boshqarish</p>
+                <p className="text-slate-400 font-medium tracking-wide">O'qituvchilar va Unit testlar boshqaruvi</p>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 relative z-10">
                 {/* Teacher Management */}
-                <section className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <UserPlus className="text-blue-400" />
-                        <h2 className="text-2xl font-semibold text-white">O'qituvchilar</h2>
+                <section className="glass rounded-[2.5rem] p-8 border-slate-700/30">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="bg-blue-500/10 p-3 rounded-2xl">
+                            <UserPlus className="text-blue-400 w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white tracking-tight">O'qituvchilar</h2>
                     </div>
 
-                    <form onSubmit={handleCreateTeacher} className="space-y-4 mb-8">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Ism Familiya</label>
+                    <form onSubmit={handleCreateTeacher} className="space-y-6 mb-12">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Ism Familiya</label>
                             <input
                                 type="text"
                                 value={teacherName}
                                 onChange={(e) => setTeacherName(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                className="w-full bg-slate-900/40 border border-slate-700/50 rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-medium transition-all"
                                 placeholder="Masalan: Ali Valiyev"
                                 required
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Telefon raqam</label>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Telefon raqam</label>
                             <input
                                 type="text"
                                 value={teacherPhone}
                                 onChange={(e) => setTeacherPhone(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                placeholder="Masalan: +998901234567"
+                                className="w-full bg-slate-900/40 border border-slate-700/50 rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-medium transition-all"
+                                placeholder="Masalan: 998901234567"
                                 required
                             />
                         </div>
                         <button
                             type="submit"
-                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-lg transition-all flex items-center justify-center gap-2"
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2 btn-premium shadow-xl shadow-blue-500/10"
                         >
                             <Plus size={20} /> O'qituvchi qo'shish
                         </button>
                     </form>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                         {teachers.map(teacher => (
-                            <div key={teacher.id} className="bg-slate-900/50 border border-slate-700/30 rounded-xl p-4 flex justify-between items-center group">
+                            <div key={teacher.id} className="glass-blue border-transparent rounded-[1.5rem] p-5 flex justify-between items-center group hover:border-blue-500/30 transition-all">
                                 <div>
-                                    <p className="font-semibold text-white">{teacher.name}</p>
-                                    <p className="text-sm text-slate-500">{teacher.phone} | Parol: ****{teacher.password}</p>
+                                    <p className="font-bold text-white text-lg">{teacher.name}</p>
+                                    <div className="flex items-center gap-3 mt-1">
+                                        <span className="text-xs font-bold text-slate-500 bg-slate-900/50 px-2 py-1 rounded-md">{teacher.phone}</span>
+                                        <span className="text-xs font-bold text-blue-500/70 bg-blue-500/5 px-2 py-1 rounded-md">Pass: ****{teacher.password}</span>
+                                    </div>
                                 </div>
-                                <button className="text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
+                                <button className="p-3 bg-red-500/10 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white">
                                     <Trash2 size={18} />
                                 </button>
                             </div>
@@ -166,68 +182,73 @@ const AdminPanel = () => {
                 </section>
 
                 {/* Unit Quiz Management */}
-                <section className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <BookOpen className="text-indigo-400" />
-                        <h2 className="text-2xl font-semibold text-white">Unit Quizlar</h2>
+                <section className="glass rounded-[2.5rem] p-8 border-slate-700/30">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="bg-indigo-500/10 p-3 rounded-2xl">
+                            <BookOpen className="text-indigo-400 w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white tracking-tight">Unit Quizlar</h2>
                     </div>
 
-                    <form onSubmit={handleCreateUnitQuiz} className="space-y-4 mb-8">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Quiz nomi</label>
+                    <form onSubmit={handleCreateUnitQuiz} className="space-y-6 mb-12">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Quiz nomi</label>
                             <input
                                 type="text"
                                 value={quizTitle}
                                 onChange={(e) => setQuizTitle(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                className="w-full bg-slate-900/40 border border-slate-700/50 rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-medium transition-all"
                                 placeholder="Masalan: Unit 1 - Basics"
                                 required
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Level</label>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Level</label>
                                 <select
                                     value={quizLevel}
                                     onChange={(e) => setQuizLevel(e.target.value)}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    className="w-full bg-slate-900/40 border border-slate-700/50 rounded-2xl px-4 py-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-medium transition-all appearance-none cursor-pointer"
                                     required
                                 >
-                                    <option value="">Tanlang</option>
-                                    <option value="Beginner">Beginner</option>
-                                    <option value="Elementary">Elementary</option>
-                                    <option value="Intermediate">Intermediate</option>
-                                    <option value="Advanced">Advanced</option>
+                                    <option value="" className="bg-slate-900">Tanlang</option>
+                                    <option value="Beginner" className="bg-slate-900">Beginner</option>
+                                    <option value="Elementary" className="bg-slate-900">Elementary</option>
+                                    <option value="Intermediate" className="bg-slate-900">Intermediate</option>
+                                    <option value="Advanced" className="bg-slate-900">Advanced</option>
                                 </select>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Unit</label>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Unit</label>
                                 <input
                                     type="text"
                                     value={quizUnit}
                                     onChange={(e) => setQuizUnit(e.target.value)}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                    placeholder="Masalan: 1"
+                                    className="w-full bg-slate-900/40 border border-slate-700/50 rounded-2xl px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-medium transition-all"
+                                    placeholder="Unit"
                                     required
                                 />
                             </div>
                         </div>
                         <button
                             type="submit"
-                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg transition-all flex items-center justify-center gap-2"
+                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2 btn-premium shadow-xl shadow-indigo-500/10"
                         >
                             <Plus size={20} /> Quiz qo'shish
                         </button>
                     </form>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                         {unitQuizzes.map(quiz => (
-                            <div key={quiz.id} className="bg-slate-900/50 border border-slate-700/30 rounded-xl p-4 flex justify-between items-center group">
+                            <div key={quiz.id} className="glass-indigo border-transparent rounded-[1.5rem] p-5 flex justify-between items-center group hover:border-indigo-500/30 transition-all">
                                 <div>
-                                    <p className="font-semibold text-white">{quiz.title}</p>
-                                    <p className="text-sm text-slate-500">{quiz.level} - Unit {quiz.unit}</p>
+                                    <p className="font-bold text-white text-lg">{quiz.title}</p>
+                                    <div className="flex items-center gap-3 mt-1">
+                                        <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-md">{quiz.level}</span>
+                                        <span className="text-xs font-bold text-slate-500">Unit {quiz.unit}</span>
+                                    </div>
                                 </div>
-                                <button className="text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
+                                <button className="p-3 bg-red-500/10 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white">
                                     <Trash2 size={18} />
                                 </button>
                             </div>

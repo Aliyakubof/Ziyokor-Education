@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 interface User {
     id?: string;
@@ -17,17 +17,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [role, setRole] = useState<'admin' | 'teacher' | null>(null);
-
-    useEffect(() => {
+    const [user, setUser] = useState<User | null>(() => {
         const savedUser = localStorage.getItem('ziyokor_user');
-        const savedRole = localStorage.getItem('ziyokor_role');
-        if (savedUser && savedRole) {
-            setUser(JSON.parse(savedUser));
-            setRole(savedRole as 'admin' | 'teacher');
-        }
-    }, []);
+        return savedUser ? JSON.parse(savedUser) : null;
+    });
+    const [role, setRole] = useState<'admin' | 'teacher' | null>(() => {
+        return localStorage.getItem('ziyokor_role') as 'admin' | 'teacher' | null;
+    });
 
     const login = (userData: User, userRole: 'admin' | 'teacher') => {
         setUser(userData);

@@ -51,21 +51,36 @@ const TeacherDashboard = () => {
     }, [selectedGroup]);
 
     const fetchGroups = async (teacherId: string) => {
-        const res = await apiFetch(`/api/groups/${teacherId}`);
-        const data = await res.json();
-        setGroups(data);
+        try {
+            const res = await apiFetch(`/api/groups/${teacherId}`);
+            const data = await res.json();
+            setGroups(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error fetching groups:', err);
+            setGroups([]);
+        }
     };
 
     const fetchStudents = async (groupId: string) => {
-        const res = await apiFetch(`/api/students/${groupId}`);
-        const data = await res.json();
-        setStudents(data);
+        try {
+            const res = await apiFetch(`/api/students/${groupId}`);
+            const data = await res.json();
+            setStudents(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error fetching students:', err);
+            setStudents([]);
+        }
     };
 
     const fetchUnitQuizzes = async () => {
-        const res = await apiFetch('/api/unit-quizzes');
-        const data = await res.json();
-        setUnitQuizzes(data);
+        try {
+            const res = await apiFetch('/api/unit-quizzes');
+            const data = await res.json();
+            setUnitQuizzes(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error fetching unit quizzes:', err);
+            setUnitQuizzes([]);
+        }
     };
 
     const handleCreateGroup = async (e: React.FormEvent) => {
@@ -114,116 +129,127 @@ const TeacherDashboard = () => {
                         logout();
                         navigate('/login');
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all border border-red-500/20"
+                    className="flex items-center gap-2 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl transition-all border border-red-500/10 font-bold"
                 >
                     <LogOut size={18} /> Chiqish
                 </button>
             </div>
 
-            <header className="mb-12">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">
+            <header className="mb-16 relative">
+                <div className="absolute -top-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl animate-pulse"></div>
+                <h1 className="text-5xl font-black bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent mb-4">
                     {user?.name || "O'qituvchi Kabineti"}
                 </h1>
-                <p className="text-slate-400 mt-2">Guruhlar va o'quvchilarni boshqarish</p>
+                <p className="text-slate-400 font-medium tracking-wide">Guruhlar va o'quvchilarni boshqarish tizimi</p>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
                 {/* Groups Section */}
-                <section className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <Users className="text-emerald-400" />
-                        <h2 className="text-2xl font-semibold text-white">Guruhlar</h2>
+                <section className="glass-emerald rounded-[2.5rem] p-8">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="bg-emerald-500/10 p-3 rounded-2xl">
+                            <Users className="text-emerald-400 w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white tracking-tight">Guruhlar</h2>
                     </div>
 
-                    <form onSubmit={handleCreateGroup} className="flex gap-2 mb-6">
+                    <form onSubmit={handleCreateGroup} className="flex gap-2 mb-8">
                         <input
                             type="text"
                             value={groupName}
                             onChange={(e) => setGroupName(e.target.value)}
                             placeholder="Guruh nomi"
-                            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                            className="flex-1 bg-slate-900/40 border border-emerald-500/20 rounded-2xl px-5 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-medium transition-all"
                             required
                         />
-                        <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 p-2 rounded-lg transition-colors">
-                            <Plus size={20} />
+                        <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 p-3 rounded-2xl transition-all btn-premium shadow-lg shadow-emerald-500/20">
+                            <Plus size={24} />
                         </button>
                     </form>
 
-                    <div className="space-y-2">
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                         {groups.map(group => (
                             <button
                                 key={group.id}
                                 onClick={() => setSelectedGroup(group.id)}
-                                className={`w-full text-left p-4 rounded-xl border transition-all ${selectedGroup === group.id
-                                    ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400'
-                                    : 'bg-slate-900/50 border-slate-700/30 text-slate-400 hover:border-slate-600'
+                                className={`w-full text-left p-5 rounded-2xl border transition-all duration-300 flex items-center justify-between group ${selectedGroup === group.id
+                                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-lg shadow-emerald-500/10'
+                                    : 'bg-slate-900/40 border-slate-700/30 text-slate-400 hover:border-emerald-500/30'
                                     }`}
                             >
-                                {group.name}
+                                <span className="font-bold">{group.name}</span>
+                                <div className={`w-2 h-2 rounded-full transition-all ${selectedGroup === group.id ? 'bg-emerald-400 animate-pulse' : 'bg-slate-700'}`}></div>
                             </button>
                         ))}
                     </div>
                 </section>
 
                 {/* Students Section */}
-                <section className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <GraduationCap className="text-teal-400" />
-                        <h2 className="text-2xl font-semibold text-white">O'quvchilar</h2>
+                <section className="glass rounded-[2.5rem] p-8 border-slate-700/30">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="bg-teal-500/10 p-3 rounded-2xl">
+                            <GraduationCap className="text-teal-400 w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white tracking-tight">O'quvchilar</h2>
                     </div>
 
                     {selectedGroup ? (
                         <>
-                            <form onSubmit={handleCreateStudent} className="flex gap-2 mb-6">
+                            <form onSubmit={handleCreateStudent} className="flex gap-2 mb-8">
                                 <input
                                     type="text"
                                     value={studentName}
                                     onChange={(e) => setStudentName(e.target.value)}
                                     placeholder="F.I.SH"
-                                    className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50"
+                                    className="flex-1 bg-slate-900/40 border border-slate-700/50 rounded-2xl px-5 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50 font-medium transition-all"
                                     required
                                 />
-                                <button type="submit" className="bg-teal-600 hover:bg-teal-500 p-2 rounded-lg transition-colors">
-                                    <Plus size={20} />
+                                <button type="submit" className="bg-teal-600 hover:bg-teal-500 p-3 rounded-2xl transition-all btn-premium shadow-lg shadow-teal-500/20">
+                                    <Plus size={24} />
                                 </button>
                             </form>
 
-                            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                                 {students.map(student => (
-                                    <div key={student.id} className="bg-slate-900/50 border border-slate-700/30 rounded-xl p-3 flex justify-between items-center">
+                                    <div key={student.id} className="glass-emerald border-transparent rounded-2xl p-4 flex justify-between items-center group/item hover:border-teal-500/30 transition-all">
                                         <div>
-                                            <p className="font-medium text-white text-sm">{student.name}</p>
-                                            <p className="text-xs text-emerald-500/70 font-mono">ID: {student.id}</p>
+                                            <p className="font-bold text-white mb-1">{student.name}</p>
+                                            <p className="text-[10px] text-teal-400/70 font-black tracking-widest bg-teal-500/5 px-2 py-1 rounded inline-block uppercase">ID: {student.id}</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         </>
                     ) : (
-                        <div className="h-40 flex items-center justify-center text-slate-500 text-sm italic">
-                            O'quvchilarni ko'rish uchun guruh tanlang
+                        <div className="h-64 flex flex-col items-center justify-center text-slate-500 text-sm italic text-center gap-4 px-6">
+                            <div className="w-16 h-16 bg-slate-800/50 rounded-3xl flex items-center justify-center mb-2 animate-pulse">
+                                <Users size={24} className="opacity-20" />
+                            </div>
+                            <p>O'quvchilarni ko'rish va qo'shish uchun avval chapdan guruh tanlang</p>
                         </div>
                     )}
                 </section>
 
-                {/* quiz Launch Section */}
-                <section className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <PlayCircle className="text-orange-400" />
-                        <h2 className="text-2xl font-semibold text-white">Quiz Boshlash</h2>
+                {/* Quiz Launch Section */}
+                <section className="glass rounded-[2.5rem] p-8 border-slate-700/30">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="bg-orange-500/10 p-3 rounded-2xl">
+                            <PlayCircle className="text-orange-400 w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white tracking-tight">Unit Quiz</h2>
                     </div>
 
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Unit Quiz tanlang</label>
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Unit Quiz tanlang</label>
                             <select
                                 value={selectedQuizId}
                                 onChange={(e) => setSelectedQuizId(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                                className="w-full bg-slate-900/40 border border-slate-700/50 rounded-2xl px-5 py-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50 font-medium transition-all appearance-none cursor-pointer"
                             >
-                                <option value="">Tanlang...</option>
+                                <option value="" className="bg-slate-900">Testni tanlang...</option>
                                 {unitQuizzes.map(quiz => (
-                                    <option key={quiz.id} value={quiz.id}>
+                                    <option key={quiz.id} value={quiz.id} className="bg-slate-900">
                                         {quiz.level} - Unit {quiz.unit}: {quiz.title}
                                     </option>
                                 ))}
@@ -233,14 +259,14 @@ const TeacherDashboard = () => {
                         <button
                             onClick={handleLaunchQuiz}
                             disabled={!selectedGroup || !selectedQuizId}
-                            className="w-full bg-orange-600 hover:bg-orange-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-orange-900/20 flex items-center justify-center gap-2 mt-4"
+                            className="w-full bg-orange-600 hover:bg-orange-500 disabled:bg-slate-800/50 disabled:text-slate-600 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-orange-500/10 btn-premium flex items-center justify-center gap-3 mt-4"
                         >
-                            <PlayCircle size={24} /> Start Unit Quiz
+                            <PlayCircle size={28} /> <span>Unit testni boshlash</span>
                         </button>
 
                         {!selectedGroup && (
-                            <p className="text-xs text-orange-400/70 text-center mt-2 italic">
-                                Quizni boshlash uchun avval guruh tanlang
+                            <p className="text-[10px] text-orange-400/50 text-center mt-2 font-bold uppercase tracking-widest">
+                                Guruh tanlanmagan
                             </p>
                         )}
                     </div>
