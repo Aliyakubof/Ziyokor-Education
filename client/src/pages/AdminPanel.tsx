@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft, LogOut } from 'lucide-react';
 import { apiFetch } from '../api';
+import { useAuth } from '../AuthContext';
 
 interface Teacher {
     id: string;
@@ -19,6 +20,7 @@ interface UnitQuiz {
 
 const AdminPanel = () => {
     const navigate = useNavigate();
+    const { logout } = useAuth();
     const [teachers, setTeachers] = useState<Teacher[]>([]);
     const [unitQuizzes, setUnitQuizzes] = useState<UnitQuiz[]>([]);
 
@@ -80,14 +82,27 @@ const AdminPanel = () => {
         }
     };
 
+    // Update the return to include logout button next to Orqaga
     return (
         <div className="p-8 max-w-6xl mx-auto">
-            <button
-                onClick={() => navigate('/')}
-                className="flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors"
-            >
-                <ArrowLeft size={20} /> Orqaga
-            </button>
+            <div className="flex justify-between items-center mb-8">
+                <button
+                    onClick={() => navigate('/')}
+                    className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                >
+                    <ArrowLeft size={20} /> Orqaga
+                </button>
+
+                <button
+                    onClick={() => {
+                        logout();
+                        navigate('/login');
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all border border-red-500/20"
+                >
+                    <LogOut size={18} /> Chiqish
+                </button>
+            </div>
 
             <header className="mb-12">
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">

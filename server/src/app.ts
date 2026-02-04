@@ -41,6 +41,38 @@ async function initDb() {
     }
 }
 
+// Authentication
+app.post('/api/login', async (req, res) => {
+    const { phone, password } = req.body;
+
+    // Hardcoded Admin
+    if (phone === '998901234567' && password === '4567') {
+        return res.json({
+            user: { name: 'Admin', phone: '998901234567' },
+            role: 'admin'
+        });
+    }
+
+    // Teacher Login from Database
+    try {
+        const result = await query(
+            'SELECT id, name, phone FROM teachers WHERE phone = $1 AND password = $2',
+            [phone, password]
+        );
+
+        if (result.rowCount && result.rowCount > 0) {
+            return res.json({
+                user: result.rows[0],
+                role: 'teacher'
+            });
+        }
+
+        res.status(401).json({ error: 'Telefon raqam yoki parol noto\'g\'ri' });
+    } catch (err) {
+        res.status(500).json({ error: 'Serverda xatolik yuz berdi' });
+    }
+});
+
 // Admin: Teachers
 app.post('/api/admin/teachers', async (req, res) => {
     try {

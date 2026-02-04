@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, PlayCircle, Plus, ArrowLeft, GraduationCap } from 'lucide-react';
+import { Users, PlayCircle, Plus, ArrowLeft, GraduationCap, LogOut } from 'lucide-react';
 import { apiFetch } from '../api';
+import { useAuth } from '../AuthContext';
 
 interface Group {
     id: string;
@@ -23,6 +24,7 @@ interface UnitQuiz {
 
 const TeacherDashboard = () => {
     const navigate = useNavigate();
+    const { user, logout } = useAuth();
     const [groups, setGroups] = useState<Group[]>([]);
     const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
     const [students, setStudents] = useState<Student[]>([]);
@@ -36,10 +38,11 @@ const TeacherDashboard = () => {
     const [selectedQuizId, setSelectedQuizId] = useState('');
 
     useEffect(() => {
-        // Mock teacherId for now, in real app this comes from auth
-        fetchGroups('teacher-1');
+        if (user?.id) {
+            fetchGroups(user.id);
+        }
         fetchUnitQuizzes();
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         if (selectedGroup) {
@@ -67,13 +70,14 @@ const TeacherDashboard = () => {
 
     const handleCreateGroup = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!user?.id) return;
         const res = await apiFetch('/api/groups', {
             method: 'POST',
-            body: JSON.stringify({ name: groupName, teacherId: 'teacher-1' })
+            body: JSON.stringify({ name: groupName, teacherId: user.id })
         });
         if (res.ok) {
             setGroupName('');
-            fetchGroups('teacher-1');
+            fetchGroups(user.id);
         }
     };
 
@@ -92,22 +96,33 @@ const TeacherDashboard = () => {
 
     const handleLaunchQuiz = async () => {
         if (!selectedGroup || !selectedQuizId) return;
-        // Navigation to Lobby will happen here
         navigate(`/unit-lobby/${selectedQuizId}/${selectedGroup}`);
     };
 
     return (
         <div className="p-8 max-w-6xl mx-auto">
-            <button
-                onClick={() => navigate('/')}
-                className="flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors"
-            >
-                <ArrowLeft size={20} /> Orqaga
-            </button>
+            <div className="flex justify-between items-center mb-8">
+                <button
+                    onClick={() => navigate('/')}
+                    className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                >
+                    <ArrowLeft size={20} /> Orqaga
+                </button>
+
+                <button
+                    onClick={() => {
+                        logout();
+                        navigate('/login');
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all border border-red-500/20"
+                >
+                    <LogOut size={18} /> Chiqish
+                </button>
+            </div>
 
             <header className="mb-12">
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">
-                    O'qituvchi Kabineti
+                    {user?.name || "O'qituvchi Kabineti"}
                 </h1>
                 <p className="text-slate-400 mt-2">Guruhlar va o'quvchilarni boshqarish</p>
             </header>
