@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { socket } from '../socket';
-import { Trophy, Clock, CheckCircle2, AlertCircle, Play } from 'lucide-react';
+import { Trophy, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function PlayerGame() {
     const [view, setView] = useState<'WAITING' | 'PLAYING' | 'ANSWERED' | 'FINISHED'>('WAITING');

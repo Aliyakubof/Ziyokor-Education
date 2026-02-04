@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Trophy, Clock, CheckCircle2, AlertCircle, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { socket } from '../socket';
 
 interface QuestionData {
