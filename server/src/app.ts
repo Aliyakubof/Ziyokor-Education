@@ -3,10 +3,9 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
-import fs from 'fs';
-import path from 'path';
 import { games, generatePin, generateStudentId } from './store';
 import { query } from './db';
+import { schema } from './schema';
 import { GameSession, Player } from './types';
 
 const app = express();
@@ -35,8 +34,6 @@ const io = new Server(httpServer, {
 // Database Initialization
 async function initDb() {
     try {
-        const schemaPath = path.join(__dirname, 'schema.sql');
-        const schema = fs.readFileSync(schemaPath, 'utf8');
         await query(schema);
         console.log('Database initialized successfully');
     } catch (err) {
