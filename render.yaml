@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ziyokor-server
+    env: node
+    buildCommand: cd server && npm install && npm run build
+    startCommand: cd server && npm run start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: NODE_VERSION
+        value: 18
