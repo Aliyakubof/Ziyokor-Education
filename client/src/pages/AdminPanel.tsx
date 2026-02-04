@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, BookOpen, Plus, Trash2, Save, ArrowLeft } from 'lucide-react';
+import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { apiFetch } from '../api';
 
 interface Teacher {

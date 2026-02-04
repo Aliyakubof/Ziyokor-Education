@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, PlayCircle, Plus, ArrowLeft, GraduationCap } from 'lucide-react';
+import { Users, PlayCircle, Plus, ArrowLeft, GraduationCap } from 'lucide-react';
 import { apiFetch } from '../api';
 
 interface Group {

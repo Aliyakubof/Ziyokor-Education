@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import { socket } from '../socket';
@@ -129,13 +129,13 @@ const UnitLobby = () => {
                             <div
                                 key={player.id}
                                 className={`flex items-center justify-between p-4 rounded-xl border transition-all ${player.status === 'Cheating'
-                                        ? 'bg-red-500/10 border-red-500/50 animate-pulse'
-                                        : 'bg-slate-900/50 border-slate-700/30'
+                                    ? 'bg-red-500/10 border-red-500/50 animate-pulse'
+                                    : 'bg-slate-900/50 border-slate-700/30'
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className={`w-2 h-2 rounded-full ${player.status === 'Online' ? 'bg-emerald-500' :
-                                            player.status === 'Cheating' ? 'bg-red-500' : 'bg-slate-600'
+                                        player.status === 'Cheating' ? 'bg-red-500' : 'bg-slate-600'
                                         }`} />
                                     <span className="font-semibold">{player.name}</span>
                                 </div>
