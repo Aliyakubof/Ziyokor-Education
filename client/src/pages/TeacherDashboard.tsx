@@ -545,7 +545,7 @@ const TeacherDashboard = () => {
             <div className="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row justify-between items-center gap-6 border-b border-slate-200 pb-6">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate(role === 'admin' ? '/admin' : '/')}
+                        onClick={() => navigate('/')}
                         className="p-2 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors"
                     >
                         <ArrowLeft size={20} />
