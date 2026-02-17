@@ -143,8 +143,8 @@ export default function CreateQuiz() {
                                         >
                                             <option value="Beginner">Beginner</option>
                                             <option value="Elementary">Elementary</option>
+                                            <option value="Pre-Intermediate">Pre-Intermediate</option>
                                             <option value="Intermediate">Intermediate</option>
-                                            <option value="Advanced">Advanced</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
