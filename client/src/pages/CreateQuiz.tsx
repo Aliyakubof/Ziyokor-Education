@@ -90,7 +90,7 @@ export default function CreateQuiz() {
             });
             const data = await res.json();
             if (res.ok) {
-                navigate(`/admin`); // Go back to admin panel
+                navigate(`/`); // Go back to home
             } else {
                 throw new Error(data.error || 'Xatolik');
             }
@@ -105,7 +105,7 @@ export default function CreateQuiz() {
             <div className="max-w-6xl mx-auto">
                 <header className="flex justify-between items-center mb-12">
                     <button
-                        onClick={() => navigate('/admin')}
+                        onClick={() => navigate('/')}
                         className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 transition-all hover:translate-x-[-4px]"
                     >
                         <ArrowLeft size={20} /> Admin Panelga Qaytish
