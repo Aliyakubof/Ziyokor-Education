@@ -3,13 +3,17 @@ import React, { createContext, useContext, useState } from 'react';
 interface User {
     id?: string;
     name: string;
-    phone: string;
+    phone?: string;
+    groupName?: string;
+    teacherName?: string;
 }
+
+type UserRole = 'admin' | 'teacher' | 'student';
 
 interface AuthContextType {
     user: User | null;
-    role: 'admin' | 'teacher' | null;
-    login: (userData: User, role: 'admin' | 'teacher') => void;
+    role: UserRole | null;
+    login: (token: string, userData: User, role: UserRole) => void;
     logout: () => void;
     isAuthenticated: boolean;
 }
@@ -21,13 +25,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('ziyokor_user');
         return savedUser ? JSON.parse(savedUser) : null;
     });
-    const [role, setRole] = useState<'admin' | 'teacher' | null>(() => {
-        return localStorage.getItem('ziyokor_role') as 'admin' | 'teacher' | null;
+    const [role, setRole] = useState<UserRole | null>(() => {
+        return localStorage.getItem('ziyokor_role') as UserRole | null;
     });
 
-    const login = (userData: User, userRole: 'admin' | 'teacher') => {
+    const login = (token: string, userData: User, userRole: UserRole) => {
         setUser(userData);
         setRole(userRole);
+        localStorage.setItem('ziyokor_token', token);
         localStorage.setItem('ziyokor_user', JSON.stringify(userData));
         localStorage.setItem('ziyokor_role', userRole);
     };
@@ -35,8 +40,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const logout = () => {
         setUser(null);
         setRole(null);
+        localStorage.removeItem('ziyokor_token');
         localStorage.removeItem('ziyokor_user');
         localStorage.removeItem('ziyokor_role');
+        // Clear admin/teacher specific items just in case
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('role');
     };
 
     return (

@@ -11,6 +11,7 @@ export interface Teacher {
     name: string;
     phone: string;
     password: string; // last 4 digits of phone
+    telegramChatId?: string;
 }
 
 export interface Student {
@@ -32,12 +33,14 @@ export interface UnitQuiz {
     unit: string;
     title: string;
     questions: Question[];
+    time_limit?: number;
 }
 
 export interface Quiz {
     id: string;
     title: string;
     questions: Question[];
+    time_limit?: number;
 }
 
 export interface Question {
@@ -45,6 +48,8 @@ export interface Question {
     options: string[];
     correctIndex: number;
     timeLimit: number;
+    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite';
+    acceptedAnswers?: string[];
 }
 
 export interface GameSession {
@@ -57,4 +62,6 @@ export interface GameSession {
     startTime?: number; // When the current question started
     isUnitQuiz?: boolean;
     groupId?: string;
+    timePerQuestion?: number;
+    endTime?: number;
 }

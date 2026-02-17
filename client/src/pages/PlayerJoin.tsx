@@ -34,26 +34,28 @@ export default function PlayerJoin() {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-brand-purple p-4">
-            <h1 className="text-5xl font-black mb-8">Kahoot!</h1>
-            <div className="flex flex-col gap-4 w-full max-w-sm">
+        <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-brand-purple p-6">
+            <h1 className="text-4xl md:text-5xl font-black mb-6 md:mb-8 text-center break-words max-w-full">Kahoot!</h1>
+            <div className="flex flex-col gap-3 w-full max-w-xs md:max-w-sm">
                 {!hasPinInUrl && (
                     <input
-                        className="p-4 rounded text-center text-xl font-bold text-black"
+                        className="p-3 md:p-4 rounded-xl text-center text-lg md:text-xl font-bold text-black shadow-lg"
                         placeholder="Game PIN"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={pin}
                         onChange={e => setPin(e.target.value)}
                     />
                 )}
                 <input
-                    className="p-4 rounded text-center text-xl font-bold text-black"
+                    className="p-3 md:p-4 rounded-xl text-center text-lg md:text-xl font-bold text-black shadow-lg"
                     placeholder="Nickname"
                     value={name}
                     onChange={e => setName(e.target.value)}
                 />
                 <button
                     onClick={joinGame}
-                    className="bg-black text-white p-4 rounded font-bold text-xl hover:bg-gray-900 transition mt-2"
+                    className="bg-black text-white p-3 md:p-4 rounded-xl font-bold text-lg md:text-xl hover:bg-gray-900 transition mt-2 shadow-xl active:scale-95"
                 >
                     Enter
                 </button>

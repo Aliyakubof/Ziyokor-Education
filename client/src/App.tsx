@@ -7,19 +7,23 @@ import PlayerGame from './pages/PlayerGame';
 import HostGame from './pages/HostGame';
 import AdminPanel from './pages/AdminPanel';
 import TeacherDashboard from './pages/TeacherDashboard';
+import StudentLogin from './pages/StudentLogin';
+
+import StudentDashboard from './pages/StudentDashboard';
 import UnitLobby from './pages/UnitLobby';
 import UnitJoin from './pages/UnitJoin';
 import Login from './pages/Login';
+import GroupDetails from './pages/GroupDetails';
 import { AuthProvider, useAuth } from './AuthContext';
 
-const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' }) => {
+const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' }) => {
   const { isAuthenticated, role } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && role !== requiredRole) {
+  if (requiredRole && role !== requiredRole && role !== 'admin') {
     return <Navigate to="/" replace />;
   }
 
@@ -30,11 +34,27 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-slate-900 text-white font-sans">
+        <div className="min-h-screen font-sans">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/create" element={<CreateQuiz />} />
+            <Route path="/student/login" element={<StudentLogin />} />
+            <Route
+              path="/student/dashboard"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <CreateQuiz />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/host/:quizId" element={<HostLobby />} />
             <Route path="/host-game/:pin" element={<HostGame />} />
             <Route path="/join" element={<PlayerJoin />} />
@@ -50,10 +70,34 @@ function App() {
               }
             />
             <Route
+              path="/admin/group/:groupId"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <GroupDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/groups"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/teacher"
               element={
                 <ProtectedRoute requiredRole="teacher">
                   <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/group/:groupId"
+              element={
+                <ProtectedRoute requiredRole="teacher">
+                  <GroupDetails />
                 </ProtectedRoute>
               }
             />
@@ -69,7 +113,7 @@ function App() {
           </Routes>
         </div>
       </BrowserRouter>
-    </AuthProvider>
+    </AuthProvider >
   );
 }
 

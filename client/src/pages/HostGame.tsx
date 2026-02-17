@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Play } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Play, CheckCircle2, XCircle } from 'lucide-react';
 import { socket } from '../socket';
 
 interface QuestionData {
@@ -10,28 +10,44 @@ interface QuestionData {
     questionIndex: number;
     totalQuestions: number;
     correctIndex: number;
+    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite';
+    acceptedAnswers?: string[];
 }
 
 export default function HostGame() {
     const { pin } = useParams();
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    // const [searchParams] = useSearchParams();
     const [question, setQuestion] = useState<QuestionData | null>(null);
     const [answersCount, setAnswersCount] = useState(0);
     const [timeLeft, setTimeLeft] = useState(0);
     const [showResult, setShowResult] = useState(false);
     const [leaderboard, setLeaderboard] = useState<{ name: string; score: number }[] | null>(null);
+    const [totalTimeMinutes, setTotalTimeMinutes] = useState(10);
+    const [gameStarted, setGameStarted] = useState(false);
+    const [globalEndTime, setGlobalEndTime] = useState<number | null>(null);
+    const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null);
 
     useEffect(() => {
-        if (searchParams.get('start') === 'true') {
-            socket.emit('host-start-game', pin);
-        }
+        // If "start=true" is in URL (e.g. from AdminPanel directly? No, usually we go to lobby first)
+        // We will change the flow: Host lands on Lobby, sets time, THEN starts.
+        // The previous logic was: socket.emit('host-start-game', pin) immediately if start=true?
+        // Let's remove auto-start from URL for now or repurpose it.
+        // Actually, preventing auto-start is safer.
+
+        socket.on('game-started', (data: any) => {
+            // data might contain endTime if it's a unit quiz
+            if (data && data.endTime) {
+                setGlobalEndTime(data.endTime);
+            }
+        });
 
         socket.on('question-new', (q) => {
             setQuestion(q);
             setTimeLeft(q.timeLimit);
             setAnswersCount(0);
             setShowResult(false);
+            setGameStarted(true);
         });
 
         socket.on('answers-count', (count) => {
@@ -47,16 +63,38 @@ export default function HostGame() {
             socket.off('answers-count');
             socket.off('game-over');
         };
-    }, [pin, searchParams]);
+    }, []);
 
     useEffect(() => {
+        // Per-question timer (only runs if NO global timer or if we want both. For now, let's keep it for visual)
         if (timeLeft > 0 && !showResult && !leaderboard) {
             const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
             return () => clearInterval(timer);
         } else if (timeLeft === 0 && !showResult && question && !leaderboard) {
+            // If Global Timer exists, we DO NOT auto-show result?
+            // User said: "vaqt tugasa ham to'xtamasin". This controls the question time.
+            // If Unit Quiz has global time, maybe per-question time is irrelevant or just a guide?
+            // I'll keep it for now as it triggers 'showResult' (Correct Answer reveal).
+            // The User likely meant the GLOBAL timer shouldn't stop the GAME.
             setShowResult(true);
         }
     }, [timeLeft, showResult, question, leaderboard]);
+
+    useEffect(() => {
+        if (globalEndTime) {
+            const timer = setInterval(() => {
+                const left = Math.floor((globalEndTime - Date.now()) / 1000);
+                setGlobalTimeLeft(left);
+                // We do NOT stop the game if left <= 0. Just show 0 or negative.
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [globalEndTime]);
+
+    const startGame = () => {
+        if (totalTimeMinutes < 1) return alert("Vaqtni kiriting");
+        socket.emit('host-start-game', { pin, totalTimeMinutes });
+    };
 
     const nextQuestion = () => {
         socket.emit('host-next-question', pin);
@@ -64,31 +102,28 @@ export default function HostGame() {
 
     if (leaderboard) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-8 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full bg-slate-950 -z-10"></div>
-                <div className="absolute top-1/4 -left-20 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
-                <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-indigo-600/10 rounded-full blur-[100px] animate-pulse"></div>
+            <div className="flex flex-col items-center justify-center min-h-screen p-8 relative overflow-hidden bg-transparent">
 
                 <div className="relative z-10 flex flex-col items-center w-full max-w-5xl">
                     <div className="text-center mb-16">
-                        <div className="inline-flex items-center gap-2 px-6 py-2 glass rounded-full mb-6 border-slate-700/30">
+                        <div className="inline-flex items-center gap-2 px-6 py-2 bg-white rounded-full mb-6 border border-slate-200 shadow-sm">
                             <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
-                            <span className="text-xs font-black text-slate-300 uppercase tracking-[0.3em]">Final Results</span>
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-[0.3em]">Final Results</span>
                         </div>
-                        <h1 className="text-7xl font-black text-white text-glow mb-4">G'oliblar</h1>
+                        <h1 className="text-7xl font-black text-slate-900 mb-4">G'oliblar</h1>
                     </div>
 
                     <div className="flex items-end justify-center gap-4 w-full h-[500px]">
                         {leaderboard[1] && (
                             <div className="flex flex-col items-center w-full max-w-[200px]">
-                                <div className="text-xl font-black mb-4 text-slate-400 text-center truncate w-full px-2">{leaderboard[1]?.name}</div>
-                                <div className="glass-blue w-full h-48 rounded-t-[2.5rem] flex flex-col items-center justify-center border-b-0 shadow-2xl relative group overflow-hidden">
-                                    <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors"></div>
-                                    <span className="text-6xl font-black text-blue-400/30 relative z-10">2</span>
+                                <div className="text-xl font-black mb-4 text-slate-500 text-center truncate w-full px-2">{leaderboard[1]?.name}</div>
+                                <div className="bg-blue-50 w-full h-48 rounded-t-[2.5rem] flex flex-col items-center justify-center border-b-0 shadow-xl relative group overflow-hidden border border-blue-100">
+                                    <div className="absolute inset-0 bg-blue-100/50 group-hover:bg-blue-200/50 transition-colors"></div>
+                                    <span className="text-6xl font-black text-blue-300 relative z-10">2</span>
                                 </div>
-                                <div className="w-full glass p-4 rounded-b-2xl border-t-0 text-center">
-                                    <div className="text-lg font-black text-white">{leaderboard[1]?.score}</div>
-                                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">ball</div>
+                                <div className="w-full bg-white p-4 rounded-b-2xl border border-t-0 border-slate-200 text-center shadow-md">
+                                    <div className="text-lg font-black text-slate-800">{leaderboard[1]?.score}</div>
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ball</div>
                                 </div>
                             </div>
                         )}
@@ -96,17 +131,17 @@ export default function HostGame() {
                         {leaderboard[0] && (
                             <div className="flex flex-col items-center w-full max-w-[240px] z-10 -translate-y-8 animate-float">
                                 <div className="relative mb-6">
-                                    <div className="absolute -inset-4 bg-yellow-400/20 blur-xl rounded-full"></div>
-                                    <div className="text-3xl font-black text-white text-center truncate w-full px-2 relative">{leaderboard[0]?.name}</div>
+                                    <div className="absolute -inset-4 bg-yellow-200/50 blur-xl rounded-full"></div>
+                                    <div className="text-3xl font-black text-slate-800 text-center truncate w-full px-2 relative">{leaderboard[0]?.name}</div>
                                 </div>
-                                <div className="bg-gradient-to-b from-yellow-400 via-yellow-500 to-yellow-600 w-full h-64 rounded-t-[3rem] flex flex-col items-center justify-center shadow-[0_0_50px_rgba(234,179,8,0.3)] relative overflow-hidden group">
+                                <div className="bg-gradient-to-b from-yellow-300 via-yellow-400 to-yellow-500 w-full h-64 rounded-t-[3rem] flex flex-col items-center justify-center shadow-[0_10px_40px_rgba(250,204,21,0.3)] relative overflow-hidden group">
                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.4),transparent)] animate-pulse"></div>
-                                    <span className="text-8xl font-black text-white/40 relative z-10">1</span>
-                                    <div className="absolute bottom-4 animate-bounce">👑</div>
+                                    <span className="text-8xl font-black text-white/60 relative z-10">1</span>
+                                    <div className="absolute bottom-4 animate-bounce text-4xl">👑</div>
                                 </div>
-                                <div className="w-full glass p-6 rounded-b-3xl border-t-0 text-center border-yellow-500/20 bg-yellow-500/5">
+                                <div className="w-full bg-white p-6 rounded-b-3xl border-t-0 text-center border border-yellow-100 shadow-xl">
                                     <div className="text-2xl font-black text-yellow-500 tracking-tight">{leaderboard[0]?.score}</div>
-                                    <div className="text-xs font-black text-yellow-500/50 uppercase tracking-[0.2em]">ball</div>
+                                    <div className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">ball</div>
                                 </div>
                             </div>
                         )}
@@ -114,13 +149,13 @@ export default function HostGame() {
                         {leaderboard[2] && (
                             <div className="flex flex-col items-center w-full max-w-[200px]">
                                 <div className="text-lg font-black mb-4 text-slate-500 text-center truncate w-full px-2">{leaderboard[2]?.name}</div>
-                                <div className="glass-indigo w-full h-32 rounded-t-[2.5rem] flex flex-col items-center justify-center border-b-0 shadow-2xl relative group overflow-hidden">
-                                    <div className="absolute inset-0 bg-indigo-500/5 group-hover:bg-indigo-500/10 transition-colors"></div>
-                                    <span className="text-5xl font-black text-indigo-400/30 relative z-10">3</span>
+                                <div className="bg-indigo-50 w-full h-32 rounded-t-[2.5rem] flex flex-col items-center justify-center border-b-0 shadow-xl relative group overflow-hidden border border-indigo-100">
+                                    <div className="absolute inset-0 bg-indigo-100/50 group-hover:bg-indigo-200/50 transition-colors"></div>
+                                    <span className="text-5xl font-black text-indigo-300 relative z-10">3</span>
                                 </div>
-                                <div className="w-full glass p-4 rounded-b-2xl border-t-0 text-center">
-                                    <div className="text-lg font-black text-white">{leaderboard[2]?.score}</div>
-                                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">ball</div>
+                                <div className="w-full bg-white p-4 rounded-b-2xl border border-t-0 border-slate-200 text-center shadow-md">
+                                    <div className="text-lg font-black text-slate-800">{leaderboard[2]?.score}</div>
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ball</div>
                                 </div>
                             </div>
                         )}
@@ -128,7 +163,7 @@ export default function HostGame() {
 
                     <button
                         onClick={() => navigate('/')}
-                        className="mt-20 px-10 py-4 glass hover:bg-slate-800 text-white font-black rounded-2xl transition-all btn-premium border-slate-700/50 shadow-xl"
+                        className="mt-20 px-10 py-4 bg-white hover:bg-slate-50 text-slate-800 font-black rounded-2xl transition-all btn-premium border border-slate-200 shadow-lg hover:shadow-xl"
                     >
                         TUGATISH
                     </button>
@@ -137,98 +172,178 @@ export default function HostGame() {
         );
     }
 
+    if (!question && !gameStarted) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-transparent relative">
+                <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-200 text-center max-w-md w-full">
+                    <h1 className="text-3xl font-black text-slate-800 mb-2">O'yinni Boshlash</h1>
+                    <p className="text-slate-500 mb-8 font-medium">O'quvchilar qo'shilishini kuting...</p>
+
+                    <div className="mb-8 text-left">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block mb-2">Umumiy Vaqt (Daqiqa)</label>
+                        <input
+                            type="number"
+                            value={totalTimeMinutes}
+                            onChange={(e) => setTotalTimeMinutes(Number(e.target.value))}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-center"
+                            min="1"
+                        />
+                        <p className="text-xs text-slate-400 mt-2 text-center">Har bir savolga {(totalTimeMinutes * 60 / (10)).toFixed(0)}~ soniya ajratiladi (taxminan)</p>
+                    </div>
+
+                    <button
+                        onClick={startGame}
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-indigo-500/20 btn-premium flex items-center justify-center gap-3 active:scale-95"
+                    >
+                        <Play size={24} />
+                        BOSHLASH
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (!question) return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-8 text-white relative">
-            <div className="absolute top-0 left-0 w-full h-full bg-slate-950 -z-10"></div>
-            <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-            <p className="text-slate-500 font-black uppercase tracking-widest text-xs animate-pulse">Yuklanmoqda...</p>
+        <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-transparent relative">
+            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+            <p className="text-slate-400 font-black uppercase tracking-widest text-xs animate-pulse">Yuklanmoqda...</p>
         </div>
     );
 
     return (
-        <div className="flex flex-col h-screen relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full bg-slate-950 -z-10"></div>
+        <div className="flex flex-col h-screen relative overflow-hidden bg-transparent">
 
-            <header className="glass p-6 md:p-8 flex justify-between items-center border-b border-slate-700/30">
+            <header className="bg-white/80 backdrop-blur-md p-6 md:p-8 flex justify-between items-center border-b border-slate-200 z-10">
                 <div className="flex items-center gap-4">
-                    <div className="bg-slate-900 border border-slate-700 px-4 py-2 rounded-xl">
-                        <span className="text-sm font-black text-slate-500 uppercase tracking-widest">Savol</span>
-                        <div className="text-xl font-black text-white">{question.questionIndex} / {question.totalQuestions}</div>
+                    <div className="bg-slate-100 border border-slate-200 px-4 py-2 rounded-xl">
+                        <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Savol</span>
+                        <div className="text-xl font-black text-slate-800">{question.questionIndex} / {question.totalQuestions}</div>
                     </div>
                 </div>
 
-                <h2 className="text-2xl md:text-4xl font-black text-center text-white text-glow px-4 line-clamp-2 leading-tight">
+                <h2 className="text-2xl md:text-4xl font-black text-center text-slate-800 px-4 line-clamp-2 leading-tight flex-1">
                     {question.text}
                 </h2>
 
+                <button
+                    onClick={() => socket.emit('host-end-game', pin)}
+                    className="mr-4 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors border border-red-200"
+                >
+                    TUGATISH
+                </button>
+
                 <div className="relative">
-                    <svg className="w-20 h-20 -rotate-90 md:w-24 md:h-24">
-                        <circle cx="50%" cy="50%" r="45%" className="fill-none stroke-slate-800 stroke-[4px]" />
-                        <circle
-                            cx="50%" cy="50%" r="45%"
-                            className="fill-none stroke-blue-500 stroke-[6px] transition-all duration-1000"
-                            style={{
-                                strokeDasharray: '283',
-                                strokeDashoffset: `${283 - (timeLeft / question.timeLimit) * 283}`
-                            }}
-                        />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center text-2xl md:text-3xl font-black text-white text-glow">
-                        {timeLeft}
-                    </div>
+                    {/* Global Timer Display if active */}
+                    {globalTimeLeft !== null ? (
+                        <div className={`text - 4xl font - black ${globalTimeLeft < 0 ? 'text-red-500 animate-pulse' : 'text-slate-700'} `}>
+                            {Math.floor(globalTimeLeft / 60)}:{(globalTimeLeft % 60).toString().padStart(2, '0').replace('-', '')}
+                        </div>
+                    ) : (
+                        <>
+                            <svg className="w-20 h-20 -rotate-90 md:w-24 md:h-24">
+                                <circle cx="50%" cy="50%" r="45%" className="fill-none stroke-slate-200 stroke-[4px]" />
+                                <circle
+                                    cx="50%" cy="50%" r="45%"
+                                    className="fill-none stroke-blue-500 stroke-[6px] transition-all duration-1000"
+                                    style={{
+                                        strokeDasharray: '283',
+                                        strokeDashoffset: `${283 - (timeLeft / (question.timeLimit || 20)) * 283} `
+                                    }}
+                                />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center text-2xl md:text-3xl font-black text-slate-700">
+                                {timeLeft}
+                            </div>
+                        </>
+                    )}
                 </div>
             </header>
 
-            <main className="flex-1 flex items-center justify-center p-8 relative">
-                <div className="absolute left-10 top-1/2 -translate-y-1/2 glass-blue border-transparent px-8 py-6 rounded-[2.5rem] text-center shadow-2xl animate-float">
-                    <div className="text-6xl font-black text-white text-glow mb-1">{answersCount}</div>
+            <main className="flex-1 flex items-center justify-center p-8 relative z-10">
+                <div className="absolute left-10 top-1/2 -translate-y-1/2 bg-white border border-blue-100 px-8 py-6 rounded-[2.5rem] text-center shadow-xl animate-float">
+                    <div className="text-6xl font-black text-blue-600 mb-1">{answersCount}</div>
                     <div className="text-xs font-black text-blue-400 tracking-[0.2em]">JAVOBLAR</div>
                 </div>
 
                 {showResult && (
                     <div className="relative z-20 flex flex-col items-center gap-6">
-                        <div className="glass p-8 rounded-[3rem] border-slate-700/30 text-center animate-bounce shadow-2xl">
+                        <div className="bg-white p-8 rounded-[3rem] border border-slate-200 text-center animate-bounce shadow-2xl">
                             <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">Tayyormisiz?</span>
                         </div>
                         <button
                             onClick={nextQuestion}
-                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-12 py-5 rounded-[2rem] text-2xl font-black shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all btn-premium flex items-center gap-3"
+                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-12 py-5 rounded-[2rem] text-2xl font-black shadow-[0_10px_30px_rgba(59,130,246,0.4)] transition-all btn-premium flex items-center gap-3 active:scale-95"
                         >
-                            <span>Keyingi savol</span>
+                            <span>Next Question</span>
                             <Play className="fill-current" />
                         </button>
                     </div>
                 )}
             </main>
 
-            <div className="grid grid-cols-2 gap-4 h-1/3 p-4 md:p-8 bg-slate-900 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
-                {question.options.map((opt, i) => (
-                    <div
-                        key={i}
-                        className={`
-                            relative glass rounded-[2rem] p-6 md:p-8 flex items-center gap-6 transition-all duration-500 border-2 btn-premium
-                            ${showResult
-                                ? (i === question.correctIndex ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-slate-800 opacity-20 scale-[0.98]')
-                                : 'border-slate-700/30 hover:border-slate-500'
-                            }
-                        `}
-                    >
-                        <div className={`
-                            w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-xl md:text-2xl 
-                            ${i === 0 ? 'bg-blue-600' : i === 1 ? 'bg-emerald-600' : i === 2 ? 'bg-orange-600' : i === 3 ? 'bg-indigo-600' : 'bg-slate-600'}
-                            shadow-lg shadow-black/40
-                        `}>
-                            {i === 0 && '▲'} {i === 1 && '◆'} {i === 2 && '●'} {i === 3 && '■'}
+            <div className="grid grid-cols-2 gap-4 h-1/3 p-4 md:p-8 bg-white border-t border-slate-200 shadow-[0_-20px_50px_rgba(0,0,0,0.05)] z-20">
+                {['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '') ? (
+                    <div className="col-span-2 flex flex-col items-center justify-center h-full">
+                        <div className="bg-indigo-50 border border-indigo-200 px-12 py-6 rounded-[2rem] text-center shadow-lg">
+                            <h3 className="text-slate-500 font-bold uppercase tracking-widest text-sm mb-2">
+                                {question.type === 'fill-blank' ? "Fill in the Blank" :
+                                    question.type === 'find-mistake' ? "Find Mistake" :
+                                        question.type === 'rewrite' ? "Rewrite Sentence" :
+                                            "Type Answer"}
+                            </h3>
+                            {showResult ? (
+                                <div>
+                                    <p className="text-3xl font-black text-emerald-600 mb-2">Correct answers:</p>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {question.acceptedAnswers?.map((ans, i) => (
+                                            <span key={i} className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold border border-emerald-200">
+                                                {ans}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-2xl font-black text-indigo-800 animate-pulse">O'quvchilar javob yozmoqda...</p>
+                            )}
                         </div>
-                        <span className="text-lg md:text-2xl font-bold text-white tracking-tight leading-snug">{opt}</span>
-
-                        {showResult && i === question.correctIndex && (
-                            <div className="absolute top-4 right-6 text-emerald-500 font-black animate-pulse text-xs tracking-widest">
-                                TO'G'RI JAVOB
-                            </div>
-                        )}
                     </div>
-                ))}
+                ) : (
+                    question.options.map((opt, i) => (
+                        <div
+                            key={i}
+                            className={`
+                                relative bg-white rounded-[2rem] p-6 md:p-8 flex items-center gap-6 transition-all duration-500 border-2 btn-premium shadow-md
+                                ${showResult
+                                    ? (i === question.correctIndex ? 'border-emerald-500 bg-emerald-50' : 'border-slate-100 opacity-40 scale-[0.98]')
+                                    : 'border-slate-100 hover:border-blue-300 hover:shadow-xl'
+                                }
+                            `}
+                        >
+                            <div className={`
+                                w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-xl md:text-2xl text-white
+                                ${i === 0 ? 'bg-blue-500' :
+                                    i === 1 ? (question.type === 'true-false' ? 'bg-red-500' : 'bg-emerald-500') :
+                                        i === 2 ? 'bg-orange-500' :
+                                            i === 3 ? 'bg-indigo-500' : 'bg-slate-500'
+                                }
+                                shadow-lg
+                            `}>
+                                {question.type === 'true-false' ? (
+                                    i === 0 ? <CheckCircle2 /> : <XCircle />
+                                ) : (
+                                    i === 0 ? '▲' : i === 1 ? '◆' : i === 2 ? '●' : '■'
+                                )}
+                            </div>
+                            <span className="text-lg md:text-2xl font-bold text-slate-700 tracking-tight leading-snug">{opt}</span>
+
+                            {showResult && i === question.correctIndex && (
+                                <div className="absolute top-4 right-6 text-emerald-600 font-black animate-pulse text-xs tracking-widest">
+                                    TO'G'RI JAVOB
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );

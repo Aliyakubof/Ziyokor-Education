@@ -13,9 +13,12 @@ try {
 }
 
 console.log('PostgreSQL Pool creating with connection string (redacted):', connectionString.replace(/:[^:@]+@/, ':****@').substring(0, 50) + '...');
+
+const isLocalhost = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+
 export const pool = new Pool({
     connectionString,
-    ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false }
+    ssl: isLocalhost ? false : { rejectUnauthorized: false }
 });
 
 pool.on('connect', () => {
