@@ -248,14 +248,6 @@ app.post('/api/students', async (req, res) => {
     }
 });
 
-app.get('/api/students/:groupId', async (req, res) => {
-    try {
-        const result = await query('SELECT * FROM students WHERE group_id = $1', [req.params.groupId]);
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: 'Error fetching students' });
-    }
-});
 app.get('/api/students/search', async (req, res) => {
     try {
         const { q } = req.query;
@@ -273,6 +265,15 @@ app.get('/api/students/search', async (req, res) => {
     } catch (err) {
         console.error('Search error:', err);
         res.status(500).json({ error: 'Error searching students' });
+    }
+});
+
+app.get('/api/students/:groupId', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM students WHERE group_id = $1', [req.params.groupId]);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Error fetching students' });
     }
 });
 
