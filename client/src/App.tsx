@@ -33,7 +33,7 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <div className="min-h-screen font-sans">
           <Routes>
             <Route path="/" element={<Home />} />

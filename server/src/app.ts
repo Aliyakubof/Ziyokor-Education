@@ -256,6 +256,26 @@ app.get('/api/students/:groupId', async (req, res) => {
         res.status(500).json({ error: 'Error fetching students' });
     }
 });
+app.get('/api/students/search', async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q) return res.json([]);
+
+        const result = await query(`
+            SELECT s.id, s.name, s.group_id, g.name as group_name
+            FROM students s
+            JOIN groups g ON s.group_id = g.id
+            WHERE s.name ILIKE $1 OR s.id ILIKE $1
+            LIMIT 20
+        `, [`%${q}%`]);
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Search error:', err);
+        res.status(500).json({ error: 'Error searching students' });
+    }
+});
+
 // Student Actions
 app.delete('/api/students/:id', async (req, res) => {
     try {
