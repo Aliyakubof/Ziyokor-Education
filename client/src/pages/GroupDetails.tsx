@@ -246,7 +246,7 @@ const GroupDetails = () => {
                 <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-center gap-6">
                         <button
-                            onClick={() => navigate(role === 'admin' ? '/admin' : '/teacher')}
+                            onClick={() => navigate(role === 'admin' ? '/admin/groups' : '/teacher')}
                             className="p-3 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all"
                         >
                             <ArrowLeft size={24} />
