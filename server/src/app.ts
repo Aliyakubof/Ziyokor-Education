@@ -734,14 +734,21 @@ io.on('connection', (socket) => {
         const endTime = Date.now() + durationMinutes * 60 * 1000;
         game.endTime = endTime;
 
-        io.to(pin).emit('game-started', { endTime });
+        io.to(pin).emit('game-started', { endTime, title: game.quiz.title });
         // Unit quiz starts with all questions available or just starts the timer? 
         // Assuming unit quiz is self-paced or has a global timer for all questions.
         // For now, let's stick to the current flow but send the global timer.
 
         if (game.isUnitQuiz) {
-            // For Unit Quiz, we might want to send the first question or just start
-            // If PlayerGame handles fetching questions, we just signal start.
+            // For Unit Quiz, we send all questions (without correct indices forMCQs)
+            const questionsForStudents = game.quiz.questions.map((q, idx) => ({
+                text: q.text,
+                options: q.options,
+                type: q.type,
+                questionIndex: idx + 1,
+                totalQuestions: game.quiz.questions.length
+            }));
+            io.to(pin).except(game.hostId).emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
         } else {
             sendQuestion(pin);
         }
@@ -831,49 +838,89 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Student: Finalize Unit Quiz
+    socket.on('unit-player-finish', ({ pin }: { pin: string }) => {
+        const game = games[pin];
+        if (!game || !game.isUnitQuiz || game.status !== 'ACTIVE') return;
+
+        const playerId = (socket as any).studentId || socket.id;
+        const player = game.players.find(p => p.id === playerId);
+        if (!player) return;
+
+        (player as any).isFinished = true;
+
+        const correctAnswers = game.quiz.questions.map(q => ({
+            type: q.type,
+            correctIndex: q.correctIndex,
+            acceptedAnswers: q.acceptedAnswers
+        }));
+
+        io.to(game.hostId).emit('player-update', game.players);
+        socket.emit('unit-finished', { score: player.score, correctAnswers });
+    });
+
     // Player/Student: Submit Answer
-    socket.on('player-answer', ({ pin, answer }: { pin: string, answer: string | number }) => {
+    socket.on('player-answer', ({ pin, answer, questionIndex }: { pin: string, answer: string | number, questionIndex?: number }) => {
         const game = games[pin];
         if (!game || game.status !== 'ACTIVE') return;
 
-        // Identification: use studentId from socket if exists (unit quiz), else use socket.id (normal quiz)
         const playerId = (socket as any).studentId || socket.id;
         const player = game.players.find(p => p.id === playerId);
-
         if (!player) return;
 
-        const question = game.quiz.questions[game.currentQuestionIndex];
-        if (player.answers[game.currentQuestionIndex] !== undefined) return;
+        // For Unit Quiz, questionIndex is provided by client
+        const qIdx = game.isUnitQuiz && questionIndex !== undefined ? questionIndex : game.currentQuestionIndex;
+        if (qIdx < 0 || qIdx >= game.quiz.questions.length) return;
+
+        const question = game.quiz.questions[qIdx];
+
+        // If Unit Quiz, we allow changing answers? User said "review and change before finish".
+        // So we allow multiple submissions for the same question BEFORE finishing.
+        // We need to calculate score diff if they change answer.
+        const prevAnswerWasCorrect = (player as any).correctMap?.[qIdx] || false;
 
         // Validation Logic
         let isCorrect = false;
-        if (question.type === 'text-input') {
+        const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'];
+
+        if (textTypes.includes(question.type || '')) {
             const normalizedAnswer = String(answer).trim().toLowerCase();
             if (question.acceptedAnswers && question.acceptedAnswers.some(ans => ans.trim().toLowerCase() === normalizedAnswer)) {
                 isCorrect = true;
             }
-            // Store the text answer (as a string, but type says number... we might need to adjust logic or just store hash/flag)
-            // For simplicity in current structure which expects mapping [qIdx] -> answerIdx,
-            // we can store -1 for incorrect, and -2 for correct text answer?
-            // OR better: we store 1 for correct, 0 for incorrect.
-            // However, the current type is Record<string, number>.
-            // Let's store 1 if correct, 0 if incorrect for text-input.
-            player.answers[game.currentQuestionIndex] = isCorrect ? 1 : 0;
+            player.answers[qIdx] = isCorrect ? 1 : 0;
         } else {
-            // Multiple Choice
             const ansIdx = Number(answer);
-            player.answers[game.currentQuestionIndex] = ansIdx;
+            player.answers[qIdx] = ansIdx;
             if (ansIdx === question.correctIndex) {
                 isCorrect = true;
             }
         }
 
-        if (isCorrect) {
+        // Initialize correctMap if not exists
+        if (!(player as any).correctMap) (player as any).correctMap = {};
+
+        // Score update logic
+        if (isCorrect && !prevAnswerWasCorrect) {
             player.score += 100;
+            (player as any).correctMap[qIdx] = true;
+        } else if (!isCorrect && prevAnswerWasCorrect) {
+            player.score -= 100;
+            (player as any).correctMap[qIdx] = false;
+        } else if (isCorrect && prevAnswerWasCorrect) {
+            // Already correct, no change
+        } else {
+            // Still incorrect
+            (player as any).correctMap[qIdx] = false;
         }
 
-        const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
-        io.to(game.hostId).emit('answers-count', answeredCount);
+        if (game.isUnitQuiz) {
+            // For unit quiz, progress is interesting for host
+            io.to(game.hostId).emit('player-update', game.players);
+        } else {
+            const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
+            io.to(game.hostId).emit('answers-count', answeredCount);
+        }
     });
 });
 
@@ -901,12 +948,13 @@ function sendQuestion(pin: string) {
         type: question.type
     };
 
-    if (question.type !== 'text-input') {
-        questionDataForPlayer.optionsCount = question.options.length;
-        questionDataForPlayer.options = question.options; // Send options to player if needed, though originally we didn't send text
-        // Actually PlayerGame only needs to know it's started. But for text input we need to tell it type.
+    const advancedTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'info-slide'];
+
+    if (advancedTypes.includes(question.type || '')) {
+        questionDataForPlayer.text = question.text;
+        questionDataForPlayer.options = question.options; // Contains Word Box words for 'word-box'
     } else {
-        questionDataForPlayer.text = question.text; // Send text for text-input
+        questionDataForPlayer.optionsCount = question.options.length;
     }
 
     io.to(pin).except(game.hostId).emit('question-start', questionDataForPlayer);

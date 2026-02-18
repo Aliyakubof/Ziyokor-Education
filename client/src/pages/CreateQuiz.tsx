@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api';
-import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle } from 'lucide-react';
+import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle, X, Info } from 'lucide-react';
 
 interface QuestionDraft {
     text: string;
     options: string[];
     correctIndex: number;
     timeLimit: number;
-    type: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite';
+    type: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide';
     acceptedAnswers: string[];
 }
 
@@ -22,7 +22,7 @@ export default function CreateQuiz() {
     const [questions, setQuestions] = useState<QuestionDraft[]>([]);
 
     const [qText, setQText] = useState('');
-    const [qType, setQType] = useState<'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite'>('multiple-choice');
+    const [qType, setQType] = useState<'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide'>('multiple-choice');
     const [opts, setOpts] = useState(['', '', '', '']);
     const [correctIdx, setCorrectIdx] = useState(0);
     const [acceptedAnswers, setAcceptedAnswers] = useState('');
@@ -210,6 +210,20 @@ export default function CreateQuiz() {
                                             >
                                                 <PenTool size={20} />
                                             </button>
+                                            <button
+                                                onClick={() => setQType('word-box')}
+                                                className={`p-2 rounded-lg transition-all ${qType === 'word-box' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                                title="Word Box (Fill-in-gap)"
+                                            >
+                                                <X size={20} />
+                                            </button>
+                                            <button
+                                                onClick={() => setQType('info-slide')}
+                                                className={`p-2 rounded-lg transition-all ${qType === 'info-slide' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                                title="Info Slide (Topic Heading)"
+                                            >
+                                                <Info size={20} />
+                                            </button>
                                         </div>
                                     </div>
 
@@ -286,6 +300,51 @@ export default function CreateQuiz() {
                                             </div>
                                         )}
 
+                                        {qType === 'info-slide' && (
+                                            <div className="space-y-4">
+                                                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-xs text-blue-800">
+                                                    <strong>Info Slide:</strong> Bu yerda savol bo'lmaydi. Shunchaki mavzu nomini yoki keyingi savollar uchun kerakli ma'lumotni kiriting.
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Mavzu yoki Ma'lumot matni</label>
+                                                    <textarea
+                                                        className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-bold text-center text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-slate-300 min-h-[120px]"
+                                                        placeholder="Masalan: Present Simple"
+                                                        value={qText}
+                                                        onChange={e => setQText(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                        {qType === 'word-box' && (
+                                            <div className="space-y-4">
+                                                <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-800">
+                                                    <strong>Qanday to'ldirish kerak:</strong><br />
+                                                    1. Savol matniga [1], [2] ko'rinishida bo'sh joylarni qo'ying.<br />
+                                                    2. "Word Box" - bu o'quvchi ko'radigan barcha so'zlar (vergul bilan ajrating).<br />
+                                                    3. "To'g'ri javoblar" - bo'sh joylarga tartib bilan mos keladigan so'zlar.
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Word Box (Barcha so'zlar)</label>
+                                                    <input
+                                                        className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium"
+                                                        placeholder="unhealthy, on a diet, healthy, delicious"
+                                                        value={opts.join(', ')}
+                                                        onChange={e => setOpts(e.target.value.split(',').map(s => s.trim()))}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">To'g'ri javoblar (Tartib bilan)</label>
+                                                    <input
+                                                        className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium"
+                                                        placeholder="unhealthy, on a diet"
+                                                        value={acceptedAnswers}
+                                                        onChange={e => setAcceptedAnswers(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div className="flex items-center justify-between gap-4 pt-4">
                                             <div className="flex items-center gap-4">
                                                 {/* Time input removed */}
@@ -321,23 +380,43 @@ export default function CreateQuiz() {
 
                             <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar mb-8">
                                 {questions.map((q, i) => (
-                                    <div key={i} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center justify-between group hover:border-slate-200 transition-all">
-                                        <div className="flex items-center gap-4 truncate">
-                                            <span className="text-indigo-500 font-black text-xs">#{i + 1}</span>
-                                            <div className="truncate">
-                                                <p className="text-slate-700 font-bold text-sm truncate">{q.text}</p>
-                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                                    {q.type}
-                                                </span>
+                                    q.type === 'info-slide' ? (
+                                        <div key={i} className="bg-blue-600 border border-blue-700 p-4 rounded-2xl flex items-center justify-between group shadow-lg shadow-blue-500/20">
+                                            <div className="flex items-center gap-4 truncate">
+                                                <div className="bg-white/20 p-2 rounded-lg">
+                                                    <Info className="text-white" size={16} />
+                                                </div>
+                                                <div className="truncate text-left">
+                                                    <p className="text-white font-black text-sm truncate uppercase tracking-wider">{q.text}</p>
+                                                    <span className="text-[10px] text-blue-100 font-bold uppercase tracking-[0.2em]">SECTION HEADER</span>
+                                                </div>
                                             </div>
+                                            <button
+                                                onClick={() => removeQuestion(i)}
+                                                className="text-white/60 hover:text-white transition-colors p-2"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => removeQuestion(i)}
-                                            className="text-slate-400 hover:text-red-500 transition-colors p-2"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
+                                    ) : (
+                                        <div key={i} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center justify-between group hover:border-slate-200 transition-all">
+                                            <div className="flex items-center gap-4 truncate text-left">
+                                                <span className="text-indigo-500 font-black text-xs">#{i + 1}</span>
+                                                <div className="truncate">
+                                                    <p className="text-slate-700 font-bold text-sm truncate">{q.text}</p>
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                                        {q.type}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => removeQuestion(i)}
+                                                className="text-slate-400 hover:text-red-500 transition-colors p-2"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    )
                                 ))}
 
                                 {questions.length === 0 && (

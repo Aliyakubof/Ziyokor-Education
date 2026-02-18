@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, CheckCircle2, XCircle } from 'lucide-react';
+import { Play, CheckCircle2, XCircle, Info } from 'lucide-react';
 import { socket } from '../socket';
 
 interface QuestionData {
@@ -10,7 +10,7 @@ interface QuestionData {
     questionIndex: number;
     totalQuestions: number;
     correctIndex: number;
-    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite';
+    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide';
     acceptedAnswers?: string[];
 }
 
@@ -27,22 +27,32 @@ export default function HostGame() {
     const [gameStarted, setGameStarted] = useState(false);
     const [globalEndTime, setGlobalEndTime] = useState<number | null>(null);
     const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null);
+    const [isUnitMode, setIsUnitMode] = useState(false);
+    const [unitPlayers, setUnitPlayers] = useState<any[]>([]);
+    const [totalQuestionsCount, setTotalQuestionsCount] = useState(0);
+    const [quizTitle, setQuizTitle] = useState('');
+    const [currentTopic, setCurrentTopic] = useState('');
 
     useEffect(() => {
-        // If "start=true" is in URL (e.g. from AdminPanel directly? No, usually we go to lobby first)
-        // We will change the flow: Host lands on Lobby, sets time, THEN starts.
-        // The previous logic was: socket.emit('host-start-game', pin) immediately if start=true?
-        // Let's remove auto-start from URL for now or repurpose it.
-        // Actually, preventing auto-start is safer.
-
         socket.on('game-started', (data: any) => {
-            // data might contain endTime if it's a unit quiz
-            if (data && data.endTime) {
-                setGlobalEndTime(data.endTime);
-            }
+            if (data?.endTime) setGlobalEndTime(data.endTime);
+            if (data?.title) setQuizTitle(data.title);
+        });
+
+        socket.on('unit-game-started', (data: { questions: any[], endTime?: number, title?: string }) => {
+            setIsUnitMode(true);
+            setTotalQuestionsCount(data.questions.length);
+            setGlobalEndTime(data.endTime || null);
+            setQuizTitle(data.title || '');
+            setGameStarted(true);
+        });
+
+        socket.on('player-update', (players: any[]) => {
+            setUnitPlayers(players);
         });
 
         socket.on('question-new', (q) => {
+            if (q.type === 'info-slide') setCurrentTopic(q.text);
             setQuestion(q);
             setTimeLeft(q.timeLimit);
             setAnswersCount(0);
@@ -210,6 +220,121 @@ export default function HostGame() {
         </div>
     );
 
+    if (isUnitMode) {
+        return (
+            <div className="flex flex-col h-screen bg-slate-50 relative overflow-hidden">
+                <header className="bg-white p-6 flex justify-between items-center border-b border-slate-200 shadow-sm z-10 shrink-0">
+                    <div>
+                        <h1 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                            <span className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></span>
+                            {quizTitle || 'Unit Quiz Monitoring'}
+                        </h1>
+                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Live Results Panel</p>
+                    </div>
+
+                    <div className="flex items-center gap-8">
+                        {globalTimeLeft !== null && (
+                            <div className="text-center">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Qolgan vaqt</p>
+                                <div className={`text-3xl font-black px-6 py-2 rounded-2xl border-2 transition-all shadow-sm
+                                    ${globalTimeLeft < 60 ? 'bg-red-50 border-red-200 text-red-600 animate-pulse' : 'bg-slate-50 border-slate-100 text-slate-700'}`}>
+                                    {Math.floor(globalTimeLeft / 60)}:{(globalTimeLeft % 60).toString().padStart(2, '0').replace('-', '')}
+                                </div>
+                            </div>
+                        )}
+                        <button
+                            onClick={() => window.confirm('O\'yinni haqiqatdan ham tugatmoqchimisiz?') && socket.emit('host-end-game', pin)}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border border-red-200 active:scale-95"
+                        >
+                            End Game Early
+                        </button>
+                    </div>
+                </header>
+
+                <main className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {unitPlayers.map((player, idx) => {
+                            const answeredCount = Object.keys(player.answers || {}).length;
+                            const isFinished = player.isFinished || false;
+                            const percentage = (answeredCount / totalQuestionsCount) * 100;
+
+                            return (
+                                <div key={idx} className={`bg-white rounded-[2rem] p-6 shadow-sm border transition-all hover:shadow-md
+                                    ${isFinished ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100'}`}>
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-lg
+                                                ${isFinished ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-indigo-500 shadow-indigo-500/20'}`}>
+                                                {player.name?.[0]?.toUpperCase() || 'S'}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-black text-slate-800 text-lg leading-tight truncate max-w-[120px]">{player.name}</h3>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{isFinished ? 'FINISHED' : 'IN PROGRESS'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-2xl font-black text-slate-800">{player.score}</div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BALL</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between text-xs font-black uppercase tracking-widest text-slate-400">
+                                            <span>Progress</span>
+                                            <span className={isFinished ? 'text-emerald-500' : 'text-indigo-500'}>
+                                                {answeredCount} / {totalQuestionsCount}
+                                            </span>
+                                        </div>
+                                        <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner p-0.5">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-1000 ${isFinished ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-gradient-to-r from-indigo-500 to-blue-500'}`}
+                                                style={{ width: `${percentage}%` }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {isFinished && (
+                                        <div className="mt-6 pt-4 border-t border-emerald-100/50 flex items-center justify-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-widest">
+                                            <CheckCircle2 size={16} /> Barchasi tayyor
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {unitPlayers.length === 0 && (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                            <div className="w-20 h-20 border-4 border-slate-100 border-t-indigo-200 rounded-full animate-spin mb-6"></div>
+                            <p className="font-black uppercase tracking-widest text-sm">O'quvchilar javoblarini kutmoqdamiz...</p>
+                        </div>
+                    )}
+                </main>
+
+                <footer className="bg-white p-6 border-t border-slate-200 flex justify-between items-center shrink-0">
+                    <div className="flex gap-10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                {unitPlayers.filter(p => p.isFinished).length} Tugatdi
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                {unitPlayers.filter(p => !p.isFinished).length} Davom etmoqda
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="text-slate-400 font-bold text-xs">
+                        Ziyokor Education Live Quiz System
+                    </div>
+                </footer>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col h-screen relative overflow-hidden bg-transparent">
 
@@ -221,9 +346,16 @@ export default function HostGame() {
                     </div>
                 </div>
 
-                <h2 className="text-2xl md:text-4xl font-black text-center text-slate-800 px-4 line-clamp-2 leading-tight flex-1">
-                    {question.text}
-                </h2>
+                <div className="flex-1 px-8 text-center">
+                    {(currentTopic || quizTitle) && (
+                        <h2 className="text-xs font-black text-indigo-400 uppercase tracking-[0.2em] mb-1">
+                            {currentTopic || quizTitle}
+                        </h2>
+                    )}
+                    <h2 className="text-2xl md:text-3xl font-black text-slate-800 px-4 line-clamp-2 leading-tight">
+                        {question.type === 'info-slide' ? 'Information' : question.text}
+                    </h2>
+                </div>
 
                 <button
                     onClick={() => socket.emit('host-end-game', pin)}
@@ -265,7 +397,25 @@ export default function HostGame() {
                     <div className="text-xs font-black text-blue-400 tracking-[0.2em]">JAVOBLAR</div>
                 </div>
 
-                {showResult && (
+                {question.type === 'info-slide' && (
+                    <div className="bg-blue-600 text-white p-12 rounded-[3.5rem] border-4 border-blue-400 shadow-[0_20px_60px_rgba(37,99,235,0.4)] max-w-2xl w-full text-center animate-float">
+                        <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <Info size={32} />
+                        </div>
+                        <h3 className="text-sm font-black text-blue-100 uppercase tracking-[0.3em] mb-4">Topic / Information</h3>
+                        <p className="text-4xl md:text-5xl font-black leading-tight">{question.text}</p>
+
+                        <button
+                            onClick={nextQuestion}
+                            className="mt-12 bg-white text-blue-600 px-12 py-4 rounded-2xl text-xl font-black shadow-xl hover:scale-105 transition-transform flex items-center gap-3 mx-auto"
+                        >
+                            <span>Next Question</span>
+                            <Play size={20} fill="currentColor" />
+                        </button>
+                    </div>
+                )}
+
+                {showResult && question.type !== 'info-slide' && (
                     <div className="relative z-20 flex flex-col items-center gap-6">
                         <div className="bg-white p-8 rounded-[3rem] border border-slate-200 text-center animate-bounce shadow-2xl">
                             <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">Tayyormisiz?</span>
@@ -281,70 +431,72 @@ export default function HostGame() {
                 )}
             </main>
 
-            <div className="grid grid-cols-2 gap-4 h-1/3 p-4 md:p-8 bg-white border-t border-slate-200 shadow-[0_-20px_50px_rgba(0,0,0,0.05)] z-20">
-                {['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '') ? (
-                    <div className="col-span-2 flex flex-col items-center justify-center h-full">
-                        <div className="bg-indigo-50 border border-indigo-200 px-12 py-6 rounded-[2rem] text-center shadow-lg">
-                            <h3 className="text-slate-500 font-bold uppercase tracking-widest text-sm mb-2">
-                                {question.type === 'fill-blank' ? "Fill in the Blank" :
-                                    question.type === 'find-mistake' ? "Find Mistake" :
-                                        question.type === 'rewrite' ? "Rewrite Sentence" :
-                                            "Type Answer"}
-                            </h3>
-                            {showResult ? (
-                                <div>
-                                    <p className="text-3xl font-black text-emerald-600 mb-2">Correct answers:</p>
-                                    <div className="flex flex-wrap justify-center gap-2">
-                                        {question.acceptedAnswers?.map((ans, i) => (
-                                            <span key={i} className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold border border-emerald-200">
-                                                {ans}
-                                            </span>
-                                        ))}
+            {question.type !== 'info-slide' && (
+                <div className="grid grid-cols-2 gap-4 h-1/3 p-4 md:p-8 bg-white border-t border-slate-200 shadow-[0_-20px_50px_rgba(0,0,0,0.05)] z-20">
+                    {['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '') ? (
+                        <div className="col-span-2 flex flex-col items-center justify-center h-full">
+                            <div className="bg-indigo-50 border border-indigo-200 px-12 py-6 rounded-[2rem] text-center shadow-lg">
+                                <h3 className="text-slate-500 font-bold uppercase tracking-widest text-sm mb-2">
+                                    {question.type === 'fill-blank' ? "Fill in the Blank" :
+                                        question.type === 'find-mistake' ? "Find Mistake" :
+                                            question.type === 'rewrite' ? "Rewrite Sentence" :
+                                                "Type Answer"}
+                                </h3>
+                                {showResult ? (
+                                    <div>
+                                        <p className="text-3xl font-black text-emerald-600 mb-2">Correct answers:</p>
+                                        <div className="flex flex-wrap justify-center gap-2">
+                                            {question.acceptedAnswers?.map((ans, i) => (
+                                                <span key={i} className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold border border-emerald-200">
+                                                    {ans}
+                                                </span>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <p className="text-2xl font-black text-indigo-800 animate-pulse">O'quvchilar javob yozmoqda...</p>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    question.options.map((opt, i) => (
-                        <div
-                            key={i}
-                            className={`
-                                relative bg-white rounded-[2rem] p-6 md:p-8 flex items-center gap-6 transition-all duration-500 border-2 btn-premium shadow-md
-                                ${showResult
-                                    ? (i === question.correctIndex ? 'border-emerald-500 bg-emerald-50' : 'border-slate-100 opacity-40 scale-[0.98]')
-                                    : 'border-slate-100 hover:border-blue-300 hover:shadow-xl'
-                                }
-                            `}
-                        >
-                            <div className={`
-                                w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-xl md:text-2xl text-white
-                                ${i === 0 ? 'bg-blue-500' :
-                                    i === 1 ? (question.type === 'true-false' ? 'bg-red-500' : 'bg-emerald-500') :
-                                        i === 2 ? 'bg-orange-500' :
-                                            i === 3 ? 'bg-indigo-500' : 'bg-slate-500'
-                                }
-                                shadow-lg
-                            `}>
-                                {question.type === 'true-false' ? (
-                                    i === 0 ? <CheckCircle2 /> : <XCircle />
                                 ) : (
-                                    i === 0 ? '▲' : i === 1 ? '◆' : i === 2 ? '●' : '■'
+                                    <p className="text-2xl font-black text-indigo-800 animate-pulse">O'quvchilar javob yozmoqda...</p>
                                 )}
                             </div>
-                            <span className="text-lg md:text-2xl font-bold text-slate-700 tracking-tight leading-snug">{opt}</span>
-
-                            {showResult && i === question.correctIndex && (
-                                <div className="absolute top-4 right-6 text-emerald-600 font-black animate-pulse text-xs tracking-widest">
-                                    TO'G'RI JAVOB
-                                </div>
-                            )}
                         </div>
-                    ))
-                )}
-            </div>
+                    ) : (
+                        question.options.map((opt, i) => (
+                            <div
+                                key={i}
+                                className={`
+                                    relative bg-white rounded-[2rem] p-6 md:p-8 flex items-center gap-6 transition-all duration-500 border-2 btn-premium shadow-md
+                                    ${showResult
+                                        ? (i === question.correctIndex ? 'border-emerald-500 bg-emerald-50' : 'border-slate-100 opacity-40 scale-[0.98]')
+                                        : 'border-slate-100 hover:border-blue-300 hover:shadow-xl'
+                                    }
+                                `}
+                            >
+                                <div className={`
+                                    w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-xl md:text-2xl text-white
+                                    ${i === 0 ? 'bg-blue-500' :
+                                        i === 1 ? (question.type === 'true-false' ? 'bg-red-500' : 'bg-emerald-500') :
+                                            i === 2 ? 'bg-orange-500' :
+                                                i === 3 ? 'bg-indigo-500' : 'bg-slate-500'
+                                    }
+                                    shadow-lg
+                                `}>
+                                    {question.type === 'true-false' ? (
+                                        i === 0 ? <CheckCircle2 /> : <XCircle />
+                                    ) : (
+                                        i === 0 ? '▲' : i === 1 ? '◆' : i === 2 ? '●' : '■'
+                                    )}
+                                </div>
+                                <span className="text-lg md:text-2xl font-bold text-slate-700 tracking-tight leading-snug">{opt}</span>
+
+                                {showResult && i === question.correctIndex && (
+                                    <div className="absolute top-4 right-6 text-emerald-600 font-black animate-pulse text-xs tracking-widest">
+                                        TO'G'RI JAVOB
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
         </div>
     );
 }

@@ -177,7 +177,7 @@ const GroupRow = ({
     return (
         <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
             {/* Group Name */}
-            <td className="p-4 cursor-pointer" onClick={() => navigate(`/teacher/group/${group.id}`)}>
+            <td className="p-4 cursor-pointer" onClick={() => navigate(isAdmin ? `/admin/group/${group.id}` : `/teacher/group/${group.id}`)}>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
                         {group.name.charAt(0)}
@@ -640,30 +640,41 @@ const TeacherDashboard = () => {
                 <div className="md:hidden space-y-4">
                     {groups.length > 0 ? (
                         groups.map(group => (
-                            <div key={group.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex items-center gap-3" onClick={() => navigate(`/teacher/group/${group.id}`)}>
-                                        <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
+                            <div key={group.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden active:scale-[0.98] transition-transform">
+                                <div className="flex justify-between items-stretch">
+                                    <div
+                                        className="flex-1 flex items-center gap-3 p-4 hover:bg-slate-50 cursor-pointer transition-colors"
+                                        onClick={() => navigate(role === 'admin' ? `/admin/group/${group.id}` : `/teacher/group/${group.id}`)}
+                                    >
+                                        <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-black text-xl shadow-inner">
                                             {group.name.charAt(0)}
                                         </div>
-                                        <div>
-                                            <h3 className="font-bold text-slate-800 text-lg">{group.name}</h3>
-                                            {role === 'admin' && (
-                                                <p className="text-xs text-slate-500 flex items-center gap-1">
-                                                    <Users size={12} /> {group.teacher_name || 'Noma\'lum'}
-                                                </p>
-                                            )}
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-black text-slate-800 text-lg truncate">{group.name}</h3>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded">Guruh</span>
+                                                {role === 'admin' && (
+                                                    <p className="text-xs text-slate-400 truncate flex items-center gap-1">
+                                                        • {group.teacher_name || 'Noma\'lum'}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="text-slate-300 pr-2">
+                                            <ArrowLeft className="rotate-180" size={20} />
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => handleOpenStudentModal(group)}
-                                        className="p-2 bg-slate-50 rounded-lg text-slate-500 hover:text-indigo-600"
-                                    >
-                                        <Users size={20} />
-                                    </button>
+                                    <div className="flex items-center pr-4">
+                                        <button
+                                            onClick={() => handleOpenStudentModal(group)}
+                                            className="p-3 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 hover:text-indigo-600 transition-all border border-slate-100"
+                                        >
+                                            <Users size={22} />
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div className="space-y-3">
+                                <div className="px-4 pb-4">
                                     {/* We reuse a simplified version of the logic here or just render the row logic in a different way. 
                                     Since GroupRow has state (selectedLevel, etc), we should probably extract that logic or just use the same component but styled differently?
                                     Actually, GroupRow returns a <tr>. We can't use it here.

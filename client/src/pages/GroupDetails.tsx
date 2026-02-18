@@ -159,12 +159,26 @@ const GroupDetails = () => {
         });
     };
 
+    const safeParseResults = (resultsData: any) => {
+        if (!resultsData) return [];
+        if (Array.isArray(resultsData)) return resultsData;
+        try {
+            return typeof resultsData === 'string' ? JSON.parse(resultsData) : resultsData;
+        } catch (e) {
+            console.error('Error parsing player results:', e);
+            return [];
+        }
+    };
+
     // Add Student State
     const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
     const [newStudentName, setNewStudentName] = useState('');
     const [newStudentPhone, setNewStudentPhone] = useState('');
-    const [parentName, setParentName] = useState(''); // 'Otasi', 'Onasi', etc.
+    const [parentName, setParentName] = useState('');
     const [parentPhone, setParentPhone] = useState('');
+
+    // Pending Contacts State
+    const [pendingContacts, setPendingContacts] = useState<Record<string, string>>({});
 
     const handleAddStudent = async () => {
         if (!newStudentName || !newStudentPhone || !parentName || !parentPhone) {
@@ -280,132 +294,190 @@ const GroupDetails = () => {
                                 ) : (
                                     <>
                                         {/* Desktop Table */}
-                                        <table className="w-full text-left border-collapse hidden md:table">
-                                            <thead className="bg-slate-50 sticky top-0">
-                                                <tr>
-                                                    <th className="p-3 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">ID</th>
-                                                    <th className="p-3 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">F.I.SH</th>
-                                                    <th className="p-3 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Telefon</th>
-                                                    <th className="p-3 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Ota-ona</th>
-                                                    <th className="p-3 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Aloqa</th>
-                                                    {role === 'admin' && <th className="p-3 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 text-right">Amallar</th>}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {students.map(student => (
-                                                    <tr key={student.id} className="hover:bg-slate-50">
-                                                        <td className="p-3 font-mono text-xs text-slate-500">{student.id}</td>
-                                                        <td className="p-3 font-bold text-slate-700 text-sm">{student.name}</td>
-                                                        <td className="p-3 text-sm text-slate-600">{student.phone || '-'}</td>
-                                                        <td className="p-3 text-sm text-slate-600">
-                                                            <div className="flex flex-col">
-                                                                <span className="font-semibold">{student.parent_name || '-'}</span>
-                                                                <span className="text-xs text-slate-400">{student.parent_phone || '-'}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-3">
-                                                            <div className="flex flex-col gap-1">
-                                                                <div className="flex items-center gap-1">
+                                        <div className="hidden md:block">
+                                            <table className="w-full text-left border-collapse">
+                                                <thead className="bg-slate-50/50">
+                                                    <tr>
+                                                        <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">O'quvchi</th>
+                                                        <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Bog'lanish</th>
+                                                        <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Holat / Tarix</th>
+                                                        {role === 'admin' && <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Amallar</th>}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {students.map(student => (
+                                                        <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
+                                                            <td className="p-4">
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-bold text-slate-800">{student.name}</span>
+                                                                    <span className="text-[10px] font-mono text-slate-400">ID: {student.id}</span>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <span className="text-xs text-slate-500 flex items-center gap-1"><Phone size={10} /> {student.phone || '-'}</span>
+                                                                        <span className="text-slate-200 text-[10px]">•</span>
+                                                                        <span className="text-xs text-slate-400 font-medium">{student.parent_name || 'Ota-ona'}: {student.parent_phone || '-'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-4">
+                                                                <div className="flex items-center gap-2">
                                                                     <select
-                                                                        className="p-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer bg-white w-32"
-                                                                        onChange={(e) => {
-                                                                            if (e.target.value) {
-                                                                                handleContact(student.id, e.target.value);
-                                                                                e.target.value = ''; // Reset
-                                                                            }
-                                                                        }}
+                                                                        className="p-2 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer w-32 shadow-sm"
+                                                                        value={pendingContacts[student.id] || ''}
+                                                                        onChange={(e) => setPendingContacts(prev => ({ ...prev, [student.id]: e.target.value }))}
                                                                     >
-                                                                        <option value="">Bog'lanish...</option>
+                                                                        <option value="">Tanlang...</option>
                                                                         {['Otasi', 'Onasi', 'Bobosi', 'Buvisi', 'Akasi'].map((rel) => (
                                                                             <option key={rel} value={rel}>{rel}</option>
                                                                         ))}
                                                                     </select>
-
+                                                                    {pendingContacts[student.id] && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                handleContact(student.id, pendingContacts[student.id]);
+                                                                                setPendingContacts(prev => {
+                                                                                    const next = { ...prev };
+                                                                                    delete next[student.id];
+                                                                                    return next;
+                                                                                });
+                                                                            }}
+                                                                            className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all shadow-md shadow-green-200 active:scale-90"
+                                                                            title="Tasdiqlash"
+                                                                        >
+                                                                            <CheckCircle size={16} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-4">
+                                                                <div className="flex items-center gap-3">
                                                                     <button
                                                                         onClick={() => fetchContactHistory(student)}
-                                                                        title="Aloqalar tarixi"
-                                                                        className="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 hover:text-indigo-600 transition-colors"
+                                                                        className="p-2 bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200 hover:text-indigo-600 transition-all shadow-sm"
+                                                                        title="Tarix"
                                                                     >
                                                                         <Clock size={16} />
                                                                     </button>
-                                                                </div>
-
-                                                                {student.last_contacted_relative && (
-                                                                    <div className="flex items-center gap-1 mt-1">
-                                                                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100`}>
-                                                                            {student.last_contacted_relative}
-                                                                        </span>
-                                                                        {student.last_contacted_at && (
-                                                                            <span className="text-[10px] text-slate-400 font-mono">
-                                                                                {new Date(student.last_contacted_at).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                                                                    {student.last_contacted_relative && (
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 w-fit">
+                                                                                {student.last_contacted_relative}
                                                                             </span>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </td>    {role === 'admin' && (
-                                                            <td className="p-3 flex justify-end gap-2">
-                                                                <button
-                                                                    onClick={() => openMoveModal(student)}
-                                                                    title="Ko'chirish"
-                                                                    className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                                >
-                                                                    <Send size={16} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteStudent(student.id)}
-                                                                    title="O'chirish"
-                                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
+                                                                            <span className="text-[9px] text-slate-400 font-mono mt-0.5">
+                                                                                {student.last_contacted_at && new Date(student.last_contacted_at).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </td>
-                                                        )}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                                            {role === 'admin' && (
+                                                                <td className="p-4 text-right">
+                                                                    <div className="flex justify-end gap-2">
+                                                                        <button
+                                                                            onClick={() => openMoveModal(student)}
+                                                                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                                                        >
+                                                                            <Send size={16} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDeleteStudent(student.id)}
+                                                                            className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                                                                        >
+                                                                            <Trash2 size={16} />
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
 
                                         {/* Mobile List View */}
-                                        <div className="md:hidden space-y-3">
+                                        <div className="md:hidden space-y-4">
                                             {students.map(student => (
-                                                <div key={student.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
-                                                    <div className="flex-1">
-                                                        <p className="font-bold text-slate-800">{student.name}</p>
-                                                        <p className="text-xs font-mono text-slate-400 mb-1">ID: {student.id}</p>
-                                                        <div className="grid grid-cols-2 gap-2 mt-2">
-                                                            <div className="bg-white p-2 rounded-lg border border-slate-100">
-                                                                <p className="text-[10px] text-slate-400 uppercase font-bold">O'quvchi</p>
-                                                                <p className="text-xs font-medium text-slate-600">{student.phone || '-'}</p>
-                                                            </div>
-                                                            <div className="bg-white p-2 rounded-lg border border-slate-100">
-                                                                <p className="text-[10px] text-slate-400 uppercase font-bold">{student.parent_name || 'Ota-ona'}</p>
-                                                                <p className="text-xs font-medium text-slate-600">{student.parent_phone || '-'}</p>
-                                                            </div>
+                                                <div key={student.id} className="bg-slate-50/50 rounded-2xl border border-slate-100 p-4 shadow-sm">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <div className="flex-1 min-w-0">
+                                                            <h3 className="font-black text-slate-800 text-base truncate">{student.name}</h3>
+                                                            <span className="text-[9px] font-mono text-slate-400 tracking-wider">ID: {student.id}</span>
                                                         </div>
-                                                    </div>
-                                                    {role === 'admin' && (
                                                         <div className="flex gap-2">
                                                             <button
                                                                 onClick={() => fetchContactHistory(student)}
-                                                                className="p-2 text-indigo-500 bg-white border border-indigo-100 rounded-lg shadow-sm"
+                                                                className="p-2 bg-white text-slate-400 rounded-lg border border-slate-100 shadow-sm"
                                                             >
                                                                 <Clock size={16} />
                                                             </button>
-                                                            <button
-                                                                onClick={() => openMoveModal(student)}
-                                                                className="p-2 text-blue-500 bg-white border border-blue-100 rounded-lg shadow-sm"
-                                                            >
-                                                                <Send size={16} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteStudent(student.id)}
-                                                                className="p-2 text-red-500 bg-white border border-red-100 rounded-lg shadow-sm"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
+                                                            {role === 'admin' && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => openMoveModal(student)}
+                                                                        className="p-2 text-blue-500 bg-white border border-blue-100 rounded-lg shadow-sm"
+                                                                    >
+                                                                        <Send size={16} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteStudent(student.id)}
+                                                                        className="p-2 text-red-500 bg-white border border-red-100 rounded-lg shadow-sm"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                         </div>
-                                                    )}
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-2 mb-4">
+                                                        <div className="bg-white p-2.5 rounded-xl border border-slate-100/50">
+                                                            <p className="text-[10px] text-slate-400 font-black uppercase mb-1 tracking-widest">O'QUVCHI</p>
+                                                            <p className="text-[11px] font-bold text-slate-600 flex items-center gap-1 truncate"><Phone size={10} /> {student.phone || '-'}</p>
+                                                        </div>
+                                                        <div className="bg-white p-2.5 rounded-xl border border-slate-100/50">
+                                                            <p className="text-[10px] text-slate-400 font-black uppercase mb-1 tracking-widest">{student.parent_name || 'OTA-ONA'}</p>
+                                                            <p className="text-[11px] font-bold text-slate-600 flex items-center gap-1 truncate"><Phone size={10} /> {student.parent_phone || '-'}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex-1 flex items-center gap-2">
+                                                            <select
+                                                                className={`flex-1 p-2.5 ${pendingContacts[student.id] ? 'bg-white text-slate-900 border-2 border-indigo-500' : 'bg-indigo-600 text-white border-0'} rounded-xl text-xs font-black outline-none shadow-lg shadow-indigo-500/20 transition-all`}
+                                                                value={pendingContacts[student.id] || ''}
+                                                                onChange={(e) => setPendingContacts(prev => ({ ...prev, [student.id]: e.target.value }))}
+                                                            >
+                                                                <option value="">BOG'LANISH...</option>
+                                                                {['Otasi', 'Onasi', 'Bobosi', 'Buvisi', 'Akasi'].map((rel) => (
+                                                                    <option key={rel} value={rel}>{rel}</option>
+                                                                ))}
+                                                            </select>
+                                                            {pendingContacts[student.id] && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        handleContact(student.id, pendingContacts[student.id]);
+                                                                        setPendingContacts(prev => {
+                                                                            const next = { ...prev };
+                                                                            delete next[student.id];
+                                                                            return next;
+                                                                        });
+                                                                    }}
+                                                                    className="p-3 bg-green-500 text-white rounded-xl shadow-lg shadow-green-200 active:scale-90 transition-transform"
+                                                                >
+                                                                    <CheckCircle size={20} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        {student.last_contacted_relative && (
+                                                            <div className="flex items-center gap-2 bg-indigo-50 px-3 py-2 rounded-xl border border-indigo-100">
+                                                                <div className="flex flex-col leading-none">
+                                                                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{student.last_contacted_relative}</span>
+                                                                    <span className="text-[11px] font-bold text-indigo-600">
+                                                                        {student.last_contacted_at && new Date(student.last_contacted_at).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -449,7 +521,7 @@ const GroupDetails = () => {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
-                                                {JSON.parse(result.player_results as any).map((player: any) => {
+                                                {safeParseResults(result.player_results).map((player: any) => {
                                                     const score = player.score || 0;
                                                     const correctCount = Math.round(score / 100);
                                                     const total = result.total_questions || 0;
@@ -489,7 +561,7 @@ const GroupDetails = () => {
 
                                     {/* Students Results List (Mobile) */}
                                     <div className="md:hidden space-y-3">
-                                        {JSON.parse(result.player_results as any).map((player: any) => {
+                                        {safeParseResults(result.player_results).map((player: any) => {
                                             const score = player.score || 0;
                                             const correctCount = Math.round(score / 100);
                                             const total = result.total_questions || 0;
