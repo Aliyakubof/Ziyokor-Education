@@ -11,3 +11,15 @@ services:
         sync: false
       - key: NODE_VERSION
         value: 18
+
+  - type: static
+    name: ziyokor-client
+    env: static
+    buildCommand: cd client && npm install && npm run build
+    staticPublishDir: client/dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        fromService:
+          type: web
+          name: ziyokor-server
+          property: host
