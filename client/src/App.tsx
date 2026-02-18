@@ -34,7 +34,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <div className="min-h-screen font-sans">
+        <div className="min-h-screen w-full overflow-x-hidden font-sans">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
