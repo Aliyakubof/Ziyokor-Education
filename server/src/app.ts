@@ -18,7 +18,7 @@ const allowedOrigins = [
     'http://localhost:5175',
     'http://localhost:5176',
     'http://localhost',
-    'https://ziyokor-education.vercel.app'
+    'https://ziyokoreducation.vercel.app'
 ].filter(Boolean) as string[];
 
 app.use(cors({
