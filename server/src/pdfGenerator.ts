@@ -32,20 +32,17 @@ export const generateQuizResultPDF = (
         doc.moveDown();
 
         // Table Header
-        const startY = doc.y;
-        const tableTop = startY;
+        const tableTop = doc.y;
         const col1 = 50;
         const col2 = 100;
-        const col3 = 350;
-        const col4 = 450;
+        const col3 = 450;
 
         doc.font('Helvetica-Bold');
         doc.text('#', col1, tableTop);
         doc.text('O\'quvchi Ismi', col2, tableTop);
         doc.text('Ball', col3, tableTop);
-        doc.text('Status', col4, tableTop);
 
-        doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+        doc.moveTo(col1, tableTop + 15).lineTo(550, tableTop + 15).stroke();
         doc.font('Helvetica');
 
         // Table Body
@@ -57,20 +54,65 @@ export const generateQuizResultPDF = (
             }
 
             doc.text((index + 1).toString(), col1, y);
-            // Truncate name if too long
-            const name = player.name.length > 30 ? player.name.substring(0, 30) + '...' : player.name;
+            const name = player.name.length > 50 ? player.name.substring(0, 50) + '...' : player.name;
             doc.text(name, col2, y);
             doc.text(player.score.toString(), col3, y);
 
-            const status = player.status || 'Offline';
-            if (status === 'Cheating') {
-                doc.fillColor('red').text(status, col4, y).fillColor('black');
-            } else {
-                doc.text(status, col4, y);
-            }
-
             y += 20;
             doc.moveTo(50, y - 5).lineTo(550, y - 5).strokeColor('#aaaaaa').lineWidth(0.5).stroke();
+        });
+
+        // Detailed Breakdown Section
+        players.forEach((player) => {
+            doc.addPage();
+
+            // Player Detail Header
+            doc.fontSize(18).font('Helvetica-Bold').text('Batafsil natijalar:', { align: 'left' });
+            doc.fontSize(14).fillColor('#4f46e5').text(player.name);
+            doc.fillColor('black').fontSize(12).font('Helvetica').text(`Umumiy ball: ${player.score}`);
+            doc.moveDown();
+
+            quiz.questions.forEach((q, qIdx) => {
+                const answer = player.answers[qIdx];
+                let isCorrect = false;
+                let studentDisplayAnswer = 'Javob berilmagan';
+
+                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'];
+
+                if (textTypes.includes(q.type || '')) {
+                    studentDisplayAnswer = answer !== undefined ? String(answer) : 'Javob berilmagan';
+                    const normalizedAnswer = studentDisplayAnswer.trim().toLowerCase();
+                    if (q.acceptedAnswers && q.acceptedAnswers.some(ans => ans.trim().toLowerCase() === normalizedAnswer)) {
+                        isCorrect = true;
+                    }
+                } else {
+                    const ansIdx = Number(answer);
+                    if (answer !== undefined && !isNaN(ansIdx)) {
+                        studentDisplayAnswer = q.options[ansIdx] || 'Noma\'lum';
+                        if (ansIdx === q.correctIndex) {
+                            isCorrect = true;
+                        }
+                    }
+                }
+
+                // Check for page overflow
+                if (doc.y > 650) doc.addPage();
+
+                doc.fontSize(11).font('Helvetica-Bold').text(`${qIdx + 1}. ${q.text}`);
+                doc.fontSize(10).font('Helvetica');
+
+                doc.fillColor(isCorrect ? '#059669' : '#dc2626')
+                    .text(`Sizning javobingiz: ${studentDisplayAnswer} ${isCorrect ? ' (TO\'G\'RI)' : ' (NOTO\'G\'RI)'}`);
+
+                if (!isCorrect) {
+                    const correctAnswer = textTypes.includes(q.type || '')
+                        ? (q.acceptedAnswers?.[0] || 'N/A')
+                        : (q.options[q.correctIndex] || 'N/A');
+                    doc.fillColor('#4b5563').text(`To'g'ri javob: ${correctAnswer}`);
+                }
+
+                doc.fillColor('black').moveDown(0.5);
+            });
         });
 
         doc.end();

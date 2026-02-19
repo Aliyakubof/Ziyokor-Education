@@ -345,6 +345,7 @@ const MobileGroupCard = ({
 
 // --- Student Search Dropdown ---
 const StudentSearchInput = ({ navigate }: { navigate: any }) => {
+    const { user, role } = useAuth();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -375,16 +376,25 @@ const StudentSearchInput = ({ navigate }: { navigate: any }) => {
     }, [query]);
 
     const handleSearch = async () => {
+        if (!query.trim()) return;
         setLoading(true);
         setIsOpen(true);
+        console.log(`[Search] Frontend - Q: "${query}", Role: ${role}, UserID: ${user?.id}`);
         try {
-            const res = await apiFetch(`/api/students/search?q=${encodeURIComponent(query)}`);
+            // Encode role and teacherId to be safe
+            const url = `/api/students/search?q=${encodeURIComponent(query)}&teacherId=${encodeURIComponent(user?.id || '')}&role=${encodeURIComponent(role || '')}`;
+
+            console.log(`[Search] Fetching URL: ${url}`);
+            const res = await apiFetch(url);
             if (res.ok) {
                 const data = await res.json();
                 setResults(Array.isArray(data) ? data : []);
+                console.log(`[Search] Success: Found ${data.length} results`);
+            } else {
+                console.error(`[Search] Server error: ${res.status}`);
             }
         } catch (err) {
-            console.error('Search error:', err);
+            console.error('[Search] Network error:', err);
         } finally {
             setLoading(false);
         }

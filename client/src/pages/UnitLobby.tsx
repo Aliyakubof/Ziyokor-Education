@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import { socket } from '../socket';
-import { Timer, Users, Play, AlertTriangle, Link as LinkIcon, ArrowLeft, Copy, Check } from 'lucide-react';
+import { Timer, Users, Play, Link as LinkIcon, ArrowLeft, Copy, Check, AlertTriangle } from 'lucide-react';
 
 interface Player {
     id: string;
     name: string;
-    status: 'Online' | 'Offline' | 'Cheating';
+    status?: 'Online' | 'Offline' | 'Cheating';
 }
 
 const UnitLobby = () => {
@@ -108,10 +108,8 @@ const UnitLobby = () => {
                                                 : 'bg-slate-50 border-slate-100 hover:border-indigo-200'}
                                         `}>
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-2.5 h-2.5 rounded-full ${player.status === 'Online' ? 'bg-emerald-500' :
-                                                    player.status === 'Cheating' ? 'bg-red-500 animate-pulse' : 'bg-slate-300'
-                                                    }`} />
-                                                <span className="font-bold text-slate-700">{player.name}</span>
+                                                <div className={`w-2.5 h-2.5 rounded-full ${player.status === 'Cheating' ? 'bg-red-500 animate-pulse' : 'bg-indigo-500'}`} />
+                                                <h3 className="font-black text-slate-800 text-lg leading-tight truncate max-w-[120px]">{player.name}</h3>
                                             </div>
 
                                             {player.status === 'Cheating' && (

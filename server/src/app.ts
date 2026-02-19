@@ -50,6 +50,24 @@ async function initDb() {
         for (const statement of statements) {
             await query(statement);
         }
+
+        // Ensure game_results has total_questions (for older installs)
+        await query('ALTER TABLE game_results ADD COLUMN IF NOT EXISTS total_questions INT NOT NULL DEFAULT 0;');
+
+        // Ensure students table has contact info columns
+        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS last_contacted_relative TEXT;');
+        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS last_contacted_at TIMESTAMPTZ;');
+
+        // Ensure contact_logs table exists
+        await query(`
+            CREATE TABLE IF NOT EXISTS contact_logs (
+                id UUID PRIMARY KEY,
+                student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+                relative TEXT NOT NULL,
+                contacted_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        `);
+
         console.log('Database initialized successfully');
         await ensureAdminExists();
     } catch (err) {
@@ -182,6 +200,35 @@ app.get('/api/admin/groups', async (req, res) => {
     }
 });
 
+// Admin: Students
+app.get('/api/admin/students', async (req, res) => {
+    try {
+        const result = await query(`
+            SELECT s.*, g.name as group_name, t.name as teacher_name
+            FROM students s
+            LEFT JOIN groups g ON s.group_id = g.id
+            LEFT JOIN teachers t ON g.teacher_id = t.id
+            ORDER BY s.name ASC
+        `);
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error fetching admin students:', err);
+        res.status(500).json({ error: 'Error fetching students', details: err.message });
+    }
+});
+
+app.put('/api/admin/students/:id/password', async (req, res) => {
+    try {
+        const { password } = req.body;
+        const { id } = req.params;
+        await query('UPDATE students SET password = $1 WHERE id = $2', [password, id]);
+        res.json({ success: true, id, password });
+    } catch (err: any) {
+        console.error('Error updating student password:', err);
+        res.status(500).json({ error: 'Error updating student password' });
+    }
+});
+
 // Admin: Unit Quizzes
 app.post('/api/unit-quizzes', async (req, res) => {
     try {
@@ -251,17 +298,36 @@ app.post('/api/students', async (req, res) => {
 
 app.get('/api/students/search', async (req, res) => {
     try {
-        const { q } = req.query;
+        const { q, teacherId, role } = req.query;
+        console.log(`[Search] Q: "${q}", teacherId: "${teacherId}", role: "${role}"`);
+
         if (!q) return res.json([]);
 
-        const result = await query(`
-            SELECT s.id, s.name, s.group_id, g.name as group_name
+        // Base query
+        let queryStr = `
+            SELECT s.id, s.name, s.group_id, g.name as group_name, g.teacher_id
             FROM students s
             JOIN groups g ON s.group_id = g.id
-            WHERE s.name ILIKE $1 OR s.id ILIKE $1
-            LIMIT 20
-        `, [`%${q}%`]);
+            WHERE (s.name ILIKE $1 OR s.id ILIKE $1)
+        `;
+        const params: any[] = [`%${q}%`];
 
+        // Mandatory filtering for teachers
+        if (role === 'teacher' || (teacherId && teacherId !== ADMIN_ID)) {
+            if (!teacherId || teacherId === 'null' || teacherId === 'undefined') {
+                console.log(`[Search] Blocking search: Role is teacher but teacherId is missing/invalid.`);
+                return res.json([]); // Return nothing if we can't filter correctly for a teacher
+            }
+            queryStr += ` AND g.teacher_id = $2::uuid`;
+            params.push(teacherId);
+            console.log(`[Search] Enforced filter by teacherId: ${teacherId}`);
+        } else {
+            console.log(`[Search] Performing global search (Admin or no filter)`);
+        }
+
+        queryStr += ` LIMIT 20`;
+
+        const result = await query(queryStr, params);
         res.json(result.rows);
     } catch (err) {
         console.error('Search error:', err);
@@ -407,7 +473,8 @@ app.get('/api/student/:id/history', async (req, res) => {
                 created_at, 
                 player->>'score' as score,
                 total_questions,
-                (player->>'score')::int * 100 / (total_questions * 100) as percentage
+                (player->>'score')::int * 100 / NULLIF(total_questions * 100, 0) as percentage,
+                player->'answers' as answers
             FROM game_results, jsonb_array_elements(player_results) as player
             WHERE player->>'id' = $1
             ORDER BY created_at DESC
@@ -672,6 +739,12 @@ io.on('connection', (socket) => {
             }
             const student = result.rows[0];
 
+            // Access Restriction: Check if student belongs to the group the quiz was opened for
+            if (game.isUnitQuiz && game.groupId && student.group_id !== game.groupId) {
+                socket.emit('error', 'Bu test sizning guruhingiz uchun emas');
+                return;
+            }
+
             // Store studentId on the socket for identification during answers
             (socket as any).studentId = studentId;
             (socket as any).pin = pin;
@@ -694,6 +767,23 @@ io.on('connection', (socket) => {
             socket.join(pin);
             socket.emit('joined', { name: student.name, pin });
             io.to(game.hostId).emit('player-update', game.players);
+
+            // If game is already active, immediately tell the student to start/play
+            if (game.status === 'ACTIVE') {
+                if (game.isUnitQuiz) {
+                    const questionsForStudents = game.quiz.questions.map((q: any, idx: number) => ({
+                        info: q.info,
+                        text: q.text,
+                        options: q.options,
+                        type: q.type,
+                        questionIndex: idx + 1,
+                        totalQuestions: game.quiz.questions.length
+                    }));
+                    socket.emit('unit-game-started', { questions: questionsForStudents, endTime: game.endTime, title: game.quiz.title });
+                } else {
+                    socket.emit('game-started', { endTime: game.endTime, title: game.quiz.title });
+                }
+            }
         } catch (err) {
             socket.emit('error', 'Database error');
         }
@@ -706,10 +796,92 @@ io.on('connection', (socket) => {
 
         const player = game.players.find(p => p.id === studentId || p.id === socket.id);
         if (player) {
+            // Once cheating, stay cheating for this session
+            if (player.status === 'Cheating' && status === 'Online') {
+                return;
+            }
             player.status = status;
             io.to(game.hostId).emit('player-update', game.players);
         }
     });
+
+    // Helper: Centralized Game Termination Logic
+    const finishGame = async (pin: string) => {
+        const game = games[pin];
+        if (!game) {
+            console.warn(`[finishGame] Game ${pin} not found`);
+            return;
+        }
+
+        console.log(`[finishGame] Ending game ${pin}. Status: ${game.status}, isUnitQuiz: ${game.isUnitQuiz}, groupId: ${game.groupId}`);
+
+        game.status = 'FINISHED';
+        const leaderboard = [...game.players].sort((a, b) => b.score - a.score);
+        io.to(pin).emit('game-over', leaderboard);
+
+        // Save Game Results
+        if (game.isUnitQuiz && game.groupId) {
+            try {
+                const resultId = uuidv4();
+                const totalQuestions = game.quiz.questions.length;
+                console.log(`[finishGame] Saving results for group ${game.groupId}, resultId: ${resultId}`);
+
+                await query(
+                    'INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results) VALUES ($1, $2, $3, $4, $5)',
+                    [resultId, game.groupId, game.quiz.title, totalQuestions, JSON.stringify(game.players)]
+                );
+                console.log(`[finishGame] Database save successful`);
+
+                // PDF Sending Logic
+                const groupRes = await query('SELECT name, teacher_id FROM groups WHERE id = $1', [game.groupId]);
+                if (groupRes.rowCount && groupRes.rowCount > 0) {
+                    const group = groupRes.rows[0];
+                    const teacherRes = await query('SELECT telegram_chat_id FROM teachers WHERE id = $1', [group.teacher_id]);
+                    const pdfBuffer = await generateQuizResultPDF(game.quiz, game.players, group.name);
+
+                    if (teacherRes.rowCount && teacherRes.rowCount > 0 && teacherRes.rows[0].telegram_chat_id) {
+                        try {
+                            await bot.telegram.sendDocument(teacherRes.rows[0].telegram_chat_id, {
+                                source: pdfBuffer,
+                                filename: `Result_${group.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`
+                            }, {
+                                caption: `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}`,
+                                parse_mode: 'HTML'
+                            });
+                            console.log(`[finishGame] PDF sent to teacher ${group.teacher_id}`);
+                        } catch (e) {
+                            console.error('[finishGame] Failed to send PDF to teacher:', e);
+                        }
+                    }
+
+                    // Send to Students/Parents
+                    for (const player of game.players) {
+                        const subRes = await query(
+                            'SELECT telegram_chat_id FROM student_telegram_subscriptions WHERE student_id = $1',
+                            [player.id]
+                        );
+                        for (const sub of subRes.rows) {
+                            try {
+                                await bot.telegram.sendDocument(sub.telegram_chat_id, {
+                                    source: pdfBuffer,
+                                    filename: `Result_${group.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`
+                                }, {
+                                    caption: `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}\n👤 O'quvchi: ${player.name}`,
+                                    parse_mode: 'HTML'
+                                });
+                            } catch (e) {
+                                console.error(`[finishGame] Failed to send PDF to student ${player.name}`, e);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('[finishGame] Error saving results (DB/PDF/Bot):', err);
+            }
+        } else {
+            console.warn(`[finishGame] Skipping DB save. game.isUnitQuiz: ${game.isUnitQuiz}, game.groupId: ${game.groupId}`);
+        }
+    };
 
     // Host: Start Game
     socket.on('host-start-game', ({ pin, timeLimit }: { pin: string, timeLimit: number }) => {
@@ -742,13 +914,14 @@ io.on('connection', (socket) => {
         if (game.isUnitQuiz) {
             // For Unit Quiz, we send all questions (without correct indices forMCQs)
             const questionsForStudents = game.quiz.questions.map((q, idx) => ({
+                info: q.info,
                 text: q.text,
                 options: q.options,
                 type: q.type,
                 questionIndex: idx + 1,
                 totalQuestions: game.quiz.questions.length
             }));
-            io.to(pin).except(game.hostId).emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
+            io.to(pin).emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
         } else {
             sendQuestion(pin);
         }
@@ -761,82 +934,103 @@ io.on('connection', (socket) => {
 
         game.currentQuestionIndex++;
         if (game.currentQuestionIndex >= game.quiz.questions.length) {
-            game.status = 'FINISHED';
-            const leaderboard = [...game.players].sort((a, b) => b.score - a.score);
-            io.to(pin).emit('game-over', leaderboard);
-
-            // Save Game Results
-            if (game.isUnitQuiz && game.groupId) {
-                (async () => {
-                    try {
-                        const resultId = uuidv4();
-                        const totalQuestions = game.quiz.questions.length;
-                        await query(
-                            'INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results) VALUES ($1, $2, $3, $4, $5)',
-                            [resultId, game.groupId, game.quiz.title, totalQuestions, JSON.stringify(game.players)]
-                        );
-                        console.log(`Game results saved for group ${game.groupId}`);
-                    } catch (err) {
-                        console.error('Error saving game results:', err);
-                    }
-                })();
-            }
-
-            // PDF Sending Logic
-            if (game.isUnitQuiz && game.groupId) {
-                (async () => {
-                    try {
-                        const groupRes = await query('SELECT name, teacher_id FROM groups WHERE id = $1', [game.groupId]);
-                        if (groupRes.rowCount === 0) return;
-                        const group = groupRes.rows[0];
-
-                        const teacherRes = await query('SELECT telegram_chat_id FROM teachers WHERE id = $1', [group.teacher_id]);
-                        if (teacherRes.rowCount === 0) return;
-                        const teacher = teacherRes.rows[0];
-
-                        const pdfBuffer = await generateQuizResultPDF(game.quiz, game.players, group.name);
-
-                        if (teacher.telegram_chat_id) {
-                            await bot.telegram.sendDocument(teacher.telegram_chat_id, {
-                                source: pdfBuffer,
-                                filename: `Result_${group.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`
-                            }, {
-                                caption: `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}`,
-                                parse_mode: 'HTML'
-                            });
-                            console.log(`PDF sent to teacher ${group.teacher_id}`);
-                        }
-
-                        // Send to Students/Parents
-                        for (const player of game.players) {
-                            const subRes = await query(
-                                'SELECT telegram_chat_id FROM student_telegram_subscriptions WHERE student_id = $1',
-                                [player.id]
-                            );
-
-                            for (const sub of subRes.rows) {
-                                try {
-                                    await bot.telegram.sendDocument(sub.telegram_chat_id, {
-                                        source: pdfBuffer,
-                                        filename: `Result_${group.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`
-                                    }, {
-                                        caption: `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}\n👤 O'quvchi: ${player.name}`,
-                                        parse_mode: 'HTML'
-                                    });
-                                } catch (e) {
-                                    console.error(`Failed to send PDF to student ${player.name}`, e);
-                                }
-                            }
-                        }
-                    } catch (err) {
-                        console.error('Error sending PDF to Telegram:', err);
-                    }
-                })();
-            }
+            finishGame(pin);
         } else {
             sendQuestion(pin);
         }
     });
+
+    // Host: End Game Early
+    socket.on('host-end-game', (pin: string) => {
+        const game = games[pin];
+        if (!game) return;
+        // Strict host check might fail if refresh happened and hostId wasn't updated.
+        // But host-get-status now updates hostId.
+        if (game.hostId !== socket.id) {
+            console.warn(`[host-end-game] Unauthorized attempt to end game ${pin} from socket ${socket.id}`);
+            return;
+        }
+        finishGame(pin);
+    });
+
+    // Host: Get Game Status (for re-sync after navigation/refresh)
+    socket.on('host-get-status', (pin: string) => {
+        const game = games[pin];
+        if (!game) return;
+
+        // Allow reclaiming hostId if the socket is new (refresh case)
+        game.hostId = socket.id;
+        socket.join(pin);
+
+        if (game.status === 'ACTIVE') {
+            const endTime = game.endTime;
+            socket.emit('game-started', { endTime, title: game.quiz.title });
+
+            if (game.isUnitQuiz) {
+                const questionsForStudents = game.quiz.questions.map((q, idx) => ({
+                    info: q.info,
+                    text: q.text,
+                    options: q.options,
+                    type: q.type,
+                    questionIndex: idx + 1,
+                    totalQuestions: game.quiz.questions.length
+                }));
+                socket.emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
+            } else if (game.currentQuestionIndex >= 0) {
+                const q = game.quiz.questions[game.currentQuestionIndex];
+                socket.emit('question-new', {
+                    ...q,
+                    questionIndex: game.currentQuestionIndex + 1,
+                    totalQuestions: game.quiz.questions.length
+                });
+            }
+            // Always send latest players
+            socket.emit('player-update', game.players);
+        }
+    });
+
+    // Player: Get Game Status (for re-sync after navigation/refresh)
+    socket.on('player-get-status', ({ pin, studentId }: { pin: string, studentId?: string }) => {
+        const game = games[pin];
+        if (!game) return;
+
+        // Re-join the room
+        socket.join(pin);
+        (socket as any).pin = pin;
+
+        if (studentId) {
+            (socket as any).studentId = studentId;
+            const player = game.players.find(p => p.id === studentId);
+            if (player) {
+                player.status = 'Online';
+                io.to(game.hostId).emit('player-update', game.players);
+            }
+        }
+
+        if (game.status === 'ACTIVE') {
+            const endTime = game.endTime;
+            if (game.isUnitQuiz) {
+                const questionsForStudents = game.quiz.questions.map((q: any, idx: number) => ({
+                    info: q.info,
+                    text: q.text,
+                    options: q.options,
+                    type: q.type,
+                    questionIndex: idx + 1,
+                    totalQuestions: game.quiz.questions.length
+                }));
+                socket.emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
+            } else if (game.currentQuestionIndex >= 0) {
+                const q = game.quiz.questions[game.currentQuestionIndex];
+                socket.emit('question-start', {
+                    ...q,
+                    questionIndex: game.currentQuestionIndex + 1,
+                    totalQuestions: game.quiz.questions.length
+                });
+            }
+        }
+    });
+
+
 
     // Student: Finalize Unit Quiz
     socket.on('unit-player-finish', ({ pin }: { pin: string }) => {
@@ -888,7 +1082,7 @@ io.on('connection', (socket) => {
             if (question.acceptedAnswers && question.acceptedAnswers.some(ans => ans.trim().toLowerCase() === normalizedAnswer)) {
                 isCorrect = true;
             }
-            player.answers[qIdx] = isCorrect ? 1 : 0;
+            player.answers[qIdx] = answer; // Store raw text for PDF
         } else {
             const ansIdx = Number(answer);
             player.answers[qIdx] = ansIdx;
@@ -932,6 +1126,7 @@ function sendQuestion(pin: string) {
     const timeLimit = game.timePerQuestion || question.timeLimit || 20;
 
     io.to(game.hostId).emit('question-new', {
+        info: question.info,
         text: question.text,
         options: question.options,
         correctIndex: question.correctIndex,
@@ -943,6 +1138,7 @@ function sendQuestion(pin: string) {
     });
 
     const questionDataForPlayer: any = {
+        info: question.info,
         questionIndex: game.currentQuestionIndex + 1,
         timeLimit: timeLimit,
         type: question.type

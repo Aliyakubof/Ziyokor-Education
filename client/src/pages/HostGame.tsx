@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Play, CheckCircle2, XCircle, Info } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Play, CheckCircle2, XCircle, Info, AlertTriangle } from 'lucide-react';
 import { socket } from '../socket';
 
 interface QuestionData {
+    info?: string;
     text: string;
     options: string[];
     timeLimit: number;
@@ -34,10 +35,22 @@ export default function HostGame() {
     const [currentTopic, setCurrentTopic] = useState('');
 
     useEffect(() => {
+        if (!pin) return;
+
+        // Ensure socket is connected when joining the game host view
+        if (!socket.connected) {
+            socket.connect();
+        }
+
+        // Request status immediately
+        socket.emit('host-get-status', pin);
+
         socket.on('game-started', (data: any) => {
             if (data?.endTime) setGlobalEndTime(data.endTime);
             if (data?.title) setQuizTitle(data.title);
+            setGameStarted(true);
         });
+        // ... (rest of the useEffect is similar, but I'll update the whole block for safety)
 
         socket.on('unit-game-started', (data: { questions: any[], endTime?: number, title?: string }) => {
             setIsUnitMode(true);
@@ -69,11 +82,14 @@ export default function HostGame() {
         });
 
         return () => {
+            socket.off('game-started');
+            socket.off('unit-game-started');
+            socket.off('player-update');
             socket.off('question-new');
             socket.off('answers-count');
             socket.off('game-over');
         };
-    }, []);
+    }, [pin]);
 
     useEffect(() => {
         // Per-question timer (only runs if NO global timer or if we want both. For now, let's keep it for visual)
@@ -112,8 +128,8 @@ export default function HostGame() {
 
     if (leaderboard) {
         return (
+            // ... (keep existing leaderboard return logic)
             <div className="flex flex-col items-center justify-center min-h-screen p-8 relative overflow-hidden bg-transparent">
-
                 <div className="relative z-10 flex flex-col items-center w-full max-w-5xl">
                     <div className="text-center mb-16">
                         <div className="inline-flex items-center gap-2 px-6 py-2 bg-white rounded-full mb-6 border border-slate-200 shadow-sm">
@@ -182,46 +198,9 @@ export default function HostGame() {
         );
     }
 
-    if (!question && !gameStarted) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-transparent relative">
-                <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-200 text-center max-w-md w-full">
-                    <h1 className="text-3xl font-black text-slate-800 mb-2">O'yinni Boshlash</h1>
-                    <p className="text-slate-500 mb-8 font-medium">O'quvchilar qo'shilishini kuting...</p>
-
-                    <div className="mb-8 text-left">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block mb-2">Umumiy Vaqt (Daqiqa)</label>
-                        <input
-                            type="number"
-                            value={totalTimeMinutes}
-                            onChange={(e) => setTotalTimeMinutes(Number(e.target.value))}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-center"
-                            min="1"
-                        />
-                        <p className="text-xs text-slate-400 mt-2 text-center">Har bir savolga {(totalTimeMinutes * 60 / (10)).toFixed(0)}~ soniya ajratiladi (taxminan)</p>
-                    </div>
-
-                    <button
-                        onClick={startGame}
-                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-indigo-500/20 btn-premium flex items-center justify-center gap-3 active:scale-95"
-                    >
-                        <Play size={24} />
-                        BOSHLASH
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    if (!question) return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-transparent relative">
-            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-            <p className="text-slate-400 font-black uppercase tracking-widest text-xs animate-pulse">Yuklanmoqda...</p>
-        </div>
-    );
-
     if (isUnitMode) {
         return (
+            // ... (Unit Mode UI return moved up)
             <div className="flex flex-col h-screen bg-slate-50 relative overflow-hidden">
                 <header className="bg-white p-6 flex justify-between items-center border-b border-slate-200 shadow-sm z-10 shrink-0">
                     <div>
@@ -258,9 +237,18 @@ export default function HostGame() {
                             const isFinished = player.isFinished || false;
                             const percentage = (answeredCount / totalQuestionsCount) * 100;
 
+                            const isCheating = player.status === 'Cheating';
+
                             return (
-                                <div key={idx} className={`bg-white rounded-[2rem] p-6 shadow-sm border transition-all hover:shadow-md
-                                    ${isFinished ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100'}`}>
+                                <div key={idx} className={`bg-white rounded-[2rem] p-6 shadow-sm border transition-all hover:shadow-md relative
+                                    ${isFinished ? 'border-emerald-200 bg-emerald-50/30' :
+                                        isCheating ? 'border-red-200 bg-red-50/30 ring-2 ring-red-500/20' : 'border-slate-100'}`}>
+
+                                    {isCheating && (
+                                        <div className="absolute -top-3 -right-3 bg-red-500 text-white p-2 rounded-xl shadow-lg animate-bounce z-20">
+                                            <AlertTriangle size={20} />
+                                        </div>
+                                    )}
                                     <div className="flex justify-between items-start mb-6">
                                         <div className="flex items-center gap-3">
                                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-lg
@@ -269,7 +257,6 @@ export default function HostGame() {
                                             </div>
                                             <div>
                                                 <h3 className="font-black text-slate-800 text-lg leading-tight truncate max-w-[120px]">{player.name}</h3>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{isFinished ? 'FINISHED' : 'IN PROGRESS'}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
@@ -335,13 +322,51 @@ export default function HostGame() {
         );
     }
 
+    if (!question && !gameStarted) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-transparent relative">
+                <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-200 text-center max-w-md w-full">
+                    <h1 className="text-3xl font-black text-slate-800 mb-2">O'yinni Boshlash</h1>
+                    <p className="text-slate-500 mb-8 font-medium">O'quvchilar qo'shilishini kuting...</p>
+
+                    <div className="mb-8 text-left">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block mb-2">Umumiy Vaqt (Daqiqa)</label>
+                        <input
+                            type="number"
+                            value={totalTimeMinutes}
+                            onChange={(e) => setTotalTimeMinutes(Number(e.target.value))}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-center"
+                            min="1"
+                        />
+                        <p className="text-xs text-slate-400 mt-2 text-center">Har bir savolga {(totalTimeMinutes * 60 / (10)).toFixed(0)}~ soniya ajratiladi (taxminan)</p>
+                    </div>
+
+                    <button
+                        onClick={startGame}
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-indigo-500/20 btn-premium flex items-center justify-center gap-3 active:scale-95"
+                    >
+                        <Play size={24} />
+                        BOSHLASH
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!question) return (
+        <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-transparent relative">
+            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+            <p className="text-slate-400 font-black uppercase tracking-widest text-xs animate-pulse">Yuklanmoqda...</p>
+        </div>
+    );
+
     return (
         <div className="flex flex-col h-screen relative overflow-hidden bg-transparent">
 
             <header className="bg-white/80 backdrop-blur-md p-6 md:p-8 flex justify-between items-center border-b border-slate-200 z-10">
                 <div className="flex items-center gap-4">
                     <div className="bg-slate-100 border border-slate-200 px-4 py-2 rounded-xl">
-                        <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Savol</span>
+                        <span className="text-sm font-black text-slate-400 uppercase tracking-widest">{question.info || 'Savol'}</span>
                         <div className="text-xl font-black text-slate-800">{question.questionIndex} / {question.totalQuestions}</div>
                     </div>
                 </div>
@@ -349,7 +374,7 @@ export default function HostGame() {
                 <div className="flex-1 px-8 text-center">
                     {(currentTopic || quizTitle) && (
                         <h2 className="text-xs font-black text-indigo-400 uppercase tracking-[0.2em] mb-1">
-                            {currentTopic || quizTitle}
+                            {question.info || currentTopic || quizTitle}
                         </h2>
                     )}
                     <h2 className="text-2xl md:text-3xl font-black text-slate-800 px-4 line-clamp-2 leading-tight">

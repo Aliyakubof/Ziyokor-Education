@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS students (
     phone TEXT,
     password TEXT, -- For student dashboard login
     parent_name TEXT, -- 'Otasi', 'Onasi', etc.
+    last_contacted_relative TEXT,
+    last_contacted_at TIMESTAMPTZ
 );
 
 -- Quizzes Table (Regular)
@@ -45,4 +47,12 @@ CREATE TABLE IF NOT EXISTS student_telegram_subscriptions (
     student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
     telegram_chat_id TEXT NOT NULL,
     PRIMARY KEY (student_id, telegram_chat_id)
+);
+
+-- Contact Logs Table
+CREATE TABLE IF NOT EXISTS contact_logs (
+    id UUID PRIMARY KEY,
+    student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+    relative TEXT NOT NULL,
+    contacted_at TIMESTAMPTZ DEFAULT NOW()
 );

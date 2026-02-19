@@ -12,7 +12,23 @@ const UnitJoin = () => {
     const [joined, setJoined] = useState(false);
 
     useEffect(() => {
+        // Auto-fill studentId from localStorage if available (e.g. from Dashboard)
+        const savedId = localStorage.getItem('student-id');
+        let currentStudentId = studentId;
+
+        if (savedId && !studentId) {
+            setStudentId(savedId);
+            currentStudentId = savedId;
+        }
+
         socket.connect();
+
+        // If we have both PIN and StudentId, attempt auto-join
+        if (urlPin && currentStudentId && !joined) {
+            localStorage.setItem('kahoot-pin', urlPin);
+            localStorage.setItem('student-id', currentStudentId);
+            socket.emit('student-join', { pin: urlPin, studentId: currentStudentId });
+        }
 
         socket.on('joined', () => {
             setJoined(true);
@@ -20,6 +36,10 @@ const UnitJoin = () => {
         });
 
         socket.on('game-started', () => {
+            navigate('/play');
+        });
+
+        socket.on('unit-game-started', () => {
             navigate('/play');
         });
 
@@ -40,6 +60,7 @@ const UnitJoin = () => {
         return () => {
             socket.off('joined');
             socket.off('game-started');
+            socket.off('unit-game-started');
             socket.off('error');
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
@@ -49,6 +70,7 @@ const UnitJoin = () => {
         e.preventDefault();
         if (!pin || !studentId) return;
         localStorage.setItem('kahoot-pin', pin); // Store for PlayerGame
+        localStorage.setItem('student-id', studentId); // Store for PlayerGame State recovery
         socket.emit('student-join', { pin, studentId });
     };
 

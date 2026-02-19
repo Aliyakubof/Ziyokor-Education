@@ -4,6 +4,7 @@ import { apiFetch } from '../api';
 import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle, X, Info } from 'lucide-react';
 
 interface QuestionDraft {
+    info: string;
     text: string;
     options: string[];
     correctIndex: number;
@@ -21,6 +22,7 @@ export default function CreateQuiz() {
 
     const [questions, setQuestions] = useState<QuestionDraft[]>([]);
 
+    const [qInfo, setQInfo] = useState('');
     const [qText, setQText] = useState('');
     const [qType, setQType] = useState<'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide'>('multiple-choice');
     const [opts, setOpts] = useState(['', '', '', '']);
@@ -33,6 +35,7 @@ export default function CreateQuiz() {
         if (qType === 'multiple-choice') {
             if (opts.some(o => !o)) return alert("Barcha variantlarni to'ldiring");
             setQuestions([...questions, {
+                info: qInfo,
                 text: qText,
                 options: opts,
                 correctIndex: correctIdx,
@@ -42,6 +45,7 @@ export default function CreateQuiz() {
             }]);
         } else if (qType === 'true-false') {
             setQuestions([...questions, {
+                info: qInfo,
                 text: qText,
                 options: ["To'g'ri", "Noto'g'ri"],
                 correctIndex: correctIdx, // 0 for True, 1 for False
@@ -54,8 +58,9 @@ export default function CreateQuiz() {
             if (!acceptedAnswers.trim()) return alert("To'g'ri javoblarni kiriting");
             const answersList = acceptedAnswers.split(',').map(a => a.trim()).filter(a => a);
             setQuestions([...questions, {
+                info: qInfo,
                 text: qText,
-                options: [],
+                options: qType === 'word-box' ? opts : [],
                 correctIndex: -1,
                 timeLimit: 0,
                 type: qType,
@@ -64,6 +69,7 @@ export default function CreateQuiz() {
         }
 
         // Reset form
+        setQInfo('');
         setQText('');
         setOpts(['', '', '', '']);
         setCorrectIdx(0);
@@ -228,12 +234,27 @@ export default function CreateQuiz() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <textarea
-                                            className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 min-h-[100px] resize-none"
-                                            placeholder="Enter question text..."
-                                            value={qText}
-                                            onChange={e => setQText(e.target.value)}
-                                        />
+                                        {qType !== 'info-slide' && (
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-4">Savol Ma'lumoti (Info)</label>
+                                                <input
+                                                    className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400"
+                                                    placeholder="Masalan: WORD & TRANSLATE yoki Grammar"
+                                                    value={qInfo}
+                                                    onChange={e => setQInfo(e.target.value)}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Savol Matni</label>
+                                            <textarea
+                                                className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 min-h-[100px] resize-none"
+                                                placeholder="Enter question text..."
+                                                value={qText}
+                                                onChange={e => setQText(e.target.value)}
+                                            />
+                                        </div>
 
                                         {qType === 'multiple-choice' && (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -403,6 +424,7 @@ export default function CreateQuiz() {
                                             <div className="flex items-center gap-4 truncate text-left">
                                                 <span className="text-indigo-500 font-black text-xs">#{i + 1}</span>
                                                 <div className="truncate">
+                                                    {q.info && <p className="text-[10px] text-indigo-500 font-black uppercase tracking-widest mb-0.5">{q.info}</p>}
                                                     <p className="text-slate-700 font-bold text-sm truncate">{q.text}</p>
                                                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                                                         {q.type}

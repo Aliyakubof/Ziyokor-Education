@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { socket } from '../socket';
-import { Trophy, Clock, CheckCircle2, AlertCircle, Send, XCircle, Info } from 'lucide-react';
+import { Trophy, Clock, CheckCircle2, Send, XCircle, Info } from 'lucide-react';
 
 interface QuestionData {
+    info?: string;
     text: string;
     options: string[];
     timeLimit: number;
@@ -19,7 +20,6 @@ export default function PlayerGame() {
     const [textAnswer, setTextAnswer] = useState('');
 
     const [isConnected, setIsConnected] = useState(socket.connected);
-    const [isCheating, setIsCheating] = useState(false);
 
     // Unit Quiz Specific States
     const [isUnitMode, setIsUnitMode] = useState(false);
@@ -42,6 +42,13 @@ export default function PlayerGame() {
             if (data?.endTime) setGlobalEndTime(data.endTime);
             if (data?.title) setQuizTitle(data.title);
         });
+
+        // Request status immediately (for re-sync after navigation or refresh)
+        const pinFromStore = localStorage.getItem('kahoot-pin');
+        const idFromStore = localStorage.getItem('student-id');
+        if (pinFromStore) {
+            socket.emit('player-get-status', { pin: pinFromStore, studentId: idFromStore || undefined });
+        }
 
         socket.on('unit-game-started', (data: { questions: QuestionData[], endTime?: number, title?: string }) => {
             setIsUnitMode(true);
@@ -82,7 +89,6 @@ export default function PlayerGame() {
 
             if (document.hidden) {
                 if (socket.connected && pin) {
-                    setIsCheating(true);
                     socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
                 }
             } else {
@@ -209,23 +215,6 @@ export default function PlayerGame() {
 
 
 
-    if (isCheating) {
-        return (
-            <div className="fixed inset-0 bg-red-900/95 z-[60] flex flex-col items-center justify-center p-6 text-center backdrop-blur-md">
-                <AlertCircle className="text-white w-20 h-20 mb-6 animate-pulse" />
-                <h2 className="text-3xl font-black text-white mb-4 uppercase tracking-widest">OGOHLANTIRISH!</h2>
-                <p className="text-white/80 font-bold text-lg mb-8 max-w-md leading-relaxed">
-                    Siz ilovadan chiqdingiz yoki boshqa oynaga o'tdingiz. Bu "Aldash" (Cheating) deb baholandi va o'qituvchiga xabar yuborildi.
-                </p>
-                <button
-                    onClick={() => setIsCheating(false)}
-                    className="bg-white text-red-600 px-8 py-4 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl"
-                >
-                    TUSHUNDIM, DAVOM ETISH
-                </button>
-            </div>
-        );
-    }
 
     if (!isConnected) {
         return (
@@ -327,7 +316,7 @@ export default function PlayerGame() {
             const isCorrect = isReview && correctInfo?.acceptedAnswers?.some((a: string) => a.toLowerCase().trim() === String(playerAns || '').toLowerCase().trim());
 
             return (
-                <div className="w-full max-w-md mx-auto bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
+                <div className="w-full max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
                     {isReview && (
                         <div className={`mb-6 p-4 rounded-2xl border text-center font-black uppercase tracking-widest text-xs
                             ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-red-50 border-red-200 text-red-600'}`}>
@@ -426,7 +415,7 @@ export default function PlayerGame() {
         if (question.type === 'info-slide') {
             return (
                 <div className="flex items-center justify-center h-full">
-                    <div className="w-full max-w-[320px] bg-white rounded-[2.5rem] p-8 shadow-2xl border border-blue-100 text-center animate-float overflow-hidden relative">
+                    <div className="w-full max-w-2xl bg-white rounded-[2.5rem] p-8 shadow-2xl border border-blue-100 text-center animate-float overflow-hidden relative">
                         <div className="absolute top-0 left-0 w-full h-2 bg-blue-500"></div>
                         <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
                             <Info className="text-blue-500" size={32} />
@@ -486,7 +475,9 @@ export default function PlayerGame() {
             <header className="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center border-b border-slate-200 z-10 shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="bg-indigo-50 border border-indigo-100 px-4 py-1.5 rounded-xl">
-                        <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block">Savol</span>
+                        <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block">
+                            {question?.info || 'Savol'}
+                        </span>
                         <div className="text-lg font-black text-indigo-600">
                             {isUnitMode ? (currentUnitIndex + 1) : question?.questionIndex} / {isUnitMode ? unitQuestions.length : question?.totalQuestions}
                         </div>
@@ -496,16 +487,16 @@ export default function PlayerGame() {
                 <div className="flex-1 px-6 text-center">
                     {isUnitMode && (
                         <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 truncate max-w-[240px] mx-auto">
-                            {getCurrentTopic() || quizTitle || 'Unit Quiz'}
+                            {question?.info || getCurrentTopic() || quizTitle || 'Unit Quiz'}
                         </h2>
                     )}
-                    <h1 className="text-lg md:text-xl font-black text-slate-800 leading-tight line-clamp-1">
+                    <h1 className="text-lg md:text-xl font-black text-slate-800 leading-tight">
                         {question?.type === 'info-slide' ? 'Information' : question?.text}
                     </h1>
                 </div>
 
                 <div className="w-20 flex justify-end">
-                    {globalEndTime && (
+                    {globalEndTime && !isUnitMode && (
                         <div className="text-sm font-black text-blue-500 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 shadow-sm animate-pulse-slow">
                             <Clock size={14} className="inline mr-1 mb-0.5" />
                             {Math.max(0, Math.floor((globalEndTime - Date.now()) / 60000))}:

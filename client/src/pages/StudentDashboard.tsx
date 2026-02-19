@@ -41,10 +41,13 @@ export default function StudentDashboard() {
 
     const handleJoinGame = (e: React.FormEvent) => {
         e.preventDefault();
-        if (pin.length === 7) {
+        if (pin.length === 6) {
+            if (user?.id) {
+                localStorage.setItem('student-id', user.id);
+            }
             navigate(`/unit-join/${pin}`);
         } else {
-            alert("Iltimos, 7 xonali ID ni to'g'ri kiriting");
+            alert("Iltimos, 6 xonali PIN kodni to'g'ri kiriting");
         }
     };
 
@@ -129,9 +132,9 @@ export default function StudentDashboard() {
                             <form onSubmit={handleJoinGame} className="relative z-10">
                                 <input
                                     type="text"
-                                    placeholder="7 xonali ID kiritng"
+                                    placeholder="6 xonali PIN kiriting"
                                     value={pin}
-                                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 7))}
+                                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                     className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 font-mono text-lg font-bold text-center tracking-widest text-slate-800 placeholder:text-slate-300 focus:border-indigo-500 focus:outline-none transition-colors mb-3"
                                 />
                                 <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all active:scale-95">
@@ -197,11 +200,18 @@ export default function StudentDashboard() {
                                     </div>
                                     <div className="text-right">
                                         <div className="text-sm font-black text-indigo-600">+{game.score} XP</div>
-                                        <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${game.percentage >= 80 ? 'bg-emerald-100 text-emerald-700' :
-                                            game.percentage >= 50 ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-red-100 text-red-700'
-                                            }`}>
-                                            {Math.round(game.percentage)}%
+                                        <div className="flex flex-col items-end gap-1 mt-1">
+                                            <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${game.percentage >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                                                game.percentage >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                                                    'bg-red-100 text-red-700'
+                                                }`}>
+                                                {Math.round(game.percentage)}%
+                                            </div>
+                                            {game.total_questions > 0 && (
+                                                <span className="text-[10px] font-bold text-slate-400">
+                                                    {Math.round(game.score / 100)} / {game.total_questions}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

@@ -2,7 +2,7 @@ export interface Player {
     id: string; // socket id
     name: string;
     score: number;
-    answers: Record<string, number>; // questionIndex -> answerIndex
+    answers: Record<string, string | number>; // questionIndex -> answerIndex or raw text
     status?: 'Online' | 'Offline' | 'Cheating';
 }
 
@@ -44,6 +44,7 @@ export interface Quiz {
 }
 
 export interface Question {
+    info?: string;
     text: string;
     options: string[];
     correctIndex: number;
