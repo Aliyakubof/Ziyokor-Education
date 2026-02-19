@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../api';
 import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle, X, Info } from 'lucide-react';
 
@@ -15,12 +15,41 @@ interface QuestionDraft {
 
 export default function CreateQuiz() {
     const navigate = useNavigate();
+    const { id } = useParams();
     const [title, setTitle] = useState('');
     const [level, setLevel] = useState('Beginner');
     const [unit, setUnit] = useState('1');
     const [timeLimit] = useState(30); // Default 30 minutes
 
     const [questions, setQuestions] = useState<QuestionDraft[]>([]);
+
+    useEffect(() => {
+        if (id) {
+            fetchQuiz();
+        }
+    }, [id]);
+
+    const fetchQuiz = async () => {
+        try {
+            const res = await apiFetch(`/api/unit-quizzes/${id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setTitle(data.title);
+                setLevel(data.level);
+                setUnit(data.unit);
+                // Ensure questions is an array, handle if strictly parsed from JSON or already object
+                const parsedQuestions = typeof data.questions === 'string' ? JSON.parse(data.questions) : data.questions;
+                setQuestions(parsedQuestions || []);
+            } else {
+                alert("Quizni yuklashda xatolik!");
+                navigate('/');
+            }
+        } catch (error) {
+            console.error("Error fetching quiz:", error);
+            alert("Quizni yuklashda xatolik!");
+            navigate('/');
+        }
+    };
 
     const [qInfo, setQInfo] = useState('');
     const [qText, setQText] = useState('');
@@ -84,8 +113,11 @@ export default function CreateQuiz() {
     const saveQuiz = async () => {
         if (!title || questions.length === 0) return alert("Sarlavha va kamida bitta savol qo'shing");
         try {
-            const res = await apiFetch('/api/unit-quizzes', {
-                method: 'POST',
+            const url = id ? `/api/unit-quizzes/${id}` : '/api/unit-quizzes';
+            const method = id ? 'PUT' : 'POST';
+
+            const res = await apiFetch(url, {
+                method,
                 body: JSON.stringify({
                     title,
                     level,
@@ -96,7 +128,7 @@ export default function CreateQuiz() {
             });
             const data = await res.json();
             if (res.ok) {
-                navigate(`/`); // Go back to home
+                navigate(`/`); // Go back to home/admin panel
             } else {
                 throw new Error(data.error || 'Xatolik');
             }
@@ -119,7 +151,7 @@ export default function CreateQuiz() {
 
                     <div className="bg-white px-6 py-2 rounded-2xl border border-slate-200 shadow-sm">
                         <span className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
-                            <FileQuestion size={16} /> Unit Quiz Yaratish
+                            <FileQuestion size={16} /> {id ? 'Unit Quiz Tahrirlash' : 'Unit Quiz Yaratish'}
                         </span>
                     </div>
                 </header>

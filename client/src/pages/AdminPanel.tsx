@@ -341,9 +341,37 @@ const AdminPanel = () => {
                                                     <span className="text-slate-500">Unit {quiz.unit}</span>
                                                 </div>
                                             </div>
-                                            <button className="p-2 text-slate-400 hover:text-red-600 transition-colors">
-                                                <Trash2 size={18} />
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => navigate(`/edit-quiz/${quiz.id}`)}
+                                                    className="p-2 text-slate-400 hover:text-indigo-600 transition-colors bg-slate-50 rounded-lg"
+                                                    title="Tahrirlash"
+                                                >
+                                                    ✎
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (window.confirm("Rostdan ham bu quizni o'chirmoqchimisiz?")) {
+                                                            try {
+                                                                const res = await apiFetch(`/api/unit-quizzes/${quiz.id}`, { method: 'DELETE' });
+                                                                if (res.ok) {
+                                                                    fetchUnitQuizzes();
+                                                                    alert("Quiz o'chirildi!");
+                                                                } else {
+                                                                    alert("O'chirishda xatolik!");
+                                                                }
+                                                            } catch (err) {
+                                                                console.error("Error deleting quiz:", err);
+                                                                alert("O'chirishda xatolik!");
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-lg"
+                                                    title="O'chirish"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </div>
                                     ))
                                 )}

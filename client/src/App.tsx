@@ -55,6 +55,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/edit-quiz/:id"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <CreateQuiz />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/host/:quizId" element={<HostLobby />} />
             <Route path="/host-game/:pin" element={<HostGame />} />
             <Route path="/join" element={<PlayerJoin />} />

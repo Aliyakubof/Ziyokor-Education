@@ -1,5 +1,6 @@
 import express from 'express';
 import { createServer } from 'http';
+import https from 'https';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
@@ -251,6 +252,43 @@ app.get('/api/unit-quizzes', async (req, res) => {
     } catch (err: any) {
         console.error('Error fetching unit quizzes:', err);
         res.status(500).json({ error: 'Error fetching unit quizzes', details: err.message });
+    }
+});
+
+app.get('/api/unit-quizzes/:id', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM unit_quizzes WHERE id = $1', [req.params.id]);
+        if (result.rowCount === 0) return res.status(404).send('Unit Quiz not found');
+        res.json(result.rows[0]);
+    } catch (err: any) {
+        console.error('Error fetching unit quiz:', err);
+        res.status(500).json({ error: 'Error fetching unit quiz', details: err.message });
+    }
+});
+
+app.put('/api/unit-quizzes/:id', async (req, res) => {
+    try {
+        const { title, questions, level, unit } = req.body;
+        const { id } = req.params;
+        await query(
+            'UPDATE unit_quizzes SET title = $1, questions = $2, level = $3, unit = $4 WHERE id = $5',
+            [title, JSON.stringify(questions), level, unit, id]
+        );
+        res.json({ id, title, questions, level, unit });
+    } catch (err) {
+        console.error('Error updating unit quiz:', err);
+        res.status(500).json({ error: 'Error updating unit quiz' });
+    }
+});
+
+app.delete('/api/unit-quizzes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM unit_quizzes WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err) {
+        console.error('Error deleting unit quiz:', err);
+        res.status(500).json({ error: 'Error deleting unit quiz' });
     }
 });
 
@@ -1159,9 +1197,22 @@ function sendQuestion(pin: string) {
     io.to(pin).except(game.hostId).emit('question-start', questionDataForPlayer);
 }
 
+// Self-pinger to keep Render awake
+function startSelfPinger() {
+    const url = 'https://ziyokor-education.onrender.com/api/health';
+    setInterval(() => {
+        https.get(url, (res) => {
+            console.log(`[Self-Ping] Status: ${res.statusCode}`);
+        }).on('error', (err) => {
+            console.error('[Self-Ping] Error:', err.message);
+        });
+    }, 14 * 60 * 1000); // 14 minutes
+}
+
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
     await initDb();
     launchBot();
+    startSelfPinger();
     console.log(`Server running on port ${PORT}`);
 });

@@ -1,0 +1,14 @@
+name: Keep Backend Awake
+
+on:
+  schedule:
+    - cron: '*/14 * * * *' # Every 14 minutes
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend
+        run: |
+          curl -I https://ziyokor-education.onrender.com/api/health
