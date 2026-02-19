@@ -740,7 +740,10 @@ io.on('connection', (socket) => {
             const student = result.rows[0];
 
             // Access Restriction: Check if student belongs to the group the quiz was opened for
-            if (game.isUnitQuiz && game.groupId && student.group_id !== game.groupId) {
+            console.log(`[Join Check] Student: ${studentId}, StudentGroup: ${student.group_id}, GameGroup: ${game.groupId}`);
+
+            if (game.isUnitQuiz && game.groupId && String(student.group_id).toLowerCase() !== String(game.groupId).toLowerCase()) {
+                console.log(`[Join Denied] Mismatch for student ${studentId}`);
                 socket.emit('error', 'Bu test sizning guruhingiz uchun emas');
                 return;
             }

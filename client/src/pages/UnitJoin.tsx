@@ -64,7 +64,7 @@ const UnitJoin = () => {
             socket.off('error');
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, [joined, pin, studentId, navigate]);
+    }, [navigate]); // Stable dependencies to avoid re-mounting listeners
 
     const handleJoin = (e: React.FormEvent) => {
         e.preventDefault();
