@@ -35,6 +35,6 @@ export default defineConfig({
       }
     })
   ],
-  // Capacitor uchun nisbiy path (./) bo'lishi shart
-  base: './',
+  // Vercel buildlari uchun '/' ishlatamiz, aks holda (Capacitor/Local) './'
+  base: process.env.VERCEL ? '/' : './',
 })
