@@ -1114,6 +1114,17 @@ io.on('connection', (socket) => {
         socket.emit('unit-finished', { score: player.score, correctAnswers });
     });
 
+    const normalizeAnswer = (val: string | number): string => {
+        let s = String(val).toLowerCase().trim();
+        // Replace curly apostrophes with straight ones
+        s = s.replace(/[‘’]/g, "'");
+        // Remove trailing punctuation: . , ! ?
+        s = s.replace(/[.,!?]+$/, "");
+        // Normalize multiple spaces to single space
+        s = s.replace(/\s+/g, " ");
+        return s.trim();
+    };
+
     // Player/Student: Submit Answer
     socket.on('player-answer', ({ pin, answer, questionIndex }: { pin: string, answer: string | number, questionIndex?: number }) => {
         const game = games[pin];
@@ -1139,8 +1150,8 @@ io.on('connection', (socket) => {
         const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'];
 
         if (textTypes.includes(question.type || '')) {
-            const normalizedAnswer = String(answer).trim().toLowerCase();
-            if (question.acceptedAnswers && question.acceptedAnswers.some(ans => ans.trim().toLowerCase() === normalizedAnswer)) {
+            const normalizedAnswer = normalizeAnswer(answer);
+            if (question.acceptedAnswers && question.acceptedAnswers.some(ans => normalizeAnswer(ans) === normalizedAnswer)) {
                 isCorrect = true;
             }
             player.answers[qIdx] = answer; // Store raw text for PDF

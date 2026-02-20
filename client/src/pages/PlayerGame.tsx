@@ -13,6 +13,17 @@ interface QuestionData {
     type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide';
 }
 
+const normalizeAnswer = (val: string | number): string => {
+    let s = String(val).toLowerCase().trim();
+    // Replace curly apostrophes with straight ones
+    s = s.replace(/[‘’]/g, "'");
+    // Remove trailing punctuation: . , ! ?
+    s = s.replace(/[.,!?]+$/, "");
+    // Normalize multiple spaces to single space
+    s = s.replace(/\s+/g, " ");
+    return s.trim();
+};
+
 export default function PlayerGame() {
     const [view, setView] = useState<'WAITING' | 'PLAYING' | 'ANSWERED' | 'FINISHED' | 'UNIT_SUMMARY' | 'UNIT_REVIEW'>('WAITING');
     const [rank, setRank] = useState<{ rank: number; score: number } | null>(null);
@@ -314,7 +325,8 @@ export default function PlayerGame() {
 
         if (['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '')) {
             const isFillBlankMulti = question.type === 'fill-blank' && question.text.includes('[...]');
-            const isCorrect = isReview && correctInfo?.acceptedAnswers?.some((a: string) => a.toLowerCase().trim() === String(playerAns || '').toLowerCase().trim());
+            const normalizedPlayerAns = normalizeAnswer(playerAns || '');
+            const isCorrect = isReview && correctInfo?.acceptedAnswers?.some((a: string) => normalizeAnswer(a) === normalizedPlayerAns);
 
             // Multi-gap specific rendering
             if (isFillBlankMulti) {
@@ -598,9 +610,10 @@ export default function PlayerGame() {
                                 const playerAns = unitAnswers[i];
                                 if (playerAns === undefined) dotColor = 'bg-slate-300';
                                 else {
-                                    const isCorrect = correctAns?.type === 'multiple-choice' || correctAns?.type === 'true-false'
+                                    const normalizedPlayerAns = normalizeAnswer(playerAns || '');
+                                    const isCorrect = (correctAns?.type === 'multiple-choice' || correctAns?.type === 'true-false')
                                         ? playerAns === correctAns?.correctIndex
-                                        : correctAns?.acceptedAnswers?.some((a: string) => a.toLowerCase().trim() === String(playerAns).toLowerCase().trim());
+                                        : correctAns?.acceptedAnswers?.some((a: string) => normalizeAnswer(a) === normalizedPlayerAns);
                                     dotColor = isCorrect ? 'bg-emerald-400 shadow-sm shadow-emerald-500/20' : 'bg-red-400 shadow-sm shadow-red-500/20';
                                 }
                             } else {
@@ -693,7 +706,7 @@ function WordBoxView({ question, unitAnswers, currentUnitIndex, onAnswer, isUnit
                 // Note: Indexing might be tricky. If acceptedAnswers is "word1, word2", 
                 // index 1 corresponds to word1.
                 const correctWord = correctAccepted[blankIdx - 1];
-                const isCorrect = isReview && val && correctWord && val.toLowerCase().trim() === correctWord.toLowerCase().trim();
+                const isCorrect = isReview && val && correctWord && normalizeAnswer(val) === normalizeAnswer(correctWord);
 
                 return (
                     <button
