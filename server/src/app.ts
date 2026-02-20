@@ -69,6 +69,13 @@ async function initDb() {
             );
         `);
 
+
+        // Gamification columns migration (coins, streaks)
+        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS coins INT DEFAULT 0;');
+        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS streak_count INT DEFAULT 0;');
+        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS last_activity_at TIMESTAMPTZ;');
+        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS avatar_url TEXT;');
+
         // Group Battles Migration
         await query('ALTER TABLE groups ADD COLUMN IF NOT EXISTS has_trophy BOOLEAN DEFAULT FALSE;');
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS is_hero BOOLEAN DEFAULT FALSE;');
