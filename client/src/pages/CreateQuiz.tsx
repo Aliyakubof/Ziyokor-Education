@@ -146,47 +146,61 @@ export default function CreateQuiz() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (file.type !== 'application/pdf') {
-            alert('Faqat PDF fayllar qabul qilinadi');
-            return;
-        }
+        if (file.type === 'application/pdf') {
+            setIsPdfLoading(true);
+            try {
+                // Dynamic import to avoid SSR/Build issues if any, and keep bundle size opt
+                const pdfjsLib = await import('pdfjs-dist');
+                // Set worker from CDN to avoid local file serving issues in dev/prod hybrid
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
-        setIsPdfLoading(true);
-        try {
-            // Dynamic import to avoid SSR/Build issues if any, and keep bundle size opt
-            const pdfjsLib = await import('pdfjs-dist');
-            // Set worker from CDN to avoid local file serving issues in dev/prod hybrid
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let extractedText = '';
 
-            let extractedText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
 
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
+                    // Simple text extraction: join items with space
+                    const pageText = textContent.items
+                        .map((item: any) => item.str)
+                        .join(' ');
 
-                // Simple text extraction: join items with space
-                // Can be improved by checking y-coordinates for lines, but this usually works for simple parsing
-                const pageText = textContent.items
-                    .map((item: any) => item.str)
-                    .join(' ');
+                    extractedText += `\n--- Page ${i} ---\n` + pageText + '\n';
+                }
 
-                extractedText += `\n--- Page ${i} ---\n` + pageText + '\n';
+                // Append to existing text so user doesn't lose what they typed
+                setImportText(prev => prev + (prev ? '\n\n' : '') + extractedText);
+
+            } catch (error) {
+                console.error('PDF parsing error:', error);
+                alert('PDF o\'qishda xatolik bo\'ldi. Fayl buzilgan bo\'lishi mumkin.');
+            } finally {
+                setIsPdfLoading(false);
+                // Reset input so same file can be selected again if needed
+                e.target.value = '';
             }
-
-            // Cleanup some common PDF glues if needed, but for now just raw append
-            // Append to existing text so user doesn't lose what they typed
-            setImportText(prev => prev + (prev ? '\n\n' : '') + extractedText);
-
-        } catch (error) {
-            console.error('PDF parsing error:', error);
-            alert('PDF o\'qishda xatolik bo\'ldi. Fayl buzilgan bo\'lishi mumkin.');
-        } finally {
-            setIsPdfLoading(false);
-            // Reset input so same file can be selected again if needed
-            e.target.value = '';
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            setIsPdfLoading(true);
+            try {
+                const mammoth = await import('mammoth/mammoth.browser');
+                const arrayBuffer = await file.arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                setImportText(prev => prev + (prev ? '\n\n' : '') + result.value);
+                if (result.messages.length > 0) {
+                    console.log("Mammoth messages:", result.messages);
+                }
+            } catch (error) {
+                console.error('Word parsing error:', error);
+                alert('Word faylni o\'qishda xatolik bo\'ldi.');
+            } finally {
+                setIsPdfLoading(false);
+                e.target.value = '';
+            }
+        } else {
+            alert('Faqat PDF yoki Word (.docx) fayllar qabul qilinadi');
         }
     };
 
