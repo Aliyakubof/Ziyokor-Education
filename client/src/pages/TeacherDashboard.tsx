@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, PlayCircle, Plus, ArrowLeft, LogOut, X, ChevronDown, Trash2 } from 'lucide-react';
+import { Users, PlayCircle, Plus, ArrowLeft, LogOut, X, ChevronDown, Trash2, Send } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import logo from '../assets/logo.jpeg';
@@ -9,6 +9,7 @@ interface Group {
     id: string;
     name: string;
     teacher_name?: string;
+    level?: string;
 }
 
 interface UnitQuiz {
@@ -17,6 +18,53 @@ interface UnitQuiz {
     level: string;
     unit: string;
 }
+
+interface Battle {
+    id: string;
+    group_a_id: string;
+    group_b_id: string;
+    group_a_name: string;
+    group_b_name: string;
+    score_a: number;
+    score_b: number;
+    status: string;
+}
+
+// --- Battle Status Component ---
+const BattleStatus = ({ battle, groupId }: { battle: Battle | null; groupId: string }) => {
+    if (!battle) return <span className="text-slate-300 text-xs italic">Battle yo'q</span>;
+
+    const isA = battle.group_a_id === groupId;
+    const myScore = isA ? battle.score_a : battle.score_b;
+    const oppScore = isA ? battle.score_b : battle.score_a;
+    const oppName = isA ? battle.group_b_name : battle.group_a_name;
+
+    const total = myScore + oppScore || 1;
+    const percentage = Math.round((myScore / total) * 100);
+
+    return (
+        <div className="flex flex-col gap-1 min-w-[120px]">
+            <div className="flex justify-between text-[10px] font-bold">
+                <span className="text-indigo-600 truncate max-w-[60px]">Siz</span>
+                <span className="text-red-500 truncate max-w-[60px]">{oppName}</span>
+            </div>
+            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                <div
+                    className="h-full bg-indigo-500 transition-all duration-500"
+                    style={{ width: `${percentage}%` }}
+                />
+                <div
+                    className="h-full bg-red-400 transition-all duration-500"
+                    style={{ width: `${100 - percentage}%` }}
+                />
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                <span>{myScore} XP</span>
+                <span>{oppScore} XP</span>
+            </div>
+        </div>
+    );
+};
 
 // --- Student Management Modal ---
 const StudentModal = ({
@@ -137,23 +185,26 @@ const StudentModal = ({
     );
 };
 
-// --- Group Row Component ---
 const GroupRow = ({
     group,
     unitQuizzes,
     onOpenStudents,
     onLaunch,
+    onEdit,
     onDelete,
     navigate,
-    isAdmin
+    isAdmin,
+    battle
 }: {
     group: Group;
     unitQuizzes: UnitQuiz[];
     onOpenStudents: (group: Group) => void;
     onLaunch: (quizId: string, groupId: string) => void;
+    onEdit: (group: Group) => void;
     onDelete?: (groupId: string) => void;
     navigate: any;
     isAdmin?: boolean;
+    battle: Battle | null;
 }) => {
     const [selectedLevel, setSelectedLevel] = useState<string>('');
     const [selectedUnit, setSelectedUnit] = useState<string>('');
@@ -184,9 +235,19 @@ const GroupRow = ({
                     <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
                         {group.name.charAt(0)}
                     </div>
-                    <span className="font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">{group.name}</span>
+                    <div>
+                        <span className="font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors block">{group.name}</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{group.level || 'Beginner'}</span>
+                    </div>
                 </div>
             </td>
+
+            {/* Battle Status */}
+            {!isAdmin && (
+                <td className="p-4">
+                    <BattleStatus battle={battle} groupId={group.id} />
+                </td>
+            )}
 
             {/* Teacher Name (Admin Only) */}
             {isAdmin && (
@@ -254,6 +315,13 @@ const GroupRow = ({
                         <Users size={20} />
                     </button>
                     <button
+                        onClick={() => onEdit(group)}
+                        className="p-2 rounded-lg text-slate-500 hover:bg-white hover:text-blue-600 hover:shadow-sm border border-transparent hover:border-slate-200 transition-all"
+                        title="Tahrirlash"
+                    >
+                        <Plus className="rotate-45" size={20} />
+                    </button>
+                    <button
                         onClick={() => selectedQuizId && onLaunch(selectedQuizId, group.id)}
                         disabled={!selectedQuizId}
                         className="px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm shadow-sm"
@@ -279,11 +347,13 @@ const GroupRow = ({
 const MobileGroupCard = ({
     group,
     unitQuizzes,
-    onLaunch
+    onLaunch,
+    onEdit
 }: {
     group: Group;
     unitQuizzes: UnitQuiz[];
     onLaunch: (quizId: string, groupId: string) => void;
+    onEdit: (group: Group) => void;
 }) => {
     const [selectedLevel, setSelectedLevel] = useState<string>('');
     const [selectedUnit, setSelectedUnit] = useState<string>('');
@@ -346,10 +416,17 @@ const MobileGroupCard = ({
                 <button
                     onClick={() => selectedQuizId && onLaunch(selectedQuizId, group.id)}
                     disabled={!selectedQuizId}
-                    className="flex-1 py-3 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+                    className="flex-[2] py-3 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
                 >
                     <PlayCircle size={18} />
                     Testni Boshlash
+                </button>
+                <button
+                    onClick={() => onEdit(group)}
+                    className="flex-1 py-3 rounded-lg bg-white border border-slate-200 text-indigo-600 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <Plus className="rotate-45" size={18} />
+                    Edit
                 </button>
                 {/* Note: In mobile view we might want to expose delete in the parent card header instead of here for better UX, 
                     but adding here for completion if passed. */}
@@ -475,11 +552,16 @@ const TeacherDashboard = () => {
     // Data State
     const [groups, setGroups] = useState<Group[]>([]);
     const [unitQuizzes, setUnitQuizzes] = useState<UnitQuiz[]>([]);
+    const [battles, setBattles] = useState<Record<string, Battle>>({});
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
     const [newGroupName, setNewGroupName] = useState('');
+    const [newGroupLevel, setNewGroupLevel] = useState('Beginner');
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editGroupName, setEditGroupName] = useState('');
+    const [editGroupLevel, setEditGroupLevel] = useState('');
 
     useEffect(() => {
         if (role === 'admin') {
@@ -496,9 +578,22 @@ const TeacherDashboard = () => {
             const res = await apiFetch('/api/admin/groups');
             const data = await res.json();
             setGroups(Array.isArray(data) ? data : []);
+            if (data.length > 0) fetchBattles(data.map((g: any) => g.id));
         } catch (err) {
             console.error('Error fetching all groups:', err);
         }
+    };
+
+    const fetchBattles = async (groupIds: string[]) => {
+        const battleMap: Record<string, Battle> = {};
+        for (const id of groupIds) {
+            try {
+                const res = await apiFetch(`/api/battles/current/${id}`);
+                const data = await res.json();
+                if (data) battleMap[id] = data;
+            } catch (e) { }
+        }
+        setBattles(battleMap);
     };
 
     // Fetch Groups for teacher
@@ -508,6 +603,7 @@ const TeacherDashboard = () => {
             const res = await apiFetch(`/api/groups/${user.id}`);
             const data = await res.json();
             setGroups(Array.isArray(data) ? data : []);
+            if (data.length > 0) fetchBattles(data.map((g: any) => g.id));
         } catch (err) {
             console.error('Error fetching groups:', err);
         }
@@ -530,12 +626,38 @@ const TeacherDashboard = () => {
 
         const res = await apiFetch('/api/groups', {
             method: 'POST',
-            body: JSON.stringify({ name: newGroupName, teacherId: user.id })
+            body: JSON.stringify({ name: newGroupName, teacherId: user.id, level: newGroupLevel })
         });
 
         if (res.ok) {
             setNewGroupName('');
+            setNewGroupLevel('Beginner');
             fetchGroups();
+        }
+    };
+
+    const handleEditGroup = (group: Group) => {
+        setSelectedGroup(group);
+        setEditGroupName(group.name);
+        setEditGroupLevel(group.level || 'Beginner');
+        setIsEditModalOpen(true);
+    };
+
+    const handleUpdateGroup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedGroup || !editGroupName.trim()) return;
+
+        const res = await apiFetch(`/api/groups/${selectedGroup.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name: editGroupName, level: editGroupLevel })
+        });
+
+        if (res.ok) {
+            setIsEditModalOpen(false);
+            if (role === 'admin') fetchAllGroups();
+            else fetchGroups();
+        } else {
+            alert("Xatolik yuz berdi!");
         }
     };
 
@@ -606,9 +728,21 @@ const TeacherDashboard = () => {
                             <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                                 {role === 'admin' ? "Ziyokor - Barcha Guruhlar" : "Ziyokor - O'qituvchi Kabineti"}
                             </h1>
-                            <p className="text-slate-500 text-sm">
-                                {role === 'admin' ? "Tizimdagi barcha guruhlar ro'yxati" : "Guruhlar va testlarni boshqarish"}
-                            </p>
+                            <div className="flex items-center gap-3 mt-1">
+                                <p className="text-slate-500 text-sm">
+                                    {role === 'admin' ? "Tizimdagi barcha guruhlar ro'yxati" : "Guruhlar va testlarni boshqarish"}
+                                </p>
+                                <span className="text-slate-300">•</span>
+                                <a
+                                    href="https://t.me/Z_education_bot?start=teacher"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 text-[#229ED9] hover:text-[#1d8dbd] font-bold text-xs transition-colors"
+                                >
+                                    <Send size={14} />
+                                    Telegram Botga ulanish
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -619,15 +753,25 @@ const TeacherDashboard = () => {
                         <StudentSearchInput navigate={navigate} />
                     </div>
 
-                    <form onSubmit={handleCreateGroup} className="flex gap-2 w-full md:w-auto">
+                    <form onSubmit={handleCreateGroup} className="flex gap-2 w-full md:w-auto items-center">
                         <input
                             type="text"
                             value={newGroupName}
                             onChange={(e) => setNewGroupName(e.target.value)}
-                            placeholder="Yangi guruh..."
-                            className="bg-white border border-slate-300 rounded-lg px-4 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-56"
+                            placeholder="Guruh nomi..."
+                            className="bg-white border border-slate-300 rounded-lg px-4 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-48"
                         />
-                        <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg text-white transition-colors shadow-sm">
+                        <select
+                            value={newGroupLevel}
+                            onChange={(e) => setNewGroupLevel(e.target.value)}
+                            className="bg-white border border-slate-300 rounded-lg px-2 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-28 appearance-none cursor-pointer"
+                        >
+                            {Array.from(new Set(unitQuizzes.map(q => q.level))).sort().map(lvl => (
+                                <option key={lvl} value={lvl}>{lvl}</option>
+                            ))}
+                            {unitQuizzes.length === 0 && <option value="Beginner">Beginner</option>}
+                        </select>
+                        <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg text-white transition-colors shadow-sm shrink-0">
                             <Plus size={20} />
                         </button>
                     </form>
@@ -653,7 +797,11 @@ const TeacherDashboard = () => {
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-xs font-semibold tracking-wider">
                                     <th className="p-4 w-1/4">Guruh Nomi</th>
-                                    {role === 'admin' && <th className="p-4 w-1/4">O'qituvchi</th>}
+                                    {role === 'admin' ? (
+                                        <th className="p-4 w-1/4">O'qituvchi</th>
+                                    ) : (
+                                        <th className="p-4 w-1/4">Haftalik Battle</th>
+                                    )}
                                     <th className="p-4 w-1/4">Daraja</th>
                                     <th className="p-4 w-1/4">Unit</th>
                                     <th className="p-4 w-1/4 text-right">Amallar</th>
@@ -668,9 +816,11 @@ const TeacherDashboard = () => {
                                             unitQuizzes={unitQuizzes}
                                             onOpenStudents={handleOpenStudentModal}
                                             onLaunch={handleLaunchQuiz}
+                                            onEdit={handleEditGroup}
                                             onDelete={handleDeleteGroup}
                                             navigate={navigate}
                                             isAdmin={role === 'admin'}
+                                            battle={battles[group.id] || null}
                                         />
                                     ))
                                 ) : (
@@ -742,6 +892,7 @@ const TeacherDashboard = () => {
                                         group={group}
                                         unitQuizzes={unitQuizzes}
                                         onLaunch={handleLaunchQuiz}
+                                        onEdit={handleEditGroup}
                                     />
                                 </div>
                             </div>
@@ -762,6 +913,65 @@ const TeacherDashboard = () => {
                 group={selectedGroup}
                 onAddStudent={handleAddStudent}
             />
+
+            {/* Edit Group Modal */}
+            {isEditModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className="flex justify-between items-center mb-8">
+                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Guruhni tahrirlash</h3>
+                            <button onClick={() => setIsEditModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleUpdateGroup} className="space-y-6">
+                            <div>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Guruh Nomi</label>
+                                <input
+                                    type="text"
+                                    value={editGroupName}
+                                    onChange={(e) => setEditGroupName(e.target.value)}
+                                    placeholder="Guruh nomi"
+                                    className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Daraja</label>
+                                <div className="relative">
+                                    <select
+                                        value={editGroupLevel}
+                                        onChange={(e) => setEditGroupLevel(e.target.value)}
+                                        className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
+                                    >
+                                        {Array.from(new Set(unitQuizzes.map(q => q.level))).sort().map(lvl => (
+                                            <option key={lvl} value={lvl}>{lvl}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />
+                                </div>
+                            </div>
+
+                            <div className="pt-4 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-all"
+                                >
+                                    Bekor qilish
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-[2] py-4 rounded-2xl bg-indigo-600 text-white font-black shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition-all"
+                                >
+                                    Saqlash
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

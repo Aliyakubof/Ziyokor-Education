@@ -56,3 +56,17 @@ CREATE TABLE IF NOT EXISTS contact_logs (
     relative TEXT NOT NULL,
     contacted_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Group Battles Table
+CREATE TABLE IF NOT EXISTS group_battles (
+    id UUID PRIMARY KEY,
+    group_a_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+    group_b_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+    week_start DATE NOT NULL,
+    score_a INT DEFAULT 0,
+    score_b INT DEFAULT 0,
+    status TEXT DEFAULT 'active', -- 'active', 'finished'
+    winner_id UUID REFERENCES groups(id),
+    mvp_id TEXT REFERENCES students(id),
+    created_at TIMESTAMP DEFAULT NOW()
+);

@@ -6,6 +6,7 @@ interface User {
     phone?: string;
     groupName?: string;
     teacherName?: string;
+    groupId?: string;
 }
 
 type UserRole = 'admin' | 'teacher' | 'student';

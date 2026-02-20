@@ -18,6 +18,7 @@ interface Student {
     phone?: string;
     parent_name?: string;
     parent_phone?: string;
+    parent_id?: string;
     last_contacted_at?: string;
     last_contacted_relative?: string;
     status: string;
@@ -207,7 +208,7 @@ const GroupDetails = () => {
                 setParentName('');
                 setParentPhone('');
                 fetchStudents();
-                alert(`O'quvchi qo'shildi! ID: ${data.id}`);
+                alert(`O'quvchi qo'shildi!\nID: ${data.id}\nOta-ona uchun ID kod: ${data.parentId}`);
             } else {
                 alert("Xatolik yuz berdi");
             }
@@ -310,7 +311,11 @@ const GroupDetails = () => {
                                                             <td className="p-4">
                                                                 <div className="flex flex-col">
                                                                     <span className="font-bold text-slate-800">{student.name}</span>
-                                                                    <span className="text-[10px] font-mono text-slate-400">ID: {student.id}</span>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[10px] font-mono text-slate-400">ID: {student.id}</span>
+                                                                        <span className="text-slate-200 text-[10px]">|</span>
+                                                                        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter">Ota-ona ID: {student.parent_id}</span>
+                                                                    </div>
                                                                     <div className="flex items-center gap-2 mt-1">
                                                                         <span className="text-xs text-slate-500 flex items-center gap-1"><Phone size={10} /> {student.phone || '-'}</span>
                                                                         <span className="text-slate-200 text-[10px]">•</span>
@@ -526,7 +531,7 @@ const GroupDetails = () => {
                                                     const correctCount = Math.round(score / 100);
                                                     const total = result.total_questions || 0;
                                                     const percentage = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-                                                    const isPassed = percentage >= 70;
+                                                    const isPassed = percentage > 59;
 
                                                     return (
                                                         <tr key={player.id} className="hover:bg-slate-50">
@@ -566,7 +571,7 @@ const GroupDetails = () => {
                                             const correctCount = Math.round(score / 100);
                                             const total = result.total_questions || 0;
                                             const percentage = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-                                            const isPassed = percentage >= 70;
+                                            const isPassed = percentage > 59;
 
                                             return (
                                                 <div key={player.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">

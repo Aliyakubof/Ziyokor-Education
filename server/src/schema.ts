@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS teachers (
 CREATE TABLE IF NOT EXISTS groups (
     id UUID PRIMARY KEY,
     name TEXT NOT NULL,
-    teacher_id UUID REFERENCES teachers(id) ON DELETE CASCADE
+    teacher_id UUID REFERENCES teachers(id) ON DELETE CASCADE,
+    level TEXT NOT NULL DEFAULT 'Beginner',
+    has_trophy BOOLEAN DEFAULT FALSE
 );
 
 -- Students Table
@@ -24,7 +26,14 @@ CREATE TABLE IF NOT EXISTS students (
     parent_name TEXT, -- 'Otasi', 'Onasi', etc.
     parent_phone TEXT,
     last_contacted_at TIMESTAMP,
-    last_contacted_relative TEXT -- The relative role that was contacted
+    last_contacted_relative TEXT, -- The relative role that was contacted
+    coins INT DEFAULT 0,
+    streak_count INT DEFAULT 0,
+    last_activity_at TIMESTAMPTZ,
+    avatar_url TEXT,
+    is_hero BOOLEAN DEFAULT FALSE,
+    weekly_battle_score INT DEFAULT 0,
+    parent_id TEXT UNIQUE
 );
 
 -- Quizzes Table (Regular)
@@ -59,6 +68,28 @@ CREATE TABLE IF NOT EXISTS contact_logs (
     contacted_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Student Purchases Table
+CREATE TABLE IF NOT EXISTS student_purchases (
+    id UUID PRIMARY KEY,
+    student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+    item_type TEXT NOT NULL, -- 'avatar', 'theme', etc.
+    item_id TEXT NOT NULL,
+    purchased_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Duels Table
+CREATE TABLE IF NOT EXISTS duels (
+    id UUID PRIMARY KEY,
+    player1_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+    player2_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+    quiz_id UUID REFERENCES unit_quizzes(id) ON DELETE CASCADE,
+    player1_score INT DEFAULT 0,
+    player2_score INT DEFAULT 0,
+    winner_id TEXT,
+    status TEXT DEFAULT 'pending', -- 'pending', 'active', 'completed'
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Game Results Table
 CREATE TABLE IF NOT EXISTS game_results (
     id UUID PRIMARY KEY,
@@ -67,4 +98,18 @@ CREATE TABLE IF NOT EXISTS game_results (
     total_questions INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW(),
     player_results JSONB NOT NULL
+);
+
+-- Group Battles Table
+CREATE TABLE IF NOT EXISTS group_battles (
+    id UUID PRIMARY KEY,
+    group_a_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+    group_b_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+    week_start DATE NOT NULL,
+    score_a INT DEFAULT 0,
+    score_b INT DEFAULT 0,
+    status TEXT DEFAULT 'active', -- 'active', 'finished'
+    winner_id UUID REFERENCES groups(id),
+    mvp_id TEXT REFERENCES students(id),
+    created_at TIMESTAMP DEFAULT NOW()
 );`;

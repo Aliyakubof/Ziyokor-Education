@@ -10,6 +10,10 @@ import TeacherDashboard from './pages/TeacherDashboard';
 import StudentLogin from './pages/StudentLogin';
 
 import StudentDashboard from './pages/StudentDashboard';
+import Leaderboard from './pages/Leaderboard.tsx';
+import Shop from './pages/Shop';
+import SoloQuiz from './pages/SoloQuiz.tsx';
+import DuelLobby from './pages/DuelLobby';
 import UnitLobby from './pages/UnitLobby';
 import UnitJoin from './pages/UnitJoin';
 import Login from './pages/Login';
@@ -44,6 +48,38 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="student">
                   <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/leaderboard"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <Leaderboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/shop"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <Shop />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/practice"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <SoloQuiz />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/duels"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <DuelLobby />
                 </ProtectedRoute>
               }
             />

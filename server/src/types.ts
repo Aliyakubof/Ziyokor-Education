@@ -62,6 +62,8 @@ export interface GameSession {
     currentQuestionIndex: number;
     startTime?: number; // When the current question started
     isUnitQuiz?: boolean;
+    isDuel?: boolean;
+    duelId?: string;
     groupId?: string;
     timePerQuestion?: number;
     endTime?: number;

@@ -46,7 +46,11 @@ export default function Home() {
 
     useEffect(() => {
         if (isAuthenticated) {
-            fetchStats();
+            if (role === 'student') {
+                navigate('/student/dashboard');
+            } else {
+                fetchStats();
+            }
         }
     }, [isAuthenticated, role, user]);
 

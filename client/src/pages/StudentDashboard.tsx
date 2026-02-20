@@ -4,8 +4,9 @@ import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
 import {
     LogOut, History, Calendar,
-    Gamepad2, Zap, Target, Crown,
-    LayoutDashboard, UserCircle, ChevronRight
+    Gamepad2, Zap,
+    LayoutDashboard, UserCircle, ChevronRight,
+    Trophy, ShoppingBag, Swords, BookOpen, Flame, Coins
 } from 'lucide-react';
 import logo from '../assets/logo.jpeg';
 
@@ -16,8 +17,15 @@ export default function StudentDashboard() {
     const [stats, setStats] = useState({
         gamesPlayed: 0,
         totalScore: 0,
-        rank: 0
+        rank: 0,
+        coins: 0,
+        streakCount: 0,
+        isHero: false,
+        hasTrophy: false,
+        weeklyBattleScore: 0,
+        groupId: ''
     });
+    const [battle, setBattle] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
     const [pin, setPin] = useState('');
 
@@ -30,13 +38,23 @@ export default function StudentDashboard() {
     const fetchData = async () => {
         try {
             const statsRes = await apiFetch(`/api/student/${user?.id}/stats`);
-            if (statsRes.ok) setStats(await statsRes.json());
+            const statsData = await statsRes.json();
+            setStats(statsData);
+            if (statsData.groupId) {
+                const battleRes = await apiFetch(`/api/battles/current/${statsData.groupId}`);
+                if (battleRes.ok) setBattle(await battleRes.json());
+            }
 
             const historyRes = await apiFetch(`/api/student/${user?.id}/history`);
             if (historyRes.ok) setHistory(await historyRes.json());
         } catch (err) {
             console.error(err);
         }
+    };
+
+    const isWeekend = () => {
+        const day = new Date().getDay();
+        return day === 0 || day === 6;
     };
 
     const handleJoinGame = (e: React.FormEvent) => {
@@ -116,6 +134,49 @@ export default function StudentDashboard() {
                         <span>{1000 - currentLevelProgress} XP to Lvl {level + 1}</span>
                     </div>
                 </div>
+
+                {/* Group Battle Progress Bar */}
+                {battle && (
+                    <div className="mt-4 bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest flex items-center gap-1">
+                                <Swords size={12} /> Haftalik Battle
+                            </span>
+                            {isWeekend() && (
+                                <span className="bg-orange-500 text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg shadow-orange-500/20">
+                                    Double XP Weekend 🔥
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                                <div className="flex justify-between text-xs font-bold mb-1">
+                                    <span className="text-white truncate max-w-[100px]">Guruh</span>
+                                    <span className="text-indigo-300 truncate max-w-[100px]">
+                                        {battle.group_a_id === stats.groupId ? battle.group_b_name : battle.group_a_name}
+                                    </span>
+                                </div>
+                                <div className="h-2 w-full bg-black/20 rounded-full overflow-hidden flex">
+                                    <div
+                                        className="h-full bg-indigo-400 transition-all duration-1000"
+                                        style={{ width: `${Math.round(((battle.group_a_id === stats.groupId ? battle.score_a : battle.score_b) / (battle.score_a + battle.score_b || 1)) * 100)}%` }}
+                                    ></div>
+                                    <div
+                                        className="h-full bg-rose-400 transition-all duration-1000"
+                                        style={{ width: `${100 - Math.round(((battle.group_a_id === stats.groupId ? battle.score_a : battle.score_b) / (battle.score_a + battle.score_b || 1)) * 100)}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-lg font-black text-indigo-100">
+                                    {battle.group_a_id === stats.groupId ? battle.score_a : battle.score_b}
+                                    <span className="text-[10px] text-indigo-400 ml-1">XP</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </header>
 
             <main className="relative z-10 px-4 -mt-4 space-y-4">
@@ -146,18 +207,80 @@ export default function StudentDashboard() {
                         {/* Recent Stats Grid */}
                         <div className="grid grid-cols-2 gap-3">
                             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
-                                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-2">
-                                    <Target size={20} />
+                                <div className="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mb-2">
+                                    <Coins size={20} />
                                 </div>
-                                <span className="text-2xl font-black text-slate-800">{stats.gamesPlayed}</span>
-                                <span className="text-xs font-bold text-slate-400">O'yinlar</span>
+                                <span className="text-2xl font-black text-slate-800">{stats.coins.toLocaleString()}</span>
+                                <span className="text-xs font-bold text-slate-400">Tangalar</span>
                             </div>
                             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
                                 <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-2">
-                                    <Crown size={20} />
+                                    <Flame size={20} />
                                 </div>
-                                <span className="text-2xl font-black text-slate-800">#{stats.rank}</span>
-                                <span className="text-xs font-bold text-slate-400">Guruhda</span>
+                                <span className="text-2xl font-black text-slate-800">{stats.streakCount}</span>
+                                <span className="text-xs font-bold text-slate-400">Kunlik Streak</span>
+                            </div>
+                        </div>
+
+                        {/* Gamification Navigation Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => navigate('/student/leaderboard')}
+                                className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center gap-3 hover:bg-indigo-50 transition-colors group"
+                            >
+                                <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Trophy size={24} />
+                                </div>
+                                <span className="font-bold text-sm text-slate-700">Peshqadamlar</span>
+                            </button>
+                            <button
+                                onClick={() => navigate('/student/shop')}
+                                className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center gap-3 hover:bg-emerald-50 transition-colors group"
+                            >
+                                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <ShoppingBag size={24} />
+                                </div>
+                                <span className="font-bold text-sm text-slate-700">Do'kon</span>
+                            </button>
+                            <button
+                                onClick={() => navigate('/student/practice')}
+                                className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center gap-3 hover:bg-blue-50 transition-colors group"
+                            >
+                                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <BookOpen size={24} />
+                                </div>
+                                <span className="font-bold text-sm text-slate-700">Mashqlar</span>
+                            </button>
+                            <button
+                                onClick={() => navigate('/student/duels')}
+                                className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center gap-3 hover:bg-rose-50 transition-colors group"
+                            >
+                                <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Swords size={24} />
+                                </div>
+                                <span className="font-bold text-sm text-slate-700">Duellar</span>
+                            </button>
+                        </div>
+
+                        {/* Rank card moved below or integrated */}
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between px-6 relative overflow-hidden">
+                            {stats.isHero && (
+                                <div className="absolute top-0 right-0 bg-yellow-400 text-[10px] font-black px-3 py-1 rounded-bl-xl shadow-md uppercase tracking-tighter">
+                                    Hafta Qahramoni 🎖️
+                                </div>
+                            )}
+                            <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 ${stats.hasTrophy ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'} rounded-2xl flex items-center justify-center`}>
+                                    <Trophy size={28} className={stats.hasTrophy ? 'animate-bounce' : ''} />
+                                </div>
+                                <div>
+                                    <h4 className="font-black text-slate-800">#{stats.rank}</h4>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global O'rin</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-sm font-black text-emerald-600">{stats.gamesPlayed}</div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">O'yinlar</p>
                             </div>
                         </div>
 
@@ -201,9 +324,8 @@ export default function StudentDashboard() {
                                     <div className="text-right">
                                         <div className="text-sm font-black text-indigo-600">+{game.score} XP</div>
                                         <div className="flex flex-col items-end gap-1 mt-1">
-                                            <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${game.percentage >= 80 ? 'bg-emerald-100 text-emerald-700' :
-                                                game.percentage >= 50 ? 'bg-yellow-100 text-yellow-700' :
-                                                    'bg-red-100 text-red-700'
+                                            <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${game.percentage > 59 ? 'bg-emerald-100 text-emerald-700' :
+                                                'bg-red-100 text-red-700'
                                                 }`}>
                                                 {Math.round(game.percentage)}%
                                             </div>

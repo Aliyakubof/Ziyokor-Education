@@ -260,8 +260,8 @@ export default function HostGame() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-2xl font-black text-slate-800">{player.score}</div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BALL</p>
+                                            <div className="text-sm font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-lg">Faol</div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Holati</p>
                                         </div>
                                     </div>
 
