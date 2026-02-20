@@ -766,10 +766,9 @@ const TeacherDashboard = () => {
                             onChange={(e) => setNewGroupLevel(e.target.value)}
                             className="bg-white border border-slate-300 rounded-lg px-2 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-28 appearance-none cursor-pointer"
                         >
-                            {Array.from(new Set(unitQuizzes.map(q => q.level))).sort().map(lvl => (
+                            {['Beginner', 'Elementary', 'Pre-Intermediate', 'Intermediate', 'Pre-IELTS', 'IELTS'].map(lvl => (
                                 <option key={lvl} value={lvl}>{lvl}</option>
                             ))}
-                            {unitQuizzes.length === 0 && <option value="Beginner">Beginner</option>}
                         </select>
                         <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg text-white transition-colors shadow-sm shrink-0">
                             <Plus size={20} />
@@ -945,7 +944,7 @@ const TeacherDashboard = () => {
                                         onChange={(e) => setEditGroupLevel(e.target.value)}
                                         className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
                                     >
-                                        {Array.from(new Set(unitQuizzes.map(q => q.level))).sort().map(lvl => (
+                                        {['Beginner', 'Elementary', 'Pre-Intermediate', 'Intermediate', 'Pre-IELTS', 'IELTS'].map(lvl => (
                                             <option key={lvl} value={lvl}>{lvl}</option>
                                         ))}
                                     </select>
