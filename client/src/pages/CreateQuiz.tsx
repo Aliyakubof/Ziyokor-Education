@@ -263,6 +263,8 @@ export default function CreateQuiz() {
         // Context for grouping
         let currentHeader = '';
         let currentQuestion: QuestionDraft | null = null;
+        let currentOptions: string[] = [];
+        let currentCorrectIdx = -1;
 
         const flushQuestion = () => {
             if (currentQuestion) {
@@ -272,9 +274,33 @@ export default function CreateQuiz() {
                     currentQuestion.text = currentQuestion.text.replace(/______/g, '[...]');
                 } else if (currentQuestion.text.toLowerCase().includes('correct the mistakes')) {
                     currentQuestion.type = 'find-mistake';
+                } else if (currentOptions.length >= 2) {
+                    // Smart detect: Multiple Choice or True/False
+                    const lowerOpts = currentOptions.map(o => o.toLowerCase());
+                    if (lowerOpts.includes('true') && lowerOpts.includes('false')) {
+                        currentQuestion.type = 'true-false';
+                        // Try to find correct answer
+                        if (currentCorrectIdx !== -1) {
+                            currentQuestion.correctIndex = currentCorrectIdx;
+                        } else {
+                            // Heuristic: if one is marked, use it. If not, default 0
+                            currentQuestion.correctIndex = 0;
+                        }
+                    } else {
+                        currentQuestion.type = 'multiple-choice';
+                        // Pad options to 4 if needed for UI consistency (though logic handles less)
+                        while (currentOptions.length < 4) currentOptions.push('');
+                        currentQuestion.options = currentOptions;
+                        if (currentCorrectIdx !== -1) {
+                            currentQuestion.correctIndex = currentCorrectIdx;
+                        }
+                    }
                 }
+
                 newQuestions.push(currentQuestion);
                 currentQuestion = null;
+                currentOptions = [];
+                currentCorrectIdx = -1;
             }
         };
 
@@ -283,16 +309,20 @@ export default function CreateQuiz() {
             if (trimmed.startsWith('--- Page')) return; // Skip page markers
 
             // Match numbered lines like "1. Question..." or "1) Question..."
-            const match = trimmed.match(/^(\d+)[\.\)]\s+(.*)/);
+            const questionMatch = trimmed.match(/^(\d+)[\.\)]\s+(.*)/);
+
+            // Match option lines like "a) Answer" or "A. Answer"
+            // Also supports "a. Answer *" for correct answer
+            const optionMatch = trimmed.match(/^([a-zA-Z])[\.\)]\s+(.*)/);
 
             // Detect headers (simple heuristic: ends with colon, or is "Grammar: ...", "Vocabulary: ...")
             const isHeader = /^(Grammar:|Vocabulary:|Section|Part)\s/.test(trimmed) || (trimmed.endsWith(':') && trimmed.length < 50);
 
-            if (match) {
+            if (questionMatch) {
                 // Formatting: New Question Found
                 flushQuestion(); // Save previous
 
-                const qText = match[2];
+                const qText = questionMatch[2];
                 // Start new question
                 currentQuestion = {
                     info: currentHeader,
@@ -303,6 +333,18 @@ export default function CreateQuiz() {
                     type: 'multiple-choice', // Default, will be re-evaluated on flush
                     acceptedAnswers: []
                 };
+            } else if (optionMatch && currentQuestion) {
+                // Found an option for the current question
+                let optText = optionMatch[2].trim();
+
+                // Check if marked as correct (ends with *)
+                if (optText.endsWith('*')) {
+                    currentCorrectIdx = currentOptions.length;
+                    optText = optText.slice(0, -1).trim(); // Remove *
+                }
+
+                currentOptions.push(optText);
+
             } else if (isHeader) {
                 // Formatting: New Header Found
                 flushQuestion(); // Save previous question if any
@@ -319,15 +361,17 @@ export default function CreateQuiz() {
                     acceptedAnswers: []
                 });
             } else {
-                // Continuation line?
+                // Continuation line or stray text
                 if (currentQuestion) {
-                    // Append to current question text
-                    // Add space for continuity
-                    currentQuestion.text += ' ' + trimmed;
+                    // If we already started collecting options, this is likely an option continuation
+                    if (currentOptions.length > 0) {
+                        currentOptions[currentOptions.length - 1] += ' ' + trimmed;
+                    } else {
+                        // Append to current question text
+                        currentQuestion.text += ' ' + trimmed;
+                    }
                 } else {
                     // Stray text at start? Treat as header info
-                    // Check if it looks like a continuation of a header or standalone text
-                    // For now, treat as info slide
                     newQuestions.push({
                         info: 'INFO',
                         text: trimmed,
