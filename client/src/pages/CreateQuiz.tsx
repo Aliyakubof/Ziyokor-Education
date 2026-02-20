@@ -329,10 +329,10 @@ export default function CreateQuiz() {
                                         <>Loading PDF...</>
                                     ) : (
                                         <>
-                                            <FileQuestion size={18} /> Upload PDF
+                                            <FileQuestion size={18} /> PDF/Word Yuklash
                                             <input
                                                 type="file"
-                                                accept=".pdf"
+                                                accept=".pdf,.docx"
                                                 className="hidden"
                                                 onChange={handleFileUpload}
                                                 disabled={isPdfLoading}
