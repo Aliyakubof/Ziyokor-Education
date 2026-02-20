@@ -265,30 +265,53 @@ export default function CreateQuiz() {
         let currentQuestion: QuestionDraft | null = null;
         let currentOptions: string[] = [];
         let currentCorrectIdx = -1;
+        let currentAnswers: string[] = [];
+        let currentWordBox: string[] = [];
 
         const flushQuestion = () => {
             if (currentQuestion) {
-                // Auto-detect type updates before saving
-                if (currentQuestion.text.includes('______') || currentQuestion.text.includes('[...]')) {
+                const lowerText = currentQuestion.text.toLowerCase();
+                const hasGaps = currentQuestion.text.includes('______') || currentQuestion.text.includes('[...]');
+                const hasNumberedGaps = /\[\d+\]/.test(currentQuestion.text);
+
+                // 1. Word Box Check
+                if (hasNumberedGaps && currentWordBox.length > 0) {
+                    currentQuestion.type = 'word-box';
+                    currentQuestion.options = currentWordBox;
+                    currentQuestion.acceptedAnswers = currentAnswers;
+                }
+                // 2. Fill in the Blank Check
+                else if (hasGaps) {
                     currentQuestion.type = 'fill-blank';
                     currentQuestion.text = currentQuestion.text.replace(/______/g, '[...]');
-                } else if (currentQuestion.text.toLowerCase().includes('correct the mistakes')) {
+                    currentQuestion.acceptedAnswers = currentAnswers;
+                }
+                // 3. Find Mistake Check
+                else if (lowerText.includes('correct the mistakes') || lowerText.includes('find the mistake')) {
                     currentQuestion.type = 'find-mistake';
-                } else if (currentOptions.length >= 2) {
-                    // Smart detect: Multiple Choice or True/False
+                    currentQuestion.acceptedAnswers = currentAnswers;
+                }
+                // 4. Rewrite Check
+                else if (lowerText.includes('rewrite')) {
+                    currentQuestion.type = 'rewrite';
+                    currentQuestion.acceptedAnswers = currentAnswers;
+                }
+                // 5. Multiple Choice or True/False
+                else if (currentOptions.length >= 2) {
                     const lowerOpts = currentOptions.map(o => o.toLowerCase());
                     if (lowerOpts.includes('true') && lowerOpts.includes('false')) {
                         currentQuestion.type = 'true-false';
-                        // Try to find correct answer
+                        currentQuestion.options = ["To'g'ri", "Noto'g'ri"];
                         if (currentCorrectIdx !== -1) {
                             currentQuestion.correctIndex = currentCorrectIdx;
+                        } else if (currentAnswers.length > 0) {
+                            const ans = currentAnswers[0].toLowerCase();
+                            currentQuestion.correctIndex = (ans === 'true' || ans === "to'g'ri") ? 0 : 1;
                         } else {
-                            // Heuristic: if one is marked, use it. If not, default 0
                             currentQuestion.correctIndex = 0;
                         }
                     } else {
                         currentQuestion.type = 'multiple-choice';
-                        // Pad options to 4 if needed for UI consistency (though logic handles less)
                         while (currentOptions.length < 4) currentOptions.push('');
                         currentQuestion.options = currentOptions;
                         if (currentCorrectIdx !== -1) {
@@ -296,11 +319,18 @@ export default function CreateQuiz() {
                         }
                     }
                 }
+                // 6. Text Input
+                else if (currentAnswers.length > 0) {
+                    currentQuestion.type = 'text-input';
+                    currentQuestion.acceptedAnswers = currentAnswers;
+                }
 
                 newQuestions.push(currentQuestion);
                 currentQuestion = null;
                 currentOptions = [];
                 currentCorrectIdx = -1;
+                currentAnswers = [];
+                currentWordBox = [];
             }
         };
 
@@ -308,31 +338,30 @@ export default function CreateQuiz() {
             const trimmed = line.trim();
             if (trimmed.startsWith('--- Page')) return; // Skip page markers
 
-            // Match numbered lines like "1. Question..." or "1) Question..."
             const questionMatch = trimmed.match(/^(\d+)[\.\)]\s+(.*)/);
-
-            // Match option lines like "a) Answer" or "A. Answer"
-            // Also supports "a. Answer *" for correct answer
             const optionMatch = trimmed.match(/^([a-zA-Z])[\.\)]\s+(.*)/);
-
-            // Detect headers (simple heuristic: ends with colon, or is "Grammar: ...", "Vocabulary: ...")
+            const answerMatch = trimmed.match(/^(Answer|Javob|Ans):\s*(.*)/i);
+            const wordsMatch = trimmed.match(/^(Options|Words|Bank|Box):\s*(.*)/i);
             const isHeader = /^(Grammar:|Vocabulary:|Section|Part)\s/.test(trimmed) || (trimmed.endsWith(':') && trimmed.length < 50);
 
             if (questionMatch) {
-                // Formatting: New Question Found
-                flushQuestion(); // Save previous
-
+                flushQuestion();
                 const qText = questionMatch[2];
-                // Start new question
                 currentQuestion = {
                     info: currentHeader,
-                    text: qText, // We start with this line
-                    options: ['', '', '', ''],
+                    text: qText,
+                    options: [],
                     correctIndex: 0,
                     timeLimit: 0,
-                    type: 'multiple-choice', // Default, will be re-evaluated on flush
+                    type: 'multiple-choice',
                     acceptedAnswers: []
                 };
+            } else if (answerMatch && currentQuestion) {
+                const ansText = answerMatch[2].trim();
+                currentAnswers = ansText.split(',').map(s => s.trim()).filter(s => s);
+            } else if (wordsMatch && currentQuestion) {
+                const wordsText = wordsMatch[2].trim();
+                currentWordBox = wordsText.split(',').map(s => s.trim()).filter(s => s);
             } else if (optionMatch && currentQuestion) {
                 // Found an option for the current question
                 let optText = optionMatch[2].trim();
