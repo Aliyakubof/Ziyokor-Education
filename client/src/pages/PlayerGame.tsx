@@ -313,8 +313,69 @@ export default function PlayerGame() {
         const playerAns = unitAnswers[currentUnitIndex];
 
         if (['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '')) {
+            const isFillBlankMulti = question.type === 'fill-blank' && question.text.includes('[...]');
             const isCorrect = isReview && correctInfo?.acceptedAnswers?.some((a: string) => a.toLowerCase().trim() === String(playerAns || '').toLowerCase().trim());
 
+            // Multi-gap specific rendering
+            if (isFillBlankMulti) {
+                const parts = question.text.split('[...]');
+                // Parse answers: "ans1, ans2" -> ["ans1", "ans2"]
+                // unitAnswers[currentUnitIndex] should be stored as "ans1, ans2" string to keep compatibility,
+                // or we can allow it to be an array. For simplicity, let's keep it as joined string and split it here.
+                const currentAnswersList = (isReview ? playerAns : textAnswer)?.split(',').map((s: string) => s.trim()) || [];
+
+                return (
+                    <div className="w-full max-w-4xl mx-auto bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
+                        {isReview && (
+                            <div className="mb-6 p-4 rounded-2xl border text-center font-black uppercase tracking-widest text-xs bg-slate-50 border-slate-200 text-slate-500">
+                                {correctInfo?.acceptedAnswers?.join(' / ')}
+                            </div>
+                        )}
+                        <h2 className="text-center text-xl font-bold text-slate-800 mb-8 lowercase opacity-60 italic">
+                            Fill in the blanks
+                        </h2>
+
+                        <div className="text-xl md:text-2xl font-medium text-slate-800 leading-loose text-center">
+                            {parts.map((part, i) => (
+                                <span key={i}>
+                                    {part}
+                                    {i < parts.length - 1 && (
+                                        <input
+                                            type="text"
+                                            value={currentAnswersList[i] || ''}
+                                            readOnly={isReview}
+                                            onChange={(e) => {
+                                                const newAns = [...currentAnswersList];
+                                                newAns[i] = e.target.value;
+                                                setTextAnswer(newAns.join(','));
+                                            }}
+                                            onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)}
+                                            className={`mx-2 inline-block w-32 border-b-2 bg-slate-50 text-center font-bold px-2 py-1 outline-none transition-all
+                                                ${isReview
+                                                    ? 'border-slate-300 text-slate-600' // Simple review style for now
+                                                    : 'border-indigo-300 focus:border-indigo-600 text-indigo-700'
+                                                }`}
+                                            placeholder="..."
+                                        />
+                                    )}
+                                </span>
+                            ))}
+                        </div>
+
+                        {!isUnitMode && !isReview && (
+                            <button
+                                onClick={() => textAnswer.trim() && sendAnswer(textAnswer.trim())}
+                                disabled={!textAnswer.trim()}
+                                className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                <Send size={20} /> SUBMIT
+                            </button>
+                        )}
+                    </div>
+                );
+            }
+
+            // Normal single input handling (text-input, single fill-blank, find-mistake, rewrite)
             return (
                 <div className="w-full max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
                     {isReview && (

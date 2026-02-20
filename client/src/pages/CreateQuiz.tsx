@@ -138,8 +138,222 @@ export default function CreateQuiz() {
         }
     };
 
+    const [showImport, setShowImport] = useState(false);
+    const [importText, setImportText] = useState('');
+    const [isPdfLoading, setIsPdfLoading] = useState(false);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.type !== 'application/pdf') {
+            alert('Faqat PDF fayllar qabul qilinadi');
+            return;
+        }
+
+        setIsPdfLoading(true);
+        try {
+            // Dynamic import to avoid SSR/Build issues if any, and keep bundle size opt
+            const pdfjsLib = await import('pdfjs-dist');
+            // Set worker from CDN to avoid local file serving issues in dev/prod hybrid
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+            let extractedText = '';
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+
+                // Simple text extraction: join items with space
+                // Can be improved by checking y-coordinates for lines, but this usually works for simple parsing
+                const pageText = textContent.items
+                    .map((item: any) => item.str)
+                    .join(' ');
+
+                extractedText += `\n--- Page ${i} ---\n` + pageText + '\n';
+            }
+
+            // Cleanup some common PDF glues if needed, but for now just raw append
+            // Append to existing text so user doesn't lose what they typed
+            setImportText(prev => prev + (prev ? '\n\n' : '') + extractedText);
+
+        } catch (error) {
+            console.error('PDF parsing error:', error);
+            alert('PDF o\'qishda xatolik bo\'ldi. Fayl buzilgan bo\'lishi mumkin.');
+        } finally {
+            setIsPdfLoading(false);
+            // Reset input so same file can be selected again if needed
+            e.target.value = '';
+        }
+    };
+
+    const handleBulkImport = () => {
+        if (!importText.trim()) return;
+
+        const lines = importText.split('\n').filter(l => l.trim());
+        const newQuestions: QuestionDraft[] = [];
+
+        // Context for grouping
+        let currentHeader = '';
+        let currentQuestion: QuestionDraft | null = null;
+
+        const flushQuestion = () => {
+            if (currentQuestion) {
+                // Auto-detect type updates before saving
+                if (currentQuestion.text.includes('______') || currentQuestion.text.includes('[...]')) {
+                    currentQuestion.type = 'fill-blank';
+                    currentQuestion.text = currentQuestion.text.replace(/______/g, '[...]');
+                } else if (currentQuestion.text.toLowerCase().includes('correct the mistakes')) {
+                    currentQuestion.type = 'find-mistake';
+                }
+                newQuestions.push(currentQuestion);
+                currentQuestion = null;
+            }
+        };
+
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('--- Page')) return; // Skip page markers
+
+            // Match numbered lines like "1. Question..." or "1) Question..."
+            const match = trimmed.match(/^(\d+)[\.\)]\s+(.*)/);
+
+            // Detect headers (simple heuristic: ends with colon, or is "Grammar: ...", "Vocabulary: ...")
+            const isHeader = /^(Grammar:|Vocabulary:|Section|Part)\s/.test(trimmed) || (trimmed.endsWith(':') && trimmed.length < 50);
+
+            if (match) {
+                // Formatting: New Question Found
+                flushQuestion(); // Save previous
+
+                const qText = match[2];
+                // Start new question
+                currentQuestion = {
+                    info: currentHeader,
+                    text: qText, // We start with this line
+                    options: ['', '', '', ''],
+                    correctIndex: 0,
+                    timeLimit: 0,
+                    type: 'multiple-choice', // Default, will be re-evaluated on flush
+                    acceptedAnswers: []
+                };
+            } else if (isHeader) {
+                // Formatting: New Header Found
+                flushQuestion(); // Save previous question if any
+                currentHeader = trimmed; // Update context
+
+                // Also add as Info Slide
+                newQuestions.push({
+                    info: 'SECTION',
+                    text: trimmed,
+                    options: [],
+                    correctIndex: 0,
+                    timeLimit: 0,
+                    type: 'info-slide',
+                    acceptedAnswers: []
+                });
+            } else {
+                // Continuation line?
+                if (currentQuestion) {
+                    // Append to current question text
+                    // Add space for continuity
+                    currentQuestion.text += ' ' + trimmed;
+                } else {
+                    // Stray text at start? Treat as header info
+                    // Check if it looks like a continuation of a header or standalone text
+                    // For now, treat as info slide
+                    newQuestions.push({
+                        info: 'INFO',
+                        text: trimmed,
+                        options: [],
+                        correctIndex: 0,
+                        timeLimit: 0,
+                        type: 'info-slide',
+                        acceptedAnswers: []
+                    });
+                }
+            }
+        });
+
+        flushQuestion(); // Flush last one
+
+        setQuestions([...questions, ...newQuestions]);
+        setShowImport(false);
+        setImportText('');
+    };
+
     return (
         <div className="min-h-screen p-8 relative overflow-hidden bg-transparent">
+            {/* Import Modal */}
+            {showImport && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                            <h2 className="text-2xl font-black text-slate-900">Bulk Import Questions</h2>
+                            <button onClick={() => setShowImport(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                                <X size={24} className="text-slate-400" />
+                            </button>
+                        </div>
+                        <div className="p-6 flex-1 overflow-hidden flex flex-col gap-4">
+                            <div className="bg-blue-50 text-blue-800 p-4 rounded-xl text-sm leading-relaxed">
+                                <strong>Format Guide:</strong><br />
+                                • Paste text OR <strong>Upload PDF</strong> (text will be extracted below).<br />
+                                • Lines starting with numbers (e.g. <code>1. </code>) will be created as questions.<br />
+                                • Other lines will be treated as <strong>Section Headers</strong> (Info Slides).<br />
+                                • Use <code>______</code> (6 underscores) to automatically create <strong>Fill-in-the-blank</strong> questions with gaps.<br />
+                                • After importing, don't forget to <strong>add the correct answers</strong> for each question!
+                            </div>
+
+                            <div className="flex gap-2">
+                                <label className={`
+                                    flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer transition-all border border-dashed border-indigo-300 text-indigo-600 bg-indigo-50 hover:bg-indigo-100
+                                    ${isPdfLoading ? 'opacity-50 cursor-wait' : ''}
+                                `}>
+                                    {isPdfLoading ? (
+                                        <>Loading PDF...</>
+                                    ) : (
+                                        <>
+                                            <FileQuestion size={18} /> Upload PDF
+                                            <input
+                                                type="file"
+                                                accept=".pdf"
+                                                className="hidden"
+                                                onChange={handleFileUpload}
+                                                disabled={isPdfLoading}
+                                            />
+                                        </>
+                                    )}
+                                </label>
+                            </div>
+
+                            <textarea
+                                value={importText}
+                                onChange={e => setImportText(e.target.value)}
+                                className="flex-1 w-full bg-slate-50 border-2 border-slate-200 rounded-2xl p-6 font-mono text-sm focus:outline-none focus:border-indigo-500 transition-all resize-none"
+                                placeholder="Paste your questions here or upload a PDF..."
+                            />
+                        </div>
+                        <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+                            <button
+                                className="px-6 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleBulkImport}
+                                disabled={!importText.trim()}
+                                className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center gap-2"
+                            >
+                                <PlusCircle size={20} />
+                                IMPORT QUESTIONS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-6xl mx-auto">
                 <header className="flex justify-between items-center mb-12">
                     <button
@@ -149,10 +363,19 @@ export default function CreateQuiz() {
                         <ArrowLeft size={20} /> Admin Panelga Qaytish
                     </button>
 
-                    <div className="bg-white px-6 py-2 rounded-2xl border border-slate-200 shadow-sm">
-                        <span className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
-                            <FileQuestion size={16} /> {id ? 'Unit Quiz Tahrirlash' : 'Unit Quiz Yaratish'}
-                        </span>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setShowImport(true)}
+                            className="bg-white hover:bg-indigo-50 text-indigo-600 px-5 py-2.5 rounded-xl font-black border border-indigo-100 shadow-sm transition-all flex items-center gap-2 active:scale-95"
+                        >
+                            <FileQuestion size={18} />
+                            BULK IMPORT
+                        </button>
+                        <div className="bg-white px-6 py-2 rounded-2xl border border-slate-200 shadow-sm">
+                            <span className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                                <FileQuestion size={16} /> {id ? 'Unit Quiz Tahrirlash' : 'Unit Quiz Yaratish'}
+                            </span>
+                        </div>
                     </div>
                 </header>
 

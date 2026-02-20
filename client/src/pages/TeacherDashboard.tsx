@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, PlayCircle, Plus, ArrowLeft, LogOut, X, ChevronDown } from 'lucide-react';
+import { Users, PlayCircle, Plus, ArrowLeft, LogOut, X, ChevronDown, Trash2 } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import logo from '../assets/logo.jpeg';
@@ -143,6 +143,7 @@ const GroupRow = ({
     unitQuizzes,
     onOpenStudents,
     onLaunch,
+    onDelete,
     navigate,
     isAdmin
 }: {
@@ -150,6 +151,7 @@ const GroupRow = ({
     unitQuizzes: UnitQuiz[];
     onOpenStudents: (group: Group) => void;
     onLaunch: (quizId: string, groupId: string) => void;
+    onDelete?: (groupId: string) => void;
     navigate: any;
     isAdmin?: boolean;
 }) => {
@@ -259,6 +261,15 @@ const GroupRow = ({
                         <PlayCircle size={16} />
                         Boshlash
                     </button>
+                    {isAdmin && onDelete && (
+                        <button
+                            onClick={() => onDelete(group.id)}
+                            className="p-2 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors border border-transparent hover:border-red-100"
+                            title="Guruhni o'chirish"
+                        >
+                            <Trash2 size={20} />
+                        </button>
+                    )}
                 </div>
             </td>
         </tr>
@@ -331,14 +342,18 @@ const MobileGroupCard = ({
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
             </div>
 
-            <button
-                onClick={() => selectedQuizId && onLaunch(selectedQuizId, group.id)}
-                disabled={!selectedQuizId}
-                className="col-span-2 w-full mt-2 py-3 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
-            >
-                <PlayCircle size={18} />
-                Testni Boshlash
-            </button>
+            <div className="col-span-2 flex gap-2">
+                <button
+                    onClick={() => selectedQuizId && onLaunch(selectedQuizId, group.id)}
+                    disabled={!selectedQuizId}
+                    className="flex-1 py-3 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <PlayCircle size={18} />
+                    Testni Boshlash
+                </button>
+                {/* Note: In mobile view we might want to expose delete in the parent card header instead of here for better UX, 
+                    but adding here for completion if passed. */}
+            </div>
         </div>
     );
 };
@@ -549,6 +564,30 @@ const TeacherDashboard = () => {
         navigate(`/unit-lobby/${quizId}/${groupId}`);
     };
 
+    const handleDeleteGroup = async (groupId: string) => {
+        if (!window.confirm("Bu guruhni o'chirmoqchimisiz? Barcha o'quvchilar va natijalar o'chib ketishi mumkin.")) {
+            return;
+        }
+
+        try {
+            const res = await apiFetch(`/api/groups/${groupId}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                // Refresh list
+                const newGroups = groups.filter(g => g.id !== groupId);
+                setGroups(newGroups);
+                alert("Guruh o'chirildi!");
+            } else {
+                alert("Xatolik yuz berdi!");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Server bilan bog'lanishda xatolik!");
+        }
+    };
+
     return (
         <div className="min-h-screen p-8 bg-transparent font-sans text-slate-900">
             {/* Header */}
@@ -629,6 +668,7 @@ const TeacherDashboard = () => {
                                             unitQuizzes={unitQuizzes}
                                             onOpenStudents={handleOpenStudentModal}
                                             onLaunch={handleLaunchQuiz}
+                                            onDelete={handleDeleteGroup}
                                             navigate={navigate}
                                             isAdmin={role === 'admin'}
                                         />
@@ -674,7 +714,15 @@ const TeacherDashboard = () => {
                                             <ArrowLeft className="rotate-180" size={20} />
                                         </div>
                                     </div>
-                                    <div className="flex items-center pr-4">
+                                    <div className="flex items-center gap-2 pr-4">
+                                        {role === 'admin' && (
+                                            <button
+                                                onClick={() => handleDeleteGroup(group.id)}
+                                                className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:text-red-600 transition-all border border-red-100"
+                                            >
+                                                <Trash2 size={22} />
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => handleOpenStudentModal(group)}
                                             className="p-3 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 hover:text-indigo-600 transition-all border border-slate-100"

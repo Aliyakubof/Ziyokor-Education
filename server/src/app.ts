@@ -316,6 +316,26 @@ app.get('/api/groups/:teacherId', async (req, res) => {
     }
 });
 
+app.delete('/api/groups/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        // Check if group exists
+        const check = await query('SELECT * FROM groups WHERE id = $1', [id]);
+        if (check.rowCount === 0) {
+            return res.status(404).json({ error: 'Group not found' });
+        }
+
+        // Delete group (Cascade should handle students/results if configured, otherwise we might need manual cleanup)
+        // Assuming schema handles cascade or we want to hard delete
+        await query('DELETE FROM groups WHERE id = $1', [id]);
+
+        res.json({ success: true, id });
+    } catch (err) {
+        console.error('Error deleting group:', err);
+        res.status(500).json({ error: 'Error deleting group' });
+    }
+});
+
 // Teacher: Students
 // Removed duplicate /api/admin/groups route
 
