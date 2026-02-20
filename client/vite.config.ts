@@ -35,6 +35,5 @@ export default defineConfig({
       }
     })
   ],
-  // Vercel buildlari uchun '/' ishlatamiz, aks holda (Capacitor/Local) './'
-  base: process.env.VERCEL ? '/' : './',
+  base: '/',
 })
