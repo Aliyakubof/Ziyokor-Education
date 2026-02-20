@@ -76,6 +76,9 @@ async function initDb() {
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS last_activity_at TIMESTAMPTZ;');
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS avatar_url TEXT;');
 
+        // Groups level migration
+        await query("ALTER TABLE groups ADD COLUMN IF NOT EXISTS level TEXT DEFAULT 'Beginner';");
+
         // Group Battles Migration
         await query('ALTER TABLE groups ADD COLUMN IF NOT EXISTS has_trophy BOOLEAN DEFAULT FALSE;');
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS is_hero BOOLEAN DEFAULT FALSE;');
