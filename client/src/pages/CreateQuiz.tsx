@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../api';
-import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle, X, Info } from 'lucide-react';
+import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle, X, Info, Pencil } from 'lucide-react';
 
 interface QuestionDraft {
     info: string;
@@ -57,13 +57,35 @@ export default function CreateQuiz() {
     const [opts, setOpts] = useState(['', '', '', '']);
     const [correctIdx, setCorrectIdx] = useState(0);
     const [acceptedAnswers, setAcceptedAnswers] = useState('');
+    const [editingIdx, setEditingIdx] = useState<number | null>(null);
+
+    const editQuestion = (index: number) => {
+        const q = questions[index];
+        setQInfo(q.info);
+        setQText(q.text);
+        setQType(q.type);
+        setOpts(q.options.length ? q.options : ['', '', '', '']);
+        setCorrectIdx(q.correctIndex);
+        setAcceptedAnswers(q.acceptedAnswers.join(', '));
+        setEditingIdx(index);
+    };
+
+    const cancelEdit = () => {
+        setQInfo('');
+        setQText('');
+        setOpts(['', '', '', '']);
+        setCorrectIdx(0);
+        setAcceptedAnswers('');
+        setQType('multiple-choice');
+        setEditingIdx(null);
+    };
 
     const addQuestion = () => {
         if (!qText) return alert("Savol matnini kiriting");
 
         if (qType === 'multiple-choice') {
             if (opts.some(o => !o)) return alert("Barcha variantlarni to'ldiring");
-            setQuestions([...questions, {
+            const newQuestion: QuestionDraft = {
                 info: qInfo,
                 text: qText,
                 options: opts,
@@ -71,9 +93,18 @@ export default function CreateQuiz() {
                 timeLimit: 0, // No time limit for unit quizzes
                 type: 'multiple-choice',
                 acceptedAnswers: []
-            }]);
+            };
+
+            if (editingIdx !== null) {
+                const newQuestions = [...questions];
+                newQuestions[editingIdx] = newQuestion;
+                setQuestions(newQuestions);
+                setEditingIdx(null);
+            } else {
+                setQuestions([...questions, newQuestion]);
+            }
         } else if (qType === 'true-false') {
-            setQuestions([...questions, {
+            const newQuestion: QuestionDraft = {
                 info: qInfo,
                 text: qText,
                 options: ["To'g'ri", "Noto'g'ri"],
@@ -81,12 +112,21 @@ export default function CreateQuiz() {
                 timeLimit: 0,
                 type: 'true-false',
                 acceptedAnswers: []
-            }]);
+            };
+
+            if (editingIdx !== null) {
+                const newQuestions = [...questions];
+                newQuestions[editingIdx] = newQuestion;
+                setQuestions(newQuestions);
+                setEditingIdx(null);
+            } else {
+                setQuestions([...questions, newQuestion]);
+            }
         } else {
             // text-input, fill-blank, find-mistake, rewrite
             if (!acceptedAnswers.trim()) return alert("To'g'ri javoblarni kiriting");
             const answersList = acceptedAnswers.split(',').map(a => a.trim()).filter(a => a);
-            setQuestions([...questions, {
+            const newQuestion: QuestionDraft = {
                 info: qInfo,
                 text: qText,
                 options: qType === 'word-box' ? opts : [],
@@ -94,7 +134,16 @@ export default function CreateQuiz() {
                 timeLimit: 0,
                 type: qType,
                 acceptedAnswers: answersList
-            }]);
+            };
+
+            if (editingIdx !== null) {
+                const newQuestions = [...questions];
+                newQuestions[editingIdx] = newQuestion;
+                setQuestions(newQuestions);
+                setEditingIdx(null);
+            } else {
+                setQuestions([...questions, newQuestion]);
+            }
         }
 
         // Reset form
@@ -104,6 +153,7 @@ export default function CreateQuiz() {
         setCorrectIdx(0);
         setAcceptedAnswers('');
         setQType('multiple-choice');
+        setEditingIdx(null);
     };
 
     const removeQuestion = (index: number) => {
@@ -439,7 +489,7 @@ export default function CreateQuiz() {
                                             <div className="bg-indigo-100 p-2 rounded-xl">
                                                 <PlusCircle className="text-indigo-600" size={24} />
                                             </div>
-                                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Add Question</h3>
+                                            <h3 className="text-xl font-black text-slate-900 tracking-tight">{editingIdx !== null ? 'Tahrirlash' : 'Add Question'}</h3>
                                         </div>
 
                                         <div className="flex bg-white rounded-xl p-1 border border-slate-200">
@@ -640,11 +690,19 @@ export default function CreateQuiz() {
                                                 {/* Time input removed */}
                                             </div>
 
+                                            {editingIdx !== null && (
+                                                <button
+                                                    onClick={cancelEdit}
+                                                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-6 py-3 rounded-xl font-black transition-all"
+                                                >
+                                                    BEKOR QILISH
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={addQuestion}
-                                                className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-black transition-all btn-premium shadow-lg shadow-indigo-500/20"
+                                                className={`px-8 py-3 rounded-xl font-black transition-all btn-premium shadow-lg ${editingIdx !== null ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-amber-500/20' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20'}`}
                                             >
-                                                SAVOLNI QO'SHISH
+                                                {editingIdx !== null ? 'YANGILASH' : 'SAVOLNI QO\'SHISH'}
                                             </button>
                                         </div>
                                     </div>
@@ -681,12 +739,20 @@ export default function CreateQuiz() {
                                                     <span className="text-[10px] text-blue-100 font-bold uppercase tracking-[0.2em]">SECTION HEADER</span>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => removeQuestion(i)}
-                                                className="text-white/60 hover:text-white transition-colors p-2"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => editQuestion(i)}
+                                                    className="text-white/60 hover:text-white transition-colors p-2"
+                                                >
+                                                    <Pencil size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => removeQuestion(i)}
+                                                    className="text-white/60 hover:text-white transition-colors p-2"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </div>
                                     ) : (
                                         <div key={i} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center justify-between group hover:border-slate-200 transition-all">
@@ -700,12 +766,20 @@ export default function CreateQuiz() {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => removeQuestion(i)}
-                                                className="text-slate-400 hover:text-red-500 transition-colors p-2"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => editQuestion(i)}
+                                                    className="text-slate-400 hover:text-indigo-500 transition-colors p-2"
+                                                >
+                                                    <Pencil size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => removeQuestion(i)}
+                                                    className="text-slate-400 hover:text-red-500 transition-colors p-2"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </div>
                                     )
                                 ))}
