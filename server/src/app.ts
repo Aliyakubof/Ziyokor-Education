@@ -677,11 +677,17 @@ app.get('/api/student/:id/stats', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Basic Student Info (Coins, Streaks, Battle Stats)
+        // Basic Student Info (Coins, Streaks, Battle Stats) - use LEFT JOIN so missing group doesn't crash
         const studentRes = await query(`
-            SELECT s.coins, s.streak_count, s.is_hero, s.weekly_battle_score, s.group_id, g.has_trophy 
+            SELECT 
+                s.coins, 
+                s.streak_count, 
+                COALESCE(s.is_hero, false) as is_hero, 
+                COALESCE(s.weekly_battle_score, 0) as weekly_battle_score, 
+                s.group_id, 
+                COALESCE(g.has_trophy, false) as has_trophy 
             FROM students s 
-            JOIN groups g ON s.group_id = g.id 
+            LEFT JOIN groups g ON s.group_id = g.id 
             WHERE s.id = $1
         `, [id]);
         if (studentRes.rowCount === 0) return res.status(404).json({ error: 'Student not found' });
