@@ -939,9 +939,11 @@ app.get('/api/groups/:groupId/contact-logs', async (req, res) => {
                 cl.contacted_at,
                 s.name AS student_name,
                 s.parent_name,
-                s.parent_phone
+                s.parent_phone,
+                g.name AS group_name
             FROM contact_logs cl
             JOIN students s ON cl.student_id = s.id
+            JOIN groups g ON s.group_id = g.id
             WHERE s.group_id = $1
               AND cl.contacted_at >= $2
             ORDER BY cl.contacted_at DESC

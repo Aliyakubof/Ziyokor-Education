@@ -287,7 +287,7 @@ const GroupDetails = () => {
 
             doc.setFontSize(13);
             doc.setTextColor(30, 30, 30);
-            const gName = groupName || groupId || '';
+            const gName = (logs[0]?.group_name) || groupName || groupId || '';
             doc.text(`Guruh: ${gName}`, 14, 28);
 
             const filterLabel = filter === 'today' ? 'Bugun' : filter === 'week' ? 'Oxirgi 7 kun' : "Barcha vaqt";
