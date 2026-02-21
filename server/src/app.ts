@@ -1394,6 +1394,13 @@ io.on('connection', (socket) => {
         socket.emit('unit-finished', { score: player.score, correctAnswers });
     });
 
+    // Student: Register socket (for Duel Lobby presence)
+    socket.on('student-register', ({ studentId }: { studentId: string }) => {
+        (socket as any).studentId = studentId;
+        studentSockets[studentId] = socket.id;
+        console.log(`[Register] Student ${studentId} registered with socket ${socket.id}`);
+    });
+
     // Duel: Invitation
     socket.on('duel-invite', async ({ targetStudentId, studentName }: { targetStudentId: string, studentName: string }) => {
         const targetSocketId = studentSockets[targetStudentId];

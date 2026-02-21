@@ -21,8 +21,23 @@ export default function DuelLobby() {
             socket.connect();
         }
 
-        const onConnect = () => setSocketConnected(true);
+        // Register student socket so server can find us for duel invites
+        const registerStudent = () => {
+            if (user?.id) {
+                socket.emit('student-register', { studentId: user.id });
+            }
+        };
+
+        const onConnect = () => {
+            setSocketConnected(true);
+            registerStudent();
+        };
         const onDisconnect = () => setSocketConnected(false);
+
+        // If already connected, register immediately
+        if (socket.connected && user?.id) {
+            socket.emit('student-register', { studentId: user.id });
+        }
         const onInvite = (invitation: any) => {
             setInvitations(prev => [...prev.filter(i => i.fromId !== invitation.fromId), invitation]);
             setStatus(`Sizga ${invitation.fromName}dan duel taklifi keldi!`);
