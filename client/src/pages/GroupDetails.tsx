@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, FileText, User, CheckCircle, XCircle, Trash2, Send, X, Clock, Phone } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, User, CheckCircle, XCircle, Trash2, Send, X, Clock, Phone, Download } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface GameResult {
     id: string;
@@ -36,11 +38,16 @@ const GroupDetails = () => {
     const navigate = useNavigate();
     const [results, setResults] = useState<GameResult[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
+    const [groupName, setGroupName] = useState('');
 
     // Contact History State
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [historyLogs, setHistoryLogs] = useState<ContactLog[]>([]);
     const [historyStudent, setHistoryStudent] = useState<Student | null>(null);
+
+    // PDF Export State
+    const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+    const [pdfLoading, setPdfLoading] = useState(false);
 
     // Move Student State
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -54,8 +61,19 @@ const GroupDetails = () => {
         if (groupId) {
             fetchStudents();
             fetchResults();
+            fetchGroupName();
         }
     }, [groupId]);
+
+    const fetchGroupName = async () => {
+        try {
+            const res = await apiFetch(`/api/groups/${groupId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setGroupName(data.name || '');
+            }
+        } catch { /* ignore */ }
+    };
 
     const fetchStudents = async () => {
         try {
@@ -241,7 +259,7 @@ const GroupDetails = () => {
     const fetchContactHistory = async (student: Student) => {
         setHistoryStudent(student);
         setIsHistoryModalOpen(true);
-        setHistoryLogs([]); // Clear previous logs
+        setHistoryLogs([]);
         try {
             const res = await apiFetch(`/api/students/${student.id}/contact-logs`);
             if (res.ok) {
@@ -250,6 +268,71 @@ const GroupDetails = () => {
             }
         } catch (err) {
             console.error('Error fetching contact logs:', err);
+        }
+    };
+
+    const handleExportPdf = async (filter: 'today' | 'week' | 'all') => {
+        setIsPdfModalOpen(false);
+        setPdfLoading(true);
+        try {
+            const res = await apiFetch(`/api/groups/${groupId}/contact-logs?filter=${filter}`);
+            const logs: any[] = await res.json();
+
+            const doc = new jsPDF();
+
+            // Header
+            doc.setFontSize(18);
+            doc.setTextColor(67, 56, 202); // indigo
+            doc.text('Ziyokor Education', 14, 18);
+
+            doc.setFontSize(13);
+            doc.setTextColor(30, 30, 30);
+            const gName = groupName || groupId || '';
+            doc.text(`Guruh: ${gName}`, 14, 28);
+
+            const filterLabel = filter === 'today' ? 'Bugun' : filter === 'week' ? 'Oxirgi 7 kun' : "Barcha vaqt";
+            doc.setFontSize(10);
+            doc.setTextColor(120, 120, 120);
+            doc.text(`Davr: ${filterLabel}  |  Sana: ${new Date().toLocaleDateString('uz-UZ')}`, 14, 36);
+            doc.text(`Jami bog'lanishlar: ${logs.length}`, 14, 42);
+
+            if (logs.length === 0) {
+                doc.setFontSize(12);
+                doc.setTextColor(180, 180, 180);
+                doc.text("Bu davrda hech qanday bog'lanish amalga oshirilmagan.", 14, 58);
+            } else {
+                const rows = logs.map((log, i) => [
+                    i + 1,
+                    log.student_name || '-',
+                    `${log.parent_name || 'Ota-ona'} (${log.relative})`,
+                    log.parent_phone || '-',
+                    new Date(log.contacted_at).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    + '  ' + new Date(log.contacted_at).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
+                ]);
+
+                autoTable(doc, {
+                    startY: 48,
+                    head: [['#', "O'quvchi ismi", 'Yaqini', 'Telefon', "Bog'langan vaqt"]],
+                    body: rows,
+                    styles: { font: 'helvetica', fontSize: 9, cellPadding: 4 },
+                    headStyles: { fillColor: [67, 56, 202], textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [245, 247, 255] },
+                    columnStyles: {
+                        0: { cellWidth: 10, halign: 'center' },
+                        2: { cellWidth: 42 },
+                        3: { cellWidth: 36 },
+                        4: { cellWidth: 46 },
+                    },
+                });
+            }
+
+            const safeGroupName = gName.replace(/[^a-zA-Z0-9_]/g, '_');
+            doc.save(`Aloqa_${safeGroupName}_${filter}_${Date.now()}.pdf`);
+        } catch (err) {
+            console.error('PDF export error:', err);
+            alert("PDF yaratishda xatolik yuz berdi");
+        } finally {
+            setPdfLoading(false);
         }
     };
 
@@ -272,13 +355,27 @@ const GroupDetails = () => {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => setIsAddStudentModalOpen(true)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-indigo-500/30 flex items-center gap-2"
-                    >
-                        <User size={20} />
-                        O'quvchi Qo'shish
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setIsPdfModalOpen(true)}
+                            disabled={pdfLoading}
+                            className="bg-white border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 font-bold py-3 px-5 rounded-xl transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {pdfLoading ? (
+                                <span className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <Download size={18} />
+                            )}
+                            PDF Eksport
+                        </button>
+                        <button
+                            onClick={() => setIsAddStudentModalOpen(true)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-indigo-500/30 flex items-center gap-2"
+                        >
+                            <User size={20} />
+                            O'quvchi Qo'shish
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-[70%_30%] gap-8">
@@ -331,7 +428,7 @@ const GroupDetails = () => {
                                                                         onChange={(e) => setPendingContacts(prev => ({ ...prev, [student.id]: e.target.value }))}
                                                                     >
                                                                         <option value="">Tanlang...</option>
-                                                                        {['Otasi', 'Onasi', 'Bobosi', 'Buvisi', 'Akasi'].map((rel) => (
+                                                                        {['Otasi', 'Onasi', 'Bobosi', 'Buvisi', 'Akasi', "Bog'lana olmadik"].map((rel) => (
                                                                             <option key={rel} value={rel}>{rel}</option>
                                                                         ))}
                                                                     </select>
@@ -452,7 +549,7 @@ const GroupDetails = () => {
                                                                 onChange={(e) => setPendingContacts(prev => ({ ...prev, [student.id]: e.target.value }))}
                                                             >
                                                                 <option value="">BOG'LANISH...</option>
-                                                                {['Otasi', 'Onasi', 'Bobosi', 'Buvisi', 'Akasi'].map((rel) => (
+                                                                {['Otasi', 'Onasi', 'Bobosi', 'Buvisi', 'Akasi', "Bog'lana olmadik"].map((rel) => (
                                                                     <option key={rel} value={rel}>{rel}</option>
                                                                 ))}
                                                             </select>
@@ -739,6 +836,64 @@ const GroupDetails = () => {
                     </div>
                 )
             }
+
+            {/* PDF Export Filter Modal */}
+            {isPdfModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-5">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800">PDF Eksport</h3>
+                                <p className="text-xs text-slate-400 font-medium mt-0.5">Qaysi davrni yuklab olasiz?</p>
+                            </div>
+                            <button onClick={() => setIsPdfModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <X size={22} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => handleExportPdf('today')}
+                                className="w-full flex items-center gap-4 p-4 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all group"
+                            >
+                                <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                                    <Calendar size={20} className="text-emerald-600" />
+                                </div>
+                                <div className="text-left">
+                                    <p className="font-bold text-slate-800 text-sm">📅 Bugungi</p>
+                                    <p className="text-xs text-slate-400">Faqat bugungi bog'lanishlar</p>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => handleExportPdf('week')}
+                                className="w-full flex items-center gap-4 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all group"
+                            >
+                                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                                    <Calendar size={20} className="text-blue-600" />
+                                </div>
+                                <div className="text-left">
+                                    <p className="font-bold text-slate-800 text-sm">📆 Haftalik</p>
+                                    <p className="text-xs text-slate-400">Oxirgi 7 kunlik bog'lanishlar</p>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => handleExportPdf('all')}
+                                className="w-full flex items-center gap-4 p-4 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all group"
+                            >
+                                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                                    <Download size={20} className="text-indigo-600" />
+                                </div>
+                                <div className="text-left">
+                                    <p className="font-bold text-slate-800 text-sm">🗂️ Barcha vaqt</p>
+                                    <p className="text-xs text-slate-400">Barcha bog'lanishlar tarixi</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Move Student Modal */}
             {

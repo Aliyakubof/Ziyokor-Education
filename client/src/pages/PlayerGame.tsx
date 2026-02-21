@@ -93,18 +93,13 @@ export default function PlayerGame() {
             setRank({ rank: myRank, score: myScore });
         });
 
-        // Anti-Cheat: Visibility Change
+        // Anti-Cheat: Visibility Change (only send Cheating, never revert to Online)
         const handleVisibilityChange = () => {
-            const pin = localStorage.getItem('kahoot-pin');
-            const studentId = localStorage.getItem('student-id') || socket.id;
-
             if (document.hidden) {
+                const pin = localStorage.getItem('kahoot-pin');
+                const studentId = localStorage.getItem('student-id') || socket.id;
                 if (socket.connected && pin) {
                     socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
-                }
-            } else {
-                if (socket.connected && pin) {
-                    socket.emit('student-status-update', { pin, studentId, status: 'Online' });
                 }
             }
         };

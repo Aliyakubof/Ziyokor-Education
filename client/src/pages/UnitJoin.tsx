@@ -47,11 +47,10 @@ const UnitJoin = () => {
             setError(msg);
         });
 
-        // Anti-Cheat: Visibility Change listener
+        // Anti-Cheat: Visibility Change listener (only send Cheating, never revert to Online)
         const handleVisibilityChange = () => {
-            if (joined && pin && studentId) {
-                const status = document.hidden ? 'Cheating' : 'Online';
-                socket.emit('student-status-update', { pin, studentId, status });
+            if (document.hidden && joined && pin && studentId) {
+                socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
             }
         };
 

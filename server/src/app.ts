@@ -851,6 +851,18 @@ app.get('/api/teachers/:teacherId/groups', async (req, res) => {
     }
 });
 
+// Get Single Group
+app.get('/api/groups/:groupId', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM groups WHERE id = $1', [req.params.groupId]);
+        if (!result.rowCount || result.rowCount === 0) return res.status(404).json({ error: 'Group not found' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error fetching group:', err);
+        res.status(500).json({ error: 'Error fetching group' });
+    }
+});
+
 // Teacher: Group Results
 app.get('/api/groups/:groupId/results', async (req, res) => {
     try {
@@ -901,6 +913,44 @@ app.get('/api/students/:id/contact-logs', async (req, res) => {
     } catch (err) {
         console.error('Error fetching contact logs:', err);
         res.status(500).json({ error: 'Error fetching contact logs' });
+    }
+});
+
+// Get Group Contact Logs (for PDF export)
+app.get('/api/groups/:groupId/contact-logs', async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const filter = req.query.filter as string; // 'today' | 'week' | 'all'
+
+        let sinceDate: Date;
+        const now = new Date();
+        if (filter === 'today') {
+            sinceDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        } else if (filter === 'week') {
+            sinceDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        } else {
+            sinceDate = new Date(0); // all time
+        }
+
+        const result = await query(`
+            SELECT
+                cl.id,
+                cl.relative,
+                cl.contacted_at,
+                s.name AS student_name,
+                s.parent_name,
+                s.parent_phone
+            FROM contact_logs cl
+            JOIN students s ON cl.student_id = s.id
+            WHERE s.group_id = $1
+              AND cl.contacted_at >= $2
+            ORDER BY cl.contacted_at DESC
+        `, [groupId, sinceDate]);
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching group contact logs:', err);
+        res.status(500).json({ error: 'Error fetching group contact logs' });
     }
 });
 
