@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Play, CheckCircle2, XCircle, Info, AlertTriangle } from 'lucide-react';
 import { socket } from '../socket';
@@ -14,6 +14,62 @@ interface QuestionData {
     type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide';
     acceptedAnswers?: string[];
 }
+
+const MemoizedPlayerCard = memo(({ player, totalQuestionsCount }: { player: any; totalQuestionsCount: number }) => {
+    const answeredCount = player.answeredCount || 0;
+    const isFinished = player.isFinished || false;
+    const percentage = (answeredCount / totalQuestionsCount) * 100;
+    const isCheating = player.status === 'Cheating';
+
+    return (
+        <div className={`bg-white rounded-[2rem] p-6 shadow-sm border transition-all hover:shadow-md relative
+            ${isFinished ? 'border-emerald-200 bg-emerald-50/30' :
+                isCheating ? 'border-red-200 bg-red-50/30 ring-2 ring-red-500/20' : 'border-slate-100'}`}>
+
+            {isCheating && (
+                <div className="absolute -top-3 -right-3 bg-red-500 text-white p-2 rounded-xl shadow-lg animate-bounce z-20">
+                    <AlertTriangle size={20} />
+                </div>
+            )}
+            <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-lg
+                        ${isFinished ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-indigo-500 shadow-indigo-500/20'}`}>
+                        {player.name?.[0]?.toUpperCase() || 'S'}
+                    </div>
+                    <div>
+                        <h3 className="font-black text-slate-800 text-lg leading-tight truncate max-w-[120px]">{player.name}</h3>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <div className="text-sm font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-lg">Faol</div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Holati</p>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                <div className="flex justify-between text-xs font-black uppercase tracking-widest text-slate-400">
+                    <span>Progress</span>
+                    <span className={isFinished ? 'text-emerald-500' : 'text-indigo-500'}>
+                        {answeredCount} / {totalQuestionsCount}
+                    </span>
+                </div>
+                <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner p-0.5">
+                    <div
+                        className={`h-full rounded-full transition-all duration-1000 ${isFinished ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-gradient-to-r from-indigo-500 to-blue-500'}`}
+                        style={{ width: `${percentage}%` }}
+                    />
+                </div>
+            </div>
+
+            {isFinished && (
+                <div className="mt-6 pt-4 border-t border-emerald-100/50 flex items-center justify-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-widest">
+                    <CheckCircle2 size={16} /> Barchasi tayyor
+                </div>
+            )}
+        </div>
+    );
+});
 
 export default function HostGame() {
     const { pin } = useParams();
@@ -232,62 +288,13 @@ export default function HostGame() {
 
                 <main className="flex-1 p-8 overflow-y-auto custom-scrollbar">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {unitPlayers.map((player, idx) => {
-                            const answeredCount = Object.keys(player.answers || {}).length;
-                            const isFinished = player.isFinished || false;
-                            const percentage = (answeredCount / totalQuestionsCount) * 100;
-
-                            const isCheating = player.status === 'Cheating';
-
-                            return (
-                                <div key={idx} className={`bg-white rounded-[2rem] p-6 shadow-sm border transition-all hover:shadow-md relative
-                                    ${isFinished ? 'border-emerald-200 bg-emerald-50/30' :
-                                        isCheating ? 'border-red-200 bg-red-50/30 ring-2 ring-red-500/20' : 'border-slate-100'}`}>
-
-                                    {isCheating && (
-                                        <div className="absolute -top-3 -right-3 bg-red-500 text-white p-2 rounded-xl shadow-lg animate-bounce z-20">
-                                            <AlertTriangle size={20} />
-                                        </div>
-                                    )}
-                                    <div className="flex justify-between items-start mb-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-lg
-                                                ${isFinished ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-indigo-500 shadow-indigo-500/20'}`}>
-                                                {player.name?.[0]?.toUpperCase() || 'S'}
-                                            </div>
-                                            <div>
-                                                <h3 className="font-black text-slate-800 text-lg leading-tight truncate max-w-[120px]">{player.name}</h3>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-sm font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-lg">Faol</div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Holati</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between text-xs font-black uppercase tracking-widest text-slate-400">
-                                            <span>Progress</span>
-                                            <span className={isFinished ? 'text-emerald-500' : 'text-indigo-500'}>
-                                                {answeredCount} / {totalQuestionsCount}
-                                            </span>
-                                        </div>
-                                        <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner p-0.5">
-                                            <div
-                                                className={`h-full rounded-full transition-all duration-1000 ${isFinished ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-gradient-to-r from-indigo-500 to-blue-500'}`}
-                                                style={{ width: `${percentage}%` }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {isFinished && (
-                                        <div className="mt-6 pt-4 border-t border-emerald-100/50 flex items-center justify-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-widest">
-                                            <CheckCircle2 size={16} /> Barchasi tayyor
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                        {unitPlayers.map((player) => (
+                            <MemoizedPlayerCard
+                                key={player.id || player.name}
+                                player={player}
+                                totalQuestionsCount={totalQuestionsCount}
+                            />
+                        ))}
                     </div>
 
                     {unitPlayers.length === 0 && (

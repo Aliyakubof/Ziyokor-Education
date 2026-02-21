@@ -20,6 +20,7 @@ const allowedOrigins = [
     'http://localhost:5175',
     'http://localhost:5176',
     'http://localhost',
+    'capacitor://localhost',
     'https://ziyokoreducation.vercel.app'
 ].filter(Boolean) as string[];
 
@@ -1110,12 +1111,35 @@ function scrubPlayers(game: any) {
         return game.players.map((p: any) => ({
             id: p.id,
             name: p.name,
-            answers: p.answers,
+            answeredCount: Object.keys(p.answers || {}).length,
             status: p.status,
             isFinished: p.isFinished
         }));
     }
     return game.players;
+}
+
+// Throttling mechanism for unit quiz updates
+const updateThrottles: Record<string, NodeJS.Timeout | null> = {};
+
+function broadcastPlayerUpdate(pin: string) {
+    const game = games[pin];
+    if (!game || !game.hostId || game.hostId === 'system') return;
+
+    if (game.isUnitQuiz) {
+        // If already scheduled, do nothing
+        if (updateThrottles[pin]) return;
+
+        // Schedule an update in 2 seconds
+        updateThrottles[pin] = setTimeout(() => {
+            if (games[pin]) {
+                io.to(game.hostId).emit('player-update', scrubPlayers(games[pin]));
+            }
+            updateThrottles[pin] = null;
+        }, 2000);
+    } else {
+        io.to(game.hostId).emit('player-update', scrubPlayers(game));
+    }
 }
 
 io.on('connection', (socket) => {
@@ -1183,7 +1207,7 @@ io.on('connection', (socket) => {
             const player = game.players.find(p => p.id === socket.id || p.id === (socket as any).studentId);
             if (player) {
                 player.status = 'Offline';
-                io.to(game.hostId).emit('player-update', scrubPlayers(game));
+                broadcastPlayerUpdate(pin);
             }
         }
     });
@@ -1258,7 +1282,7 @@ io.on('connection', (socket) => {
             socket.emit('joined', { name: student.name, pin });
 
             if (game.hostId && game.hostId !== 'system') {
-                io.to(game.hostId).emit('player-update', scrubPlayers(game));
+                broadcastPlayerUpdate(pin);
             }
 
             if (game.status === 'ACTIVE') {
@@ -1290,7 +1314,7 @@ io.on('connection', (socket) => {
         if (player) {
             if (player.status === 'Cheating' && status === 'Online') return;
             player.status = status;
-            io.to(game.hostId).emit('player-update', scrubPlayers(game));
+            broadcastPlayerUpdate(pin);
         }
     });
 
@@ -1381,7 +1405,7 @@ io.on('connection', (socket) => {
                     totalQuestions: game.quiz.questions.length
                 });
             }
-            socket.emit('player-update', scrubPlayers(game));
+            broadcastPlayerUpdate(pin);
         }
     });
 
@@ -1398,7 +1422,7 @@ io.on('connection', (socket) => {
             const player = game.players.find(p => p.id === studentId);
             if (player) {
                 player.status = 'Online';
-                io.to(game.hostId).emit('player-update', game.players);
+                broadcastPlayerUpdate(game.pin);
             }
         }
 
@@ -1442,7 +1466,7 @@ io.on('connection', (socket) => {
             acceptedAnswers: q.acceptedAnswers
         }));
 
-        io.to(game.hostId).emit('player-update', scrubPlayers(game));
+        broadcastPlayerUpdate(pin);
         socket.emit('unit-finished', { score: player.score, correctAnswers });
     });
 
@@ -1551,7 +1575,7 @@ io.on('connection', (socket) => {
         }
 
         if (game.isUnitQuiz) {
-            io.to(game.hostId).emit('player-update', scrubPlayers(game));
+            broadcastPlayerUpdate(pin);
         } else {
             const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
             io.to(game.hostId).emit('answers-count', answeredCount);
