@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Ziyokor Education</string>
-    <string name="title_activity_main">Ziyokor Education</string>
+    <string name="app_name">Z-education</string>
+    <string name="title_activity_main">Z-education</string>
     <string name="package_name">com.ziyokor.education</string>
     <string name="custom_url_scheme">com.ziyokor.education</string>
 </resources>

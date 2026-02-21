@@ -20,6 +20,8 @@ const allowedOrigins = [
     'http://localhost:5175',
     'http://localhost:5176',
     'http://localhost',
+    'http://localhost:8080',
+    'http://localhost:8100',
     'capacitor://localhost',
     'https://ziyokoreducation.vercel.app'
 ].filter(Boolean) as string[];
