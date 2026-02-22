@@ -35,12 +35,8 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
 };
 
 const RootRoute = () => {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-
-  if (role === 'student') return <Navigate to="/student/dashboard" replace />;
-  if (role === 'teacher') return <Navigate to="/teacher" replace />;
-  if (role === 'admin') return <Navigate to="/admin" replace />;
 
   return <Home />;
 };
