@@ -19,8 +19,8 @@ export default function Leaderboard() {
     const fetchLeaderboard = async () => {
         setLoading(true);
         try {
-            let url = `/api/leaderboard?type=${type}&limit=50`;
-            if (view === 'group' && user?.groupId) {
+            let url = `/api/leaderboard?type=${type}&limit=50&view=${view}`;
+            if (user?.groupId) {
                 url += `&groupId=${user.groupId}`;
             }
             const res = await apiFetch(url);

@@ -11,6 +11,7 @@ import { schema } from './schema';
 import { Player } from './types';
 import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyReports } from './bot';
 import { generateQuizResultPDF } from './pdfGenerator';
+import { normalizeAnswer, checkAnswer } from './utils';
 import { checkAnswerWithAI } from './aiChecker';
 
 const app = express();
@@ -338,8 +339,7 @@ app.post('/api/student/quiz/submit', async (req, res) => {
             let aiResult = null;
 
             if (textTypes.includes(q.type)) {
-                const normalized = normalizeAnswer(studentAns || "");
-                if (q.acceptedAnswers && q.acceptedAnswers.some((ans: string) => normalizeAnswer(ans) === normalized)) {
+                if (checkAnswer(studentAns || "", q.acceptedAnswers || [])) {
                     isCorrect = true;
                     score += 100;
                 } else if (!isCorrect && studentAns) {
@@ -680,6 +680,7 @@ app.post('/api/student/login', async (req, res) => {
             user: {
                 id: student.id,
                 name: student.name,
+                groupId: student.group_id,
                 groupName: student.group_name,
                 teacherName: student.teacher_name,
                 role: 'student'
@@ -750,16 +751,20 @@ app.get('/api/student/:id/stats', async (req, res) => {
 
 app.get('/api/leaderboard', async (req, res) => {
     try {
-        const { type = 'coins', limit = 10, groupId } = req.query;
+        const { type = 'coins', limit = 50, view = 'global', groupId } = req.query;
         let queryStr = `
-            SELECT s.id, s.name, s.coins, s.streak_count, s.avatar_url, g.name as group_name
+            SELECT s.id, s.name, s.coins, s.streak_count, s.avatar_url, g.name as group_name, g.level as group_level
             FROM students s
             LEFT JOIN groups g ON s.group_id = g.id
         `;
-        const params = [];
+        const params: any[] = [];
 
-        if (groupId && groupId !== 'undefined' && groupId !== 'null') {
+        if (view === 'group' && groupId && groupId !== 'undefined' && groupId !== 'null') {
             queryStr += ` WHERE s.group_id = $1`;
+            params.push(groupId);
+        } else if (view === 'global' && groupId && groupId !== 'undefined' && groupId !== 'null') {
+            // Filter by students in groups that have the same level as the requester's group
+            queryStr += ` WHERE g.level = (SELECT level FROM groups WHERE id = $1)`;
             params.push(groupId);
         }
 
@@ -770,7 +775,7 @@ app.get('/api/leaderboard', async (req, res) => {
         }
 
         queryStr += ` LIMIT $${params.length + 1}`;
-        params.push(limit);
+        params.push(parseInt(limit as string));
 
         const result = await query(queryStr, params);
         res.json(result.rows);
@@ -1039,16 +1044,7 @@ app.get('/api/teacher/:id/stats', async (req, res) => {
     }
 });
 
-const normalizeAnswer = (val: string | number): string => {
-    let s = String(val).toLowerCase().trim();
-    // Handle various apostrophe and quotation mark variants
-    s = s.replace(/[‘’“”]/g, (m) => m === '‘' || m === '’' ? "'" : '"');
-    // Replace all basic punctuation with a space to preserve word boundaries
-    s = s.replace(/[.,!?;:]/g, " ");
-    // Normalize multiple spaces and ensure trimmed
-    s = s.replace(/\s+/g, " ");
-    return s.trim();
-};
+// normalizeAnswer moved to utils.ts
 
 async function awardRewards(studentId: string, score: number) {
     try {
@@ -1565,8 +1561,7 @@ io.on('connection', (socket) => {
         const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'];
 
         if (textTypes.includes(question.type || '')) {
-            const normalizedAnswer = normalizeAnswer(answer);
-            if (question.acceptedAnswers && question.acceptedAnswers.some(ans => normalizeAnswer(ans) === normalizedAnswer)) {
+            if (checkAnswer(answer, question.acceptedAnswers || [])) {
                 isCorrect = true;
             }
             player.answers[qIdx] = answer;

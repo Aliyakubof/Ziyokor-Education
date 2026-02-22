@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { Player, Quiz, UnitQuiz } from './types';
+import { checkAnswer } from './utils';
 
 export const generateQuizResultPDF = (
     quiz: Quiz | UnitQuiz,
@@ -16,7 +17,7 @@ export const generateQuizResultPDF = (
             resolve(pdfData);
         });
 
-        doc.on('error', (err) => {
+        doc.on('error', (err: Error) => {
             reject(err);
         });
 
@@ -47,16 +48,36 @@ export const generateQuizResultPDF = (
 
         // Table Body
         let y = tableTop + 25;
+        const total = quiz.questions.filter(q => q.type !== 'info-slide').length;
+
         players.sort((a, b) => b.score - a.score).forEach((player, index) => {
             if (y > 700) {
                 doc.addPage();
                 y = 50;
             }
 
+            // Calculate correct count accurately (excluding info-slides)
+            let correctCount = 0;
+            quiz.questions.forEach((q, qIdx) => {
+                if (q.type === 'info-slide') return;
+                const answer = player.answers[qIdx];
+                if (answer !== undefined) {
+                    if (['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'].includes(q.type || '')) {
+                        if (checkAnswer(answer, q.acceptedAnswers || [])) {
+                            correctCount++;
+                        }
+                    } else {
+                        if (Number(answer) === q.correctIndex) {
+                            correctCount++;
+                        }
+                    }
+                }
+            });
+
             doc.text((index + 1).toString(), col1, y);
             const name = player.name.length > 50 ? player.name.substring(0, 50) + '...' : player.name;
             doc.text(name, col2, y);
-            doc.text(player.score.toString(), col3, y);
+            doc.text(`${correctCount} / ${total}`, col3, y);
 
             y += 20;
             doc.moveTo(50, y - 5).lineTo(550, y - 5).strokeColor('#aaaaaa').lineWidth(0.5).stroke();
@@ -72,7 +93,10 @@ export const generateQuizResultPDF = (
             doc.fillColor('black').fontSize(12).font('Helvetica').text(`Umumiy ball: ${player.score}`);
             doc.moveDown();
 
+            let actualQIdx = 1;
             quiz.questions.forEach((q, qIdx) => {
+                if (q.type === 'info-slide') return;
+
                 const answer = player.answers[qIdx];
                 let isCorrect = false;
                 let studentDisplayAnswer = 'Javob berilmagan';
@@ -81,8 +105,7 @@ export const generateQuizResultPDF = (
 
                 if (textTypes.includes(q.type || '')) {
                     studentDisplayAnswer = answer !== undefined ? String(answer) : 'Javob berilmagan';
-                    const normalizedAnswer = studentDisplayAnswer.trim().toLowerCase();
-                    if (q.acceptedAnswers && q.acceptedAnswers.some(ans => ans.trim().toLowerCase() === normalizedAnswer)) {
+                    if (answer !== undefined && checkAnswer(answer, q.acceptedAnswers || [])) {
                         isCorrect = true;
                     }
                 } else {
@@ -98,7 +121,7 @@ export const generateQuizResultPDF = (
                 // Check for page overflow
                 if (doc.y > 650) doc.addPage();
 
-                doc.fontSize(11).font('Helvetica-Bold').text(`${qIdx + 1}. ${q.text}`);
+                doc.fontSize(11).font('Helvetica-Bold').text(`${actualQIdx}. ${q.text}`);
                 doc.fontSize(10).font('Helvetica');
 
                 doc.fillColor(isCorrect ? '#059669' : '#dc2626')
@@ -112,6 +135,7 @@ export const generateQuizResultPDF = (
                 }
 
                 doc.fillColor('black').moveDown(0.5);
+                actualQIdx++;
             });
         });
 
