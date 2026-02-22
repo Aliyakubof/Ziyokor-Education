@@ -1313,12 +1313,16 @@ io.on('connection', (socket) => {
     });
 
     // Student: Status Update (Anti-Cheat)
-    socket.on('student-status-update', ({ pin, studentId, status }: { pin: string, studentId: string, status: 'Online' | 'Cheating' }) => {
+    socket.on('student-status-update', ({ pin, studentId, status }: { pin: string, studentId: string, status: 'Online' | 'Offline' | 'Cheating' }) => {
         const game = games[pin];
         if (!game) return;
 
         const player = game.players.find(p => p.id === studentId || p.id === socket.id);
         if (player) {
+            if (status === 'Cheating') {
+                player.isCheater = true;
+                console.log(`[Cheat Alert] Student ${studentId || player.name} flagged as cheater in game ${pin}`);
+            }
             if (player.status === 'Cheating' && status === 'Online') return;
             player.status = status;
             broadcastPlayerUpdate(pin);
@@ -1597,6 +1601,22 @@ async function finishGame(pin: string) {
     game.status = 'FINISHED';
     const leaderboard = [...game.players].sort((a, b) => b.score - a.score);
     io.to(pin).emit('game-over', leaderboard);
+
+    if (game.isUnitQuiz) {
+        const correctAnswers = (game.quiz.questions as any[]).map(q => ({
+            type: q.type,
+            correctIndex: q.correctIndex,
+            acceptedAnswers: q.acceptedAnswers
+        }));
+
+        // Send individual results to all players still in the room
+        game.players.forEach(p => {
+            const playerSocketId = studentSockets[p.id];
+            if (playerSocketId) {
+                io.to(playerSocketId).emit('unit-finished', { score: p.score, correctAnswers });
+            }
+        });
+    }
 
     if (game.isDuel && game.duelId) {
         const winnerId = leaderboard[0]?.score > (leaderboard[1]?.score || 0) ? leaderboard[0].id : null;

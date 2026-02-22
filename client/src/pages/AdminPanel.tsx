@@ -29,7 +29,7 @@ interface Student {
 
 const AdminPanel = () => {
     const navigate = useNavigate();
-    const { logout } = useAuth();
+    const { user, logout, role } = useAuth();
     const [teachers, setTeachers] = useState<Teacher[]>([]);
     const [unitQuizzes, setUnitQuizzes] = useState<UnitQuiz[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
@@ -169,22 +169,30 @@ const AdminPanel = () => {
                     </button>
 
                     <div className="flex items-center gap-2 md:gap-4">
-                        <button
-                            onClick={() => navigate('/create')}
-                            className="flex items-center gap-2 px-3 py-2 md:px-5 md:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium shadow-sm text-sm md:text-base"
-                        >
-                            <FileQuestion size={18} /> <span className="hidden md:inline">Unit Quiz Yaratish</span><span className="md:hidden">Quiz</span>
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <div className="text-right hidden sm:block">
+                                <p className="text-sm font-bold text-slate-800 leading-tight">{user?.name}</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    {role === 'admin' ? 'Administrator' : "O'qituvchi"}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => navigate('/create')}
+                                className="flex items-center gap-2 px-3 py-2 md:px-5 md:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium shadow-sm text-sm md:text-base"
+                            >
+                                <FileQuestion size={18} /> <span className="hidden md:inline">Unit Quiz Yaratish</span><span className="md:hidden">Quiz</span>
+                            </button>
 
-                        <button
-                            onClick={() => {
-                                logout();
-                                navigate('/login');
-                            }}
-                            className="flex items-center gap-2 px-3 py-2 md:px-5 md:py-2.5 bg-white text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200 font-medium text-sm md:text-base"
-                        >
-                            <LogOut size={18} /> <span className="hidden md:inline">Chiqish</span>
-                        </button>
+                            <button
+                                onClick={() => {
+                                    logout();
+                                    navigate('/login');
+                                }}
+                                className="flex items-center gap-2 px-3 py-2 md:px-5 md:py-2.5 bg-white text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200 font-medium text-sm md:text-base"
+                            >
+                                <LogOut size={18} /> <span className="hidden md:inline">Chiqish</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 

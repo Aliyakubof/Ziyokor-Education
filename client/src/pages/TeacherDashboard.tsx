@@ -775,15 +775,25 @@ const TeacherDashboard = () => {
                         </button>
                     </form>
 
-                    <button
-                        onClick={() => {
-                            logout();
-                            navigate('/login');
-                        }}
-                        className="px-4 py-2 bg-white text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200 text-sm font-medium flex items-center gap-2"
-                    >
-                        <LogOut size={16} /> Chiqish
-                    </button>
+                    <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                        <div className="flex items-center gap-3">
+                            <div className="text-right">
+                                <p className="text-sm font-bold text-slate-800 leading-tight">{user?.name}</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    {role === 'admin' ? 'Adminstrator' : "O'qituvchi"}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    logout();
+                                    navigate('/login');
+                                }}
+                                className="px-4 py-2 bg-white text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200 text-sm font-medium flex items-center gap-2"
+                            >
+                                <LogOut size={16} /> Chiqish
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 

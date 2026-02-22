@@ -4,6 +4,7 @@ export interface Player {
     score: number;
     answers: Record<string, string | number>; // questionIndex -> answerIndex or raw text
     status?: 'Online' | 'Offline' | 'Cheating';
+    isCheater?: boolean;
 }
 
 export interface Teacher {

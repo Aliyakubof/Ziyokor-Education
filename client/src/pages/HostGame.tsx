@@ -19,7 +19,7 @@ const MemoizedPlayerCard = memo(({ player, totalQuestionsCount }: { player: any;
     const answeredCount = player.answeredCount || 0;
     const isFinished = player.isFinished || false;
     const percentage = (answeredCount / totalQuestionsCount) * 100;
-    const isCheating = player.status === 'Cheating';
+    const isCheating = player.isCheater || player.status === 'Cheating';
 
     return (
         <div className={`bg-white rounded-[2rem] p-6 shadow-sm border transition-all hover:shadow-md relative

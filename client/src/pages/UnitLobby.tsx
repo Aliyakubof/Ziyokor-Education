@@ -8,6 +8,7 @@ interface Player {
     id: string;
     name: string;
     status?: 'Online' | 'Offline' | 'Cheating';
+    isCheater?: boolean;
 }
 
 const UnitLobby = () => {
@@ -104,16 +105,16 @@ const UnitLobby = () => {
                                     players.map((player) => (
                                         <div key={player.id} className={`
                                             flex items-center justify-between p-4 rounded-2xl border transition-all
-                                            ${player.status === 'Cheating'
+                                            ${player.isCheater || player.status === 'Cheating'
                                                 ? 'bg-red-50 border-red-200 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
                                                 : 'bg-slate-50 border-slate-100 hover:border-indigo-200'}
                                         `}>
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-2.5 h-2.5 rounded-full ${player.status === 'Cheating' ? 'bg-red-500 animate-pulse' : 'bg-indigo-500'}`} />
+                                                <div className={`w-2.5 h-2.5 rounded-full ${player.isCheater || player.status === 'Cheating' ? 'bg-red-500 animate-pulse' : 'bg-indigo-500'}`} />
                                                 <h3 className="font-black text-slate-800 text-lg leading-tight truncate max-w-[120px]">{player.name}</h3>
                                             </div>
 
-                                            {player.status === 'Cheating' && (
+                                            {(player.isCheater || player.status === 'Cheating') && (
                                                 <div className="flex items-center gap-1.5 text-red-600 bg-white px-2 py-1 rounded-lg border border-red-100 shadow-sm">
                                                     <AlertTriangle size={12} />
                                                     <span className="text-[10px] font-black uppercase">DIQQAT</span>
