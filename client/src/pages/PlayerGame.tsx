@@ -15,11 +15,11 @@ interface QuestionData {
 
 const normalizeAnswer = (val: string | number): string => {
     let s = String(val).toLowerCase().trim();
-    // Replace curly apostrophes with straight ones
-    s = s.replace(/[‘’]/g, "'");
-    // Remove trailing punctuation: . , ! ?
-    s = s.replace(/[.,!?]+$/, "");
-    // Normalize multiple spaces to single space
+    // Handle various apostrophe and quotation mark variants
+    s = s.replace(/[‘’“”]/g, (m) => m === '‘' || m === '’' ? "'" : '"');
+    // Replace all basic punctuation with a space to preserve word boundaries
+    s = s.replace(/[.,!?;:]/g, " ");
+    // Normalize multiple spaces and ensure trimmed
     s = s.replace(/\s+/g, " ");
     return s.trim();
 };

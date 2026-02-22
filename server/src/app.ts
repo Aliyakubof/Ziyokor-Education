@@ -1041,8 +1041,11 @@ app.get('/api/teacher/:id/stats', async (req, res) => {
 
 const normalizeAnswer = (val: string | number): string => {
     let s = String(val).toLowerCase().trim();
-    s = s.replace(/[‘’]/g, "'");
-    s = s.replace(/[.,!?]+$/, "");
+    // Handle various apostrophe and quotation mark variants
+    s = s.replace(/[‘’“”]/g, (m) => m === '‘' || m === '’' ? "'" : '"');
+    // Replace all basic punctuation with a space to preserve word boundaries
+    s = s.replace(/[.,!?;:]/g, " ");
+    // Normalize multiple spaces and ensure trimmed
     s = s.replace(/\s+/g, " ");
     return s.trim();
 };
