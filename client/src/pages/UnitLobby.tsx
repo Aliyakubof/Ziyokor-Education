@@ -48,7 +48,7 @@ const UnitLobby = () => {
         navigate(`/host-game/${pin}`);
     };
 
-    const productionUrl = "https://ziyokoreducation.vercel.app";
+    const productionUrl = window.location.origin;
     const joinUrl = `${productionUrl}/unit-join/${pin}`;
 
     const copyLink = () => {

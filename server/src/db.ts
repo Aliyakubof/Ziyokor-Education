@@ -21,8 +21,9 @@ export const pool = new Pool({
     ssl: isLocalhost ? false : { rejectUnauthorized: false }
 });
 
-pool.on('connect', () => {
+pool.on('connect', (client) => {
     console.log('Database connected successfully');
+    client.query("SET timezone = 'Asia/Tashkent';");
 });
 
 pool.on('error', (err) => {

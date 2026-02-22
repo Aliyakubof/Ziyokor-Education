@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Tashkent';
 import express from 'express';
 import { createServer } from 'http';
 import https from 'https';
@@ -25,6 +26,10 @@ const allowedOrigins = [
     'capacitor://localhost',
     'https://ziyokoreducation.vercel.app'
 ].filter(Boolean) as string[];
+
+// Log current time to verify timezone
+console.log('Server Timezone:', process.env.TZ);
+console.log('Current Server Time:', new Date().toLocaleString());
 
 app.use(cors({
     origin: allowedOrigins,
