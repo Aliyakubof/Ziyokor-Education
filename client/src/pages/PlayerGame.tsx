@@ -16,7 +16,10 @@ interface QuestionData {
 const normalizeAnswer = (val: string | number): string => {
     let s = String(val).toLowerCase().trim();
     // Handle various apostrophe and quotation mark variants
-    s = s.replace(/[‘’“”]/g, (m) => m === '‘' || m === '’' ? "'" : '"');
+    // Mapping all apostrophe variants (including Uzbek ʻ) to standard '
+    s = s.replace(/[’‘‛ʻ´]/g, "'");
+    // Handle double quote variants
+    s = s.replace(/[“”]/g, '"');
     // Replace all basic punctuation with a space to preserve word boundaries
     s = s.replace(/[.,!?;:]/g, " ");
     // Normalize multiple spaces and ensure trimmed

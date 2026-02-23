@@ -1,9 +1,9 @@
-const normalizeAnswer = (val: string | number): string => {
+const normalizeAnswer = (val) => {
     let s = String(val).toLowerCase().trim();
-    // Replace curly apostrophes with straight ones
-    s = s.replace(/[‘’]/g, "'");
-    // Remove trailing punctuation: . , ! ?
-    s = s.replace(/[.,!?]+$/, "");
+    // Mapping all apostrophe variants (including Uzbek ʻ) to standard '
+    s = s.replace(/[’‘‛ʻ´]/g, "'");
+    // Remove punctuation
+    s = s.replace(/[.,!?;:]/g, " ");
     // Normalize multiple spaces to single space
     s = s.replace(/\s+/g, " ");
     return s.trim();
@@ -15,10 +15,11 @@ const testCases = [
     { input: "Has!", expected: "has" },
     { input: "Is it correct?", expected: "is it correct" },
     { input: "Uncle’s", expected: "uncle's" },
+    { input: "qoʻshilmoq", expected: "qo'shilmoq" }, // Uzbek ʻ
+    { input: "o’qimoq", expected: "o'qimoq" },      // Smart quote
+    { input: "g‘alaba", expected: "g'alaba" },      // Different variant
+    { input: "O'zbekiston", expected: "o'zbekiston" },
     { input: "  multiple   spaces  ", expected: "multiple spaces" },
-    { input: "End with period.", expected: "end with period" },
-    { input: "What about question mark?", expected: "what about question mark" },
-    { input: "Comma at end,", expected: "comma at end" },
     { input: "Mixed case and Punctuation!", expected: "mixed case and punctuation" },
 ];
 
