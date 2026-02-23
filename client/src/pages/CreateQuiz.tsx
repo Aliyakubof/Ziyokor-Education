@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../api';
+import { useAuth } from '../AuthContext';
 import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle, X, Info, Pencil } from 'lucide-react';
 
 interface QuestionDraft {
@@ -16,6 +17,7 @@ interface QuestionDraft {
 export default function CreateQuiz() {
     const navigate = useNavigate();
     const { id } = useParams();
+    const { role } = useAuth();
     const [title, setTitle] = useState('');
     const [level, setLevel] = useState('Beginner');
     const [unit, setUnit] = useState('1');
@@ -42,12 +44,12 @@ export default function CreateQuiz() {
                 setQuestions(parsedQuestions || []);
             } else {
                 alert("Quizni yuklashda xatolik!");
-                navigate('/');
+                navigate(role === 'teacher' ? '/teacher' : '/');
             }
         } catch (error) {
             console.error("Error fetching quiz:", error);
             alert("Quizni yuklashda xatolik!");
-            navigate('/');
+            navigate(role === 'teacher' ? '/teacher' : '/');
         }
     };
 
@@ -178,7 +180,7 @@ export default function CreateQuiz() {
             });
             const data = await res.json();
             if (res.ok) {
-                navigate(`/`); // Go back to home/admin panel
+                navigate(role === 'teacher' ? '/teacher' : '/'); // Go back to correct dashboard
             } else {
                 throw new Error(data.error || 'Xatolik');
             }
@@ -495,10 +497,10 @@ export default function CreateQuiz() {
             <div className="max-w-6xl mx-auto">
                 <header className="flex justify-between items-center mb-12">
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate(role === 'teacher' ? '/teacher' : '/')}
                         className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 transition-all hover:translate-x-[-4px]"
                     >
-                        <ArrowLeft size={20} /> Admin Panelga Qaytish
+                        <ArrowLeft size={20} /> Orqaga qaytish
                     </button>
 
                     <div className="flex items-center gap-4">

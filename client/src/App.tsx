@@ -95,7 +95,7 @@ function App() {
             <Route
               path="/create"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute requiredRole="teacher">
                   <CreateQuiz />
                 </ProtectedRoute>
               }
@@ -103,7 +103,7 @@ function App() {
             <Route
               path="/edit-quiz/:id"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute requiredRole="teacher">
                   <CreateQuiz />
                 </ProtectedRoute>
               }
