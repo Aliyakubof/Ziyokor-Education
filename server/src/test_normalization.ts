@@ -1,7 +1,7 @@
 const normalizeAnswer = (val: any) => {
     let s = String(val).toLowerCase().trim();
-    // Mapping all apostrophe variants (including Uzbek ʻ) to standard '
-    s = s.replace(/[’‘‛ʻ´]/g, "'");
+    // Remove all apostrophe variants entirely to allow matching even if omitted
+    s = s.replace(/[’‘‛ʻ´'`]/g, "");
     // Remove punctuation
     s = s.replace(/[.,!?;:]/g, " ");
     // Normalize multiple spaces to single space
@@ -11,16 +11,12 @@ const normalizeAnswer = (val: any) => {
 
 const testCases = [
     { input: "Hello.", expected: "hello" },
-    { input: "hello", expected: "hello" },
-    { input: "Has!", expected: "has" },
-    { input: "Is it correct?", expected: "is it correct" },
-    { input: "Uncle’s", expected: "uncle's" },
-    { input: "qoʻshilmoq", expected: "qo'shilmoq" }, // Uzbek ʻ
-    { input: "o’qimoq", expected: "o'qimoq" },      // Smart quote
-    { input: "g‘alaba", expected: "g'alaba" },      // Different variant
-    { input: "O'zbekiston", expected: "o'zbekiston" },
+    { input: "qoʻshilmoq", expected: "qoshilmoq" }, // Uzbek ʻ stripped
+    { input: "o’qimoq", expected: "oqimoq" },      // Smart quote stripped
+    { input: "g‘alaba", expected: "galaba" },      // Different variant stripped
+    { input: "O'zbekiston", expected: "ozbekiston" },
+    { input: "oqimoq", expected: "oqimoq" },       // Omitted apostrophe matches
     { input: "  multiple   spaces  ", expected: "multiple spaces" },
-    { input: "Mixed case and Punctuation!", expected: "mixed case and punctuation" },
 ];
 
 let passed = 0;

@@ -1,9 +1,8 @@
 export const normalizeAnswer = (val: string | number): string => {
     let s = String(val).toLowerCase().trim();
-    // Handle various apostrophe and quotation mark variants
-    // Mapping all apostrophe variants (including Uzbek ʻ) to standard '
-    s = s.replace(/[’‘‛ʻ´]/g, "'");
-    // Handle double quote variants
+    // Remove all apostrophe variants entirely to allow matching even if omitted
+    s = s.replace(/[’‘‛ʻ´'`]/g, "");
+    // Handle double quote variants (mapping to standard or removing)
     s = s.replace(/[“”]/g, '"');
     // Remove all basic punctuation throughout the string
     s = s.replace(/[.,!?;:]/g, " ");
