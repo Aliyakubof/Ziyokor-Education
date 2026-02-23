@@ -66,7 +66,7 @@ export default function CreateQuiz() {
         setQType(q.type);
         setOpts(q.options.length ? q.options : ['', '', '', '']);
         setCorrectIdx(q.correctIndex);
-        setAcceptedAnswers(q.acceptedAnswers.join(', '));
+        setAcceptedAnswers(q.acceptedAnswers.join('+'));
         setEditingIdx(index);
     };
 
@@ -125,7 +125,7 @@ export default function CreateQuiz() {
         } else {
             // text-input, fill-blank, find-mistake, rewrite
             if (!acceptedAnswers.trim()) return alert("To'g'ri javoblarni kiriting");
-            const answersList = acceptedAnswers.split(',').map(a => a.trim()).filter(a => a);
+            const answersList = acceptedAnswers.split('+').map(a => a.trim()).filter(a => a);
             const newQuestion: QuestionDraft = {
                 info: qInfo,
                 text: qText,
@@ -358,10 +358,10 @@ export default function CreateQuiz() {
                 };
             } else if (answerMatch && currentQuestion) {
                 const ansText = answerMatch[2].trim();
-                currentAnswers = ansText.split(',').map(s => s.trim()).filter(s => s);
+                currentAnswers = ansText.split('+').map(s => s.trim()).filter(s => s);
             } else if (wordsMatch && currentQuestion) {
                 const wordsText = wordsMatch[2].trim();
-                currentWordBox = wordsText.split(',').map(s => s.trim()).filter(s => s);
+                currentWordBox = wordsText.split('+').map(s => s.trim()).filter(s => s);
             } else if (optionMatch && currentQuestion) {
                 // Found an option for the current question
                 let optText = optionMatch[2].trim();
@@ -440,6 +440,7 @@ export default function CreateQuiz() {
                                 • Lines starting with numbers (e.g. <code>1. </code>) will be created as questions.<br />
                                 • Other lines will be treated as <strong>Section Headers</strong> (Info Slides).<br />
                                 • Use <code>______</code> (6 underscores) to automatically create <strong>Fill-in-the-blank</strong> questions with gaps.<br />
+                                • Multiple answers should be separated by <code>+</code> (e.g. <code>Ans: apple+an apple</code>).<br />
                                 • After importing, don't forget to <strong>add the correct answers</strong> for each question!
                             </div>
 
@@ -701,11 +702,11 @@ export default function CreateQuiz() {
                                                     {qType === 'fill-blank' ? "Correct Answer (missing word)" :
                                                         qType === 'find-mistake' ? "Mistake Word (or corrected version)" :
                                                             qType === 'rewrite' ? "Full Correct Sentence" :
-                                                                "Correct Answers (comma separated)"}
+                                                                "Correct Answers (+ bilan ajrating)"}
                                                 </label>
                                                 <textarea
                                                     className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 min-h-[80px]"
-                                                    placeholder="Masalan: apple, an apple, the apple"
+                                                    placeholder="Masalan: apple+an apple+the apple"
                                                     value={acceptedAnswers}
                                                     onChange={e => setAcceptedAnswers(e.target.value)}
                                                 />
@@ -734,23 +735,23 @@ export default function CreateQuiz() {
                                                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-800">
                                                     <strong>Qanday to'ldirish kerak:</strong><br />
                                                     1. Savol matniga [1], [2] ko'rinishida bo'sh joylarni qo'ying.<br />
-                                                    2. "Word Box" - bu o'quvchi ko'radigan barcha so'zlar (vergul bilan ajrating).<br />
+                                                    2. "Word Box" - bu o'quvchi ko'radigan barcha so'zlar (+ bilan ajrating).<br />
                                                     3. "To'g'ri javoblar" - bo'sh joylarga tartib bilan mos keladigan so'zlar.
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Word Box (Barcha so'zlar)</label>
                                                     <input
                                                         className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium"
-                                                        placeholder="unhealthy, on a diet, healthy, delicious"
-                                                        value={opts.join(', ')}
-                                                        onChange={e => setOpts(e.target.value.split(',').map(s => s.trim()))}
+                                                        placeholder="unhealthy+on a diet+healthy+delicious"
+                                                        value={opts.join('+')}
+                                                        onChange={e => setOpts(e.target.value.split('+').map(s => s.trim()))}
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">To'g'ri javoblar (Tartib bilan)</label>
                                                     <input
                                                         className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium"
-                                                        placeholder="unhealthy, on a diet"
+                                                        placeholder="unhealthy+on a diet"
                                                         value={acceptedAnswers}
                                                         onChange={e => setAcceptedAnswers(e.target.value)}
                                                     />

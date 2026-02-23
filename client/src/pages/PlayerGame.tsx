@@ -329,15 +329,15 @@ export default function PlayerGame() {
             if (isFillBlankMulti) {
                 const parts = question.text.split('[...]');
                 // Parse answers: "ans1, ans2" -> ["ans1", "ans2"]
-                // unitAnswers[currentUnitIndex] should be stored as "ans1, ans2" string to keep compatibility,
+                // unitAnswers[currentUnitIndex] should be stored as "ans1+ans2" string to keep compatibility,
                 // or we can allow it to be an array. For simplicity, let's keep it as joined string and split it here.
-                const currentAnswersList = (isReview ? playerAns : textAnswer)?.split(',').map((s: string) => s.trim()) || [];
+                const currentAnswersList = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
 
                 return (
                     <div className="w-full max-w-4xl mx-auto bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
                         {isReview && (
                             <div className="mb-6 p-4 rounded-2xl border text-center font-black uppercase tracking-widest text-xs bg-slate-50 border-slate-200 text-slate-500">
-                                {correctInfo?.acceptedAnswers?.join(' / ')}
+                                {correctInfo?.acceptedAnswers?.join('+')}
                             </div>
                         )}
                         <h2 className="text-center text-xl font-bold text-slate-800 mb-8 lowercase opacity-60 italic">
@@ -356,7 +356,7 @@ export default function PlayerGame() {
                                             onChange={(e) => {
                                                 const newAns = [...currentAnswersList];
                                                 newAns[i] = e.target.value;
-                                                setTextAnswer(newAns.join(','));
+                                                setTextAnswer(newAns.join('+'));
                                             }}
                                             onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)}
                                             className={`mx-2 inline-block w-32 border-b-2 bg-slate-50 text-center font-bold px-2 py-1 outline-none transition-all
@@ -415,7 +415,7 @@ export default function PlayerGame() {
                     {isReview && !isCorrect && (
                         <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl">
                             <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">To'g'ri javoblar:</p>
-                            <p className="text-indigo-600 font-bold">{correctInfo?.acceptedAnswers?.join(' / ')}</p>
+                            <p className="text-indigo-600 font-bold">{correctInfo?.acceptedAnswers?.join('+')}</p>
                         </div>
                     )}
 
@@ -661,7 +661,7 @@ function WordBoxView({ question, unitAnswers, currentUnitIndex, onAnswer, isUnit
 
     useEffect(() => {
         const initialBlanks = typeof unitAnswers[currentUnitIndex] === 'string'
-            ? unitAnswers[currentUnitIndex].split(', ').reduce((acc: any, val: string, i: number) => {
+            ? unitAnswers[currentUnitIndex].split('+').reduce((acc: any, val: string, i: number) => {
                 if (val) acc[i + 1] = val;
                 return acc;
             }, {})
@@ -686,14 +686,14 @@ function WordBoxView({ question, unitAnswers, currentUnitIndex, onAnswer, isUnit
         setBlanks(newBlanks);
         if (isUnitMode) {
             const sortedBlanks = Object.keys(newBlanks).map(Number).sort((a, b) => a - b);
-            const answerString = sortedBlanks.map(k => newBlanks[k]).join(', ');
+            const answerString = sortedBlanks.map(k => newBlanks[k]).join('+');
             onAnswer(answerString);
         }
     };
 
     const renderTextFromProps = () => {
         const parts = question.text.split(/(\[\d+\])/g);
-        const correctAccepted = correctInfo?.acceptedAnswers?.[0]?.split(', ') || [];
+        const correctAccepted = correctInfo?.acceptedAnswers?.[0]?.split('+') || [];
 
         return parts.map((part: string, i: number) => {
             const match = part.match(/\[(\d+)\]/);
@@ -758,7 +758,7 @@ function WordBoxView({ question, unitAnswers, currentUnitIndex, onAnswer, isUnit
                     <button
                         onClick={() => {
                             const sortedBlanks = Object.keys(blanks).map(Number).sort((a, b) => a - b);
-                            const answerString = sortedBlanks.map(k => blanks[k]).join(', ');
+                            const answerString = sortedBlanks.map(k => blanks[k]).join('+');
                             onAnswer(answerString);
                         }}
                         disabled={Object.keys(blanks).length === 0}
