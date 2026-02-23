@@ -418,6 +418,21 @@ app.get('/api/unit-quizzes/:id', async (req, res) => {
     }
 });
 
+app.post('/api/unit-quizzes', async (req, res) => {
+    try {
+        const { title, questions, level, unit } = req.body;
+        const id = uuidv4();
+        await query(
+            'INSERT INTO unit_quizzes (id, title, questions, level, unit) VALUES ($1, $2, $3, $4, $5)',
+            [id, title, JSON.stringify(questions), level, unit]
+        );
+        res.json({ id, title, questions, level, unit });
+    } catch (err) {
+        console.error('Error creating unit quiz:', err);
+        res.status(500).json({ error: 'Error creating unit quiz' });
+    }
+});
+
 app.put('/api/unit-quizzes/:id', async (req, res) => {
     try {
         const { title, questions, level, unit } = req.body;
