@@ -24,12 +24,26 @@ export default function CreateQuiz() {
     const [timeLimit] = useState(30); // Default 30 minutes
 
     const [questions, setQuestions] = useState<QuestionDraft[]>([]);
+    const [allQuizzes, setAllQuizzes] = useState<any[]>([]);
 
     useEffect(() => {
+        fetchAllQuizzes();
         if (id) {
             fetchQuiz();
         }
     }, [id]);
+
+    const fetchAllQuizzes = async () => {
+        try {
+            const res = await apiFetch('/api/unit-quizzes');
+            if (res.ok) {
+                const data = await res.json();
+                setAllQuizzes(Array.isArray(data) ? data : []);
+            }
+        } catch (error) {
+            console.error("Error fetching all quizzes:", error);
+        }
+    };
 
     const fetchQuiz = async () => {
         try {
@@ -877,6 +891,37 @@ export default function CreateQuiz() {
                                 SAQLASH
                             </button>
                         </section>
+                    </div>
+                </div>
+
+                {/* Existing Quizzes List */}
+                <div className="max-w-6xl mx-auto mt-16 pt-12 border-t border-slate-200">
+                    <h2 className="text-2xl font-black text-slate-800 mb-8">Mavjud Testlar Ro'yxati</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+                        {allQuizzes.length > 0 ? (
+                            allQuizzes.map((quiz) => (
+                                <div key={quiz.id} className="bg-white border border-slate-200 p-6 rounded-2xl flex flex-col justify-between hover:border-indigo-500 transition-all shadow-sm">
+                                    <div>
+                                        <h3 className="font-bold text-slate-800 text-lg mb-1">{quiz.title}</h3>
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-widest">{quiz.level}</span>
+                                            <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase tracking-widest">Unit {quiz.unit}</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            navigate(`/edit-quiz/${quiz.id}`);
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                        }}
+                                        className="w-full py-3 bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-600 font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+                                    >
+                                        <Pencil size={16} /> Tahrirlash
+                                    </button>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-slate-400 font-medium">Testlar topilmadi.</p>
+                        )}
                     </div>
                 </div>
             </div >

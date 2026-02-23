@@ -216,8 +216,8 @@ export default function Home() {
                         </Link>
                     )}
 
-                    {/* Create Quiz - Only for Admin */}
-                    {role === 'admin' && (
+                    {/* Create Quiz - For Admin or Teacher */}
+                    {(role === 'admin' || role === 'teacher') && (
                         <Link to="/create" className="w-full md:w-[280px] group bg-slate-50 hover:bg-white border border-slate-200 hover:border-violet-200 rounded-2xl p-8 transition-all hover:shadow-xl hover:shadow-violet-500/10 flex flex-col items-center relative overflow-hidden">
                             <div className="bg-violet-100 text-violet-600 p-4 rounded-xl mb-6 group-hover:scale-110 transition-transform">
                                 <PlusCircle size={32} />
