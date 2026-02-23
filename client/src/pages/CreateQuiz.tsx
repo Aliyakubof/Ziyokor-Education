@@ -58,12 +58,12 @@ export default function CreateQuiz() {
                 setQuestions(parsedQuestions || []);
             } else {
                 alert("Quizni yuklashda xatolik!");
-                navigate(role === 'admin' ? '/admin/groups' : '/teacher');
+                navigate(role === 'admin' ? '/admin' : '/teacher');
             }
         } catch (error) {
             console.error("Error fetching quiz:", error);
             alert("Quizni yuklashda xatolik!");
-            navigate(role === 'admin' ? '/admin/groups' : '/teacher');
+            navigate(role === 'admin' ? '/admin' : '/teacher');
         }
     };
 
@@ -513,7 +513,7 @@ export default function CreateQuiz() {
             <div className="max-w-6xl mx-auto">
                 <header className="flex justify-between items-center mb-12">
                     <button
-                        onClick={() => navigate(role === 'admin' ? '/admin/groups' : '/teacher')}
+                        onClick={() => navigate(role === 'admin' ? '/admin' : '/teacher')}
                         className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 transition-all hover:translate-x-[-4px]"
                     >
                         <ArrowLeft size={20} /> Orqaga qaytish
