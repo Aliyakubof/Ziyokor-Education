@@ -194,7 +194,9 @@ export default function CreateQuiz() {
             });
             const data = await res.json();
             if (res.ok) {
-                navigate(role === 'admin' ? '/admin/groups' : '/teacher'); // Go back to correct dashboard
+                alert(id ? "Test muvaffaqiyatli yangilandi!" : "Yangi test muvaffaqiyatli yaratildi!");
+                fetchAllQuizzes(); // Refresh the list below
+                // Don't navigate away, stay on the page as requested
             } else {
                 throw new Error(data.error || 'Xatolik');
             }
