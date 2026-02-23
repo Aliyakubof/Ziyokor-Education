@@ -1119,7 +1119,8 @@ function scrubPlayers(game: any) {
             name: p.name,
             answeredCount: Object.keys(p.answers || {}).length,
             status: p.status,
-            isFinished: p.isFinished
+            isFinished: p.isFinished,
+            isCheater: p.isCheater
         }));
     }
     return game.players;
@@ -1272,7 +1273,9 @@ io.on('connection', (socket) => {
 
             let player = game.players.find(p => p.id === studentId);
             if (player) {
-                player.status = 'Online';
+                if (player.status !== 'Cheating') {
+                    player.status = 'Online';
+                }
             } else {
                 player = {
                     id: studentId,
@@ -1431,7 +1434,9 @@ io.on('connection', (socket) => {
             (socket as any).studentId = studentId;
             const player = game.players.find(p => p.id === studentId);
             if (player) {
-                player.status = 'Online';
+                if (player.status !== 'Cheating') {
+                    player.status = 'Online';
+                }
                 broadcastPlayerUpdate(game.pin);
             }
         }
