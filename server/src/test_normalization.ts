@@ -1,4 +1,4 @@
-const normalizeAnswer = (val) => {
+const normalizeAnswer = (val: any) => {
     let s = String(val).toLowerCase().trim();
     // Mapping all apostrophe variants (including Uzbek ʻ) to standard '
     s = s.replace(/[’‘‛ʻ´]/g, "'");
