@@ -50,7 +50,7 @@ export interface Question {
     options: string[];
     correctIndex: number;
     timeLimit: number;
-    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide';
+    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching';
     acceptedAnswers?: string[];
 }
 

@@ -1316,6 +1316,7 @@ io.on('connection', (socket) => {
                         text: q.text,
                         options: q.options,
                         type: q.type,
+                        acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
                         questionIndex: idx + 1,
                         totalQuestions: game.quiz.questions.length
                     }));
@@ -1374,6 +1375,7 @@ io.on('connection', (socket) => {
                 text: q.text,
                 options: q.options,
                 type: q.type,
+                acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
                 questionIndex: idx + 1,
                 totalQuestions: game.quiz.questions.length
             }));
@@ -1421,6 +1423,7 @@ io.on('connection', (socket) => {
                     text: q.text,
                     options: q.options,
                     type: q.type,
+                    acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
                     questionIndex: idx + 1,
                     totalQuestions: game.quiz.questions.length
                 }));
@@ -1464,6 +1467,7 @@ io.on('connection', (socket) => {
                     text: q.text,
                     options: q.options,
                     type: q.type,
+                    acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
                     questionIndex: idx + 1,
                     totalQuestions: game.quiz.questions.length
                 }));

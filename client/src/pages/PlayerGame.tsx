@@ -11,6 +11,7 @@ interface QuestionData {
     totalQuestions: number;
     correctIndex: number;
     type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching';
+    acceptedAnswers?: string[];
 }
 
 const normalizeAnswer = (val: string | number): string => {
@@ -831,7 +832,7 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
 
     useEffect(() => {
         const correctLetters = "ABCDEFGHIJKLMN";
-        const defsList = (isReview ? (correctInfo?.acceptedAnswers?.[0] || "") : (question.acceptedAnswers?.[0] || "")).split('+').map((s: string) => s.trim()).filter((s: string) => s);
+        const defsList = (isReview ? (correctInfo?.acceptedAnswers || []) : (question.acceptedAnswers || []));
 
         // During review, we show definitions as they are. During play, we show them with letters.
         const mapped = defsList.map((d: string, i: number) => ({
