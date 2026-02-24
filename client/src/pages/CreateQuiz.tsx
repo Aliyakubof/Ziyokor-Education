@@ -77,12 +77,12 @@ export default function CreateQuiz() {
 
     const editQuestion = (index: number) => {
         const q = questions[index];
-        setQInfo(q.info);
-        setQText(q.text);
-        setQType(q.type);
-        setOpts(q.options.length ? q.options : ['', '', '', '']);
-        setCorrectIdx(q.correctIndex);
-        setAcceptedAnswers(q.acceptedAnswers.join('+'));
+        setQInfo(q.info || '');
+        setQText(q.text || '');
+        setQType(q.type || 'multiple-choice');
+        setOpts(q.options && q.options.length ? q.options : ['', '', '', '']);
+        setCorrectIdx(q.correctIndex || 0);
+        setAcceptedAnswers(q.acceptedAnswers ? q.acceptedAnswers.join('+') : '');
         setEditingIdx(index);
     };
 
@@ -139,14 +139,15 @@ export default function CreateQuiz() {
                 setQuestions([...questions, newQuestion]);
             }
         } else {
-            // text-input, fill-blank, find-mistake, rewrite
-            if (!acceptedAnswers.trim()) return alert("To'g'ri javoblarni kiriting");
-            const answersList = acceptedAnswers.split('+').map(a => a.trim()).filter(a => a);
+            // text-input, fill-blank, find-mistake, rewrite, word-box, info-slide
+            if (qType !== 'info-slide' && !acceptedAnswers.trim()) return alert("To'g'ri javoblarni kiriting");
+
+            const answersList = qType === 'info-slide' ? [] : acceptedAnswers.split('+').map(a => a.trim()).filter(a => a);
             const newQuestion: QuestionDraft = {
                 info: qInfo,
                 text: qText,
                 options: qType === 'word-box' ? opts : [],
-                correctIndex: -1,
+                correctIndex: qType === 'info-slide' ? 0 : -1,
                 timeLimit: 0,
                 type: qType,
                 acceptedAnswers: answersList
