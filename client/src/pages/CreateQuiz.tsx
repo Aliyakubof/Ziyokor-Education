@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
-import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle, X, Info, Pencil } from 'lucide-react';
+import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle, X, Info, Pencil, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface QuestionDraft {
     info: string;
@@ -175,6 +175,19 @@ export default function CreateQuiz() {
 
     const removeQuestion = (index: number) => {
         setQuestions(questions.filter((_, i) => i !== index));
+    };
+
+    const moveQuestion = (index: number, direction: 'up' | 'down') => {
+        const newQuestions = [...questions];
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+        if (targetIndex < 0 || targetIndex >= newQuestions.length) return;
+
+        const temp = newQuestions[index];
+        newQuestions[index] = newQuestions[targetIndex];
+        newQuestions[targetIndex] = temp;
+
+        setQuestions(newQuestions);
     };
 
     const saveQuiz = async () => {
@@ -832,7 +845,25 @@ export default function CreateQuiz() {
                                                     <span className="text-[10px] text-blue-100 font-bold uppercase tracking-[0.2em]">SECTION HEADER</span>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-1 shrink-0">
+                                                <div className="flex flex-col gap-1 mr-2 border-r border-white/20 pr-2">
+                                                    <button
+                                                        onClick={() => moveQuestion(i, 'up')}
+                                                        disabled={i === 0}
+                                                        className="text-white/40 hover:text-white transition-colors disabled:opacity-10"
+                                                        title="Yuqoriga surish"
+                                                    >
+                                                        <ChevronUp size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => moveQuestion(i, 'down')}
+                                                        disabled={i === questions.length - 1}
+                                                        className="text-white/40 hover:text-white transition-colors disabled:opacity-10"
+                                                        title="Pastga surish"
+                                                    >
+                                                        <ChevronDown size={16} />
+                                                    </button>
+                                                </div>
                                                 <button
                                                     onClick={() => editQuestion(i)}
                                                     className="text-white/60 hover:text-white transition-colors p-2"
@@ -859,7 +890,25 @@ export default function CreateQuiz() {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-1 shrink-0">
+                                                <div className="flex flex-col gap-1 mr-2 border-r border-slate-200 pr-2">
+                                                    <button
+                                                        onClick={() => moveQuestion(i, 'up')}
+                                                        disabled={i === 0}
+                                                        className="text-slate-300 hover:text-indigo-500 transition-colors disabled:opacity-20"
+                                                        title="Yuqoriga surish"
+                                                    >
+                                                        <ChevronUp size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => moveQuestion(i, 'down')}
+                                                        disabled={i === questions.length - 1}
+                                                        className="text-slate-300 hover:text-indigo-500 transition-colors disabled:opacity-20"
+                                                        title="Pastga surish"
+                                                    >
+                                                        <ChevronDown size={16} />
+                                                    </button>
+                                                </div>
                                                 <button
                                                     onClick={() => editQuestion(i)}
                                                     className="text-slate-400 hover:text-indigo-500 transition-colors p-2"
