@@ -10,7 +10,7 @@ interface QuestionData {
     questionIndex: number;
     totalQuestions: number;
     correctIndex: number;
-    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide';
+    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching';
 }
 
 const normalizeAnswer = (val: string | number): string => {
@@ -388,7 +388,7 @@ export default function PlayerGame() {
 
             // Normal single input handling (text-input, single fill-blank, find-mistake, rewrite)
             return (
-                <div className="w-full max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
+                <div className="w-full max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200 mt-8 mb-4">
                     {isReview && (
                         <div className={`mb-6 p-4 rounded-2xl border text-center font-black uppercase tracking-widest text-xs
                             ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-red-50 border-red-200 text-red-600'}`}>
@@ -401,6 +401,12 @@ export default function PlayerGame() {
                                 question.type === 'rewrite' ? "Rewrite the sentence" :
                                     "Enter your answer"}
                     </h2>
+
+                    {/* Displaying question text inside the card for better visibility if it's a long sentence */}
+                    <div className="text-xl md:text-2xl font-bold text-slate-800 text-center mb-10 leading-relaxed px-4">
+                        {question.text}
+                    </div>
+
                     <input
                         type="text"
                         value={isReview ? (playerAns || '') : textAnswer}
@@ -436,6 +442,18 @@ export default function PlayerGame() {
 
         if (question.type === 'word-box') {
             return <WordBoxView
+                question={question}
+                unitAnswers={unitAnswers}
+                currentUnitIndex={currentUnitIndex}
+                onAnswer={sendAnswer}
+                isUnitMode={isUnitMode}
+                isReview={isReview}
+                correctInfo={correctInfo}
+            />;
+        }
+
+        if (question.type === 'matching') {
+            return <MatchingView
                 question={question}
                 unitAnswers={unitAnswers}
                 currentUnitIndex={currentUnitIndex}
@@ -531,9 +549,9 @@ export default function PlayerGame() {
                                 ${i === 0 ? 'bg-blue-500' : i === 1 ? 'bg-emerald-500' : i === 2 ? 'bg-orange-500' : 'bg-indigo-500'}`}>
                                 <span>{i === 0 ? '▲' : i === 1 ? '◆' : i === 2 ? '●' : '■'}</span>
                             </div>
-                            <span className={`text-[10px] md:text-xs font-black uppercase tracking-widest relative z-10 italic
-                                ${isReview && (isCorrect || isWrongSelection) ? 'text-white' : 'text-slate-400'}`}>
-                                {i === 0 ? 'A' : i === 1 ? 'B' : i === 2 ? 'C' : 'D'} varyanti
+                            <span className={`text-sm md:text-lg font-bold relative z-10 text-center px-4 leading-tight
+                                ${isReview && (isCorrect || isWrongSelection) ? 'text-white' : 'text-slate-700'}`}>
+                                {question.options[i]}
                             </span>
                         </button>
                     );
@@ -796,6 +814,130 @@ function WordBoxView({ question, unitAnswers, currentUnitIndex, onAnswer, isUnit
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+// MatchingView
+function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUnitMode, isReview, correctInfo }: any) {
+    const [selectedWordIdx, setSelectedWordIdx] = useState<number | null>(null);
+    const [matches, setMatches] = useState<Record<number, string>>({}); // wordIdx -> definition (letter)
+
+    const words = question.options; // Left side
+    // For student view, we might need definitions to be randomized or shown as letters.
+    // In our CreateQuiz, we save definitions in acceptedAnswers as a '+' separated string.
+
+    const [defsWithLetters, setDefsWithLetters] = useState<{ letter: string, text: string }[]>([]);
+
+    useEffect(() => {
+        const correctLetters = "ABCDEFGHIJKLMN";
+        const defsList = (isReview ? (correctInfo?.acceptedAnswers?.[0] || "") : (question.acceptedAnswers?.[0] || "")).split('+').map((s: string) => s.trim()).filter((s: string) => s);
+
+        // During review, we show definitions as they are. During play, we show them with letters.
+        const mapped = defsList.map((d: string, i: number) => ({
+            letter: correctLetters[i] || '?',
+            text: d
+        }));
+        setDefsWithLetters(mapped);
+
+        // Load existing matches
+        const savedMatchStr = unitAnswers[currentUnitIndex];
+        if (savedMatchStr) {
+            const savedMatches: Record<number, string> = {};
+            savedMatchStr.split('+').forEach((m: string, i: number) => {
+                if (m) savedMatches[i] = m;
+            });
+            setMatches(savedMatches);
+        } else {
+            setMatches({});
+        }
+        setSelectedWordIdx(null);
+    }, [currentUnitIndex, unitAnswers, question, correctInfo, isReview]);
+
+    const handleMatch = (defLetter: string) => {
+        if (isReview || selectedWordIdx === null) return;
+
+        const newMatches = { ...matches, [selectedWordIdx]: defLetter };
+        setMatches(newMatches);
+        setSelectedWordIdx(null);
+
+        if (isUnitMode) {
+            const matchArray = [];
+            for (let i = 0; i < words.length; i++) {
+                matchArray.push(newMatches[i] || "");
+            }
+            onAnswer(matchArray.join('+'));
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 overflow-hidden">
+                {/* Words Column */}
+                <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 sticky top-0 bg-slate-50 py-2">Words</h3>
+                    {words.map((word: string, i: number) => (
+                        <button
+                            key={i}
+                            onClick={() => !isReview && setSelectedWordIdx(i === selectedWordIdx ? null : i)}
+                            className={`w-full p-4 rounded-2xl border-2 text-left font-bold transition-all flex items-center justify-between
+                                ${selectedWordIdx === i ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-lg' :
+                                    matches[i] ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-600 hover:border-indigo-200'}`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs opacity-40">{i + 1}.</span>
+                                {word}
+                            </div>
+                            {matches[i] && (
+                                <div className="bg-emerald-500 text-white w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black">
+                                    {matches[i]}
+                                </div>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Definitions Column */}
+                <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 sticky top-0 bg-slate-50 py-2">Definitions</h3>
+                    {defsWithLetters.map((def, i) => {
+                        const isSelected = Object.values(matches).includes(def.letter);
+                        return (
+                            <button
+                                key={i}
+                                onClick={() => handleMatch(def.letter)}
+                                className={`w-full p-4 rounded-2xl border-2 text-left transition-all flex gap-4
+                                    ${isReview ? 'border-slate-100 bg-white opacity-80 cursor-default' :
+                                        isSelected ? 'border-slate-100 bg-slate-50 text-slate-400 opacity-50' :
+                                            selectedWordIdx !== null ? 'border-indigo-200 bg-white hover:border-indigo-500 hover:bg-indigo-50 shadow-sm' : 'border-slate-100 bg-white'}`}
+                            >
+                                <div className="bg-slate-800 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black shrink-0">
+                                    {def.letter}
+                                </div>
+                                <div className="text-sm font-medium leading-tight pt-1">
+                                    {def.text}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {!isUnitMode && !isReview && (
+                <button
+                    onClick={() => {
+                        const matchArray = [];
+                        for (let i = 0; i < words.length; i++) {
+                            matchArray.push(matches[i] || "");
+                        }
+                        onAnswer(matchArray.join('+'));
+                    }}
+                    disabled={Object.keys(matches).length === 0}
+                    className="bg-indigo-600 text-white px-10 py-5 rounded-[2rem] font-black shadow-xl shadow-indigo-500/20 transition-all hover:bg-indigo-500 active:scale-95 flex items-center justify-center gap-2"
+                >
+                    <Send size={24} /> JAVOBNI YUBORISH
+                </button>
+            )}
         </div>
     );
 }

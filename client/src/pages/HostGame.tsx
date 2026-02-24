@@ -11,7 +11,7 @@ interface QuestionData {
     questionIndex: number;
     totalQuestions: number;
     correctIndex: number;
-    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide';
+    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching';
     acceptedAnswers?: string[];
 }
 
@@ -465,28 +465,32 @@ export default function HostGame() {
 
             {question.type !== 'info-slide' && (
                 <div className="grid grid-cols-2 gap-4 h-1/3 p-4 md:p-8 bg-white border-t border-slate-200 shadow-[0_-20px_50px_rgba(0,0,0,0.05)] z-20">
-                    {['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '') ? (
+                    {['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'matching'].includes(question.type || '') ? (
                         <div className="col-span-2 flex flex-col items-center justify-center h-full">
-                            <div className="bg-indigo-50 border border-indigo-200 px-12 py-6 rounded-[2rem] text-center shadow-lg">
+                            <div className="bg-indigo-50 border border-indigo-200 px-12 py-6 rounded-[2rem] text-center shadow-lg w-full max-w-4xl">
                                 <h3 className="text-slate-500 font-bold uppercase tracking-widest text-sm mb-2">
                                     {question.type === 'fill-blank' ? "Fill in the Blank" :
                                         question.type === 'find-mistake' ? "Find Mistake" :
                                             question.type === 'rewrite' ? "Rewrite Sentence" :
-                                                "Type Answer"}
+                                                question.type === 'matching' ? "Matching Savoli" :
+                                                    "Type Answer"}
                                 </h3>
                                 {showResult ? (
-                                    <div>
-                                        <p className="text-3xl font-black text-emerald-600 mb-2">Correct answers:</p>
-                                        <div className="flex flex-wrap justify-center gap-2">
-                                            {question.acceptedAnswers?.map((ans, i) => (
-                                                <span key={i} className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold border border-emerald-200">
+                                    <div className="w-full">
+                                        <p className="text-3xl font-black text-emerald-600 mb-4">Correct answers:</p>
+                                        <div className="flex flex-wrap justify-center gap-3">
+                                            {(question.type === 'matching' ? (question.acceptedAnswers?.[0] || "").split('+') : question.acceptedAnswers)?.map((ans, i) => (
+                                                <div key={i} className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold border border-emerald-200 flex items-center gap-2">
+                                                    {question.type === 'matching' && <span className="text-xs opacity-50">{question.options[i]}:</span>}
                                                     {ans}
-                                                </span>
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="text-2xl font-black text-indigo-800 animate-pulse">O'quvchilar javob yozmoqda...</p>
+                                    <p className="text-2xl font-black text-indigo-800 animate-pulse">
+                                        {question.type === 'matching' ? "O'quvchilar elementlarni moslamoqda..." : "O'quvchilar javob yozmoqda..."}
+                                    </p>
                                 )}
                             </div>
                         </div>

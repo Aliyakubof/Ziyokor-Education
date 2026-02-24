@@ -10,7 +10,7 @@ interface QuestionDraft {
     options: string[];
     correctIndex: number;
     timeLimit: number;
-    type: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide';
+    type: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching';
     acceptedAnswers: string[];
 }
 
@@ -69,7 +69,7 @@ export default function CreateQuiz() {
 
     const [qInfo, setQInfo] = useState('');
     const [qText, setQText] = useState('');
-    const [qType, setQType] = useState<'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide'>('multiple-choice');
+    const [qType, setQType] = useState<'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching'>('multiple-choice');
     const [opts, setOpts] = useState(['', '', '', '']);
     const [correctIdx, setCorrectIdx] = useState(0);
     const [acceptedAnswers, setAcceptedAnswers] = useState('');
@@ -655,6 +655,13 @@ export default function CreateQuiz() {
                                             >
                                                 <Info size={20} />
                                             </button>
+                                            <button
+                                                onClick={() => setQType('matching')}
+                                                className={`p-2 rounded-lg transition-all ${qType === 'matching' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                                title="Matching (Moslash)"
+                                            >
+                                                <List size={20} className="rotate-90" />
+                                            </button>
                                         </div>
                                     </div>
 
@@ -762,55 +769,55 @@ export default function CreateQuiz() {
                                                 </div>
                                             </div>
                                         )}
-                                        {qType === 'word-box' && (
+                                        {qType === 'matching' && (
                                             <div className="space-y-4">
-                                                <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-800">
-                                                    <strong>Qanday to'ldirish kerak:</strong><br />
-                                                    1. Savol matniga [1], [2] ko'rinishida bo'sh joylarni qo'ying.<br />
-                                                    2. "Word Box" - bu o'quvchi ko'radigan barcha so'zlar (+ bilan ajrating).<br />
-                                                    3. "To'g'ri javoblar" - bo'sh joylarga tartib bilan mos keladigan so'zlar.
+                                                <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl text-xs text-purple-800">
+                                                    <strong>Matching (Moslash):</strong><br />
+                                                    1. "Word Box" - bu so'zlar ro'yxati (chap taraf) (+ bilan ajrating).<br />
+                                                    2. "To'g'ri javoblar" - ularga mos keladigan ta'riflar (o'ng taraf) (+ bilan ajrating).<br />
+                                                    3. O'ng tarafda ortiqcha variantlar qo'shish uchun ta'riflar sonini ko'proq yozing.
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Word Box (Barcha so'zlar)</label>
-                                                    <input
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">So'zlar (Chap taraf)</label>
+                                                    <textarea
                                                         className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium"
-                                                        placeholder="unhealthy+on a diet+healthy+delicious"
+                                                        placeholder="fascinated+confused+delighted"
                                                         value={opts.join('+')}
                                                         onChange={e => setOpts(e.target.value.split('+').map(s => s.trim()))}
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">To'g'ri javoblar (Tartib bilan)</label>
-                                                    <input
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Ta'riflar (O'ng taraf / Mos javoblar)</label>
+                                                    <textarea
                                                         className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium"
-                                                        placeholder="unhealthy+on a diet"
+                                                        placeholder="very interested+not able to think clearly+very happy"
                                                         value={acceptedAnswers}
                                                         onChange={e => setAcceptedAnswers(e.target.value)}
                                                     />
                                                 </div>
                                             </div>
                                         )}
+                                    </div>
 
-                                        <div className="flex items-center justify-between gap-4 pt-4">
-                                            <div className="flex items-center gap-4">
-                                                {/* Time input removed */}
-                                            </div>
-
-                                            {editingIdx !== null && (
-                                                <button
-                                                    onClick={cancelEdit}
-                                                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-6 py-3 rounded-xl font-black transition-all"
-                                                >
-                                                    BEKOR QILISH
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={addQuestion}
-                                                className={`px-8 py-3 rounded-xl font-black transition-all btn-premium shadow-lg ${editingIdx !== null ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-amber-500/20' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20'}`}
-                                            >
-                                                {editingIdx !== null ? 'YANGILASH' : 'SAVOLNI QO\'SHISH'}
-                                            </button>
+                                    <div className="flex items-center justify-between gap-4 pt-4">
+                                        <div className="flex items-center gap-4">
+                                            {/* Time input removed */}
                                         </div>
+
+                                        {editingIdx !== null && (
+                                            <button
+                                                onClick={cancelEdit}
+                                                className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-6 py-3 rounded-xl font-black transition-all"
+                                            >
+                                                BEKOR QILISH
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={addQuestion}
+                                            className={`px-8 py-3 rounded-xl font-black transition-all btn-premium shadow-lg ${editingIdx !== null ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-amber-500/20' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20'}`}
+                                        >
+                                            {editingIdx !== null ? 'YANGILASH' : 'SAVOLNI QO\'SHISH'}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -944,10 +951,10 @@ export default function CreateQuiz() {
                             </button>
                         </section>
                     </div>
-                </div>
+                </div >
 
                 {/* Existing Quizzes List */}
-                <div className="max-w-6xl mx-auto mt-16 pt-12 border-t border-slate-200">
+                < div className="max-w-6xl mx-auto mt-16 pt-12 border-t border-slate-200" >
                     <h2 className="text-2xl font-black text-slate-800 mb-8">Mavjud Testlar Ro'yxati</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
                         {allQuizzes.length > 0 ? (
@@ -975,7 +982,7 @@ export default function CreateQuiz() {
                             <p className="text-slate-400 font-medium">Testlar topilmadi.</p>
                         )}
                     </div>
-                </div>
+                </div >
             </div >
         </div >
     );
