@@ -597,7 +597,7 @@ export default function PlayerGame() {
                 </div>
             </header>
 
-            <main className="flex-1 p-4 overflow-hidden flex flex-col">
+            <main className="flex-1 p-4 md:p-6 overflow-y-auto w-full max-w-5xl mx-auto flex flex-col">
                 <div className="flex-1 relative">
                     {renderQuestionContent()}
                 </div>
@@ -864,11 +864,11 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
     };
 
     return (
-        <div className="flex flex-col h-full md:h-[600px] space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 overflow-y-auto md:overflow-hidden p-1">
+        <div className="flex flex-col space-y-8 pb-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-1">
                 {/* Words Column */}
-                <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 sticky top-0 bg-slate-50 py-2">Words</h3>
+                <div className="space-y-4">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Words</h3>
                     {words.map((word: string, i: number) => (
                         <button
                             key={i}
@@ -891,8 +891,8 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
                 </div>
 
                 {/* Definitions Column */}
-                <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 sticky top-0 bg-slate-50 py-2">Definitions</h3>
+                <div className="space-y-4">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Definitions</h3>
                     {defsWithLetters.map((def, i) => {
                         const isSelected = Object.values(matches).includes(def.letter);
                         return (
