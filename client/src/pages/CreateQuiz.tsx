@@ -146,7 +146,7 @@ export default function CreateQuiz() {
             const newQuestion: QuestionDraft = {
                 info: qInfo,
                 text: qText,
-                options: qType === 'word-box' ? opts : [],
+                options: (qType === 'word-box' || qType === 'matching') ? opts : [],
                 correctIndex: qType === 'info-slide' ? 0 : -1,
                 timeLimit: 0,
                 type: qType,
