@@ -861,19 +861,11 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
         const newMatches = { ...matches, [selectedWordIdx]: defLetter };
         setMatches(newMatches);
         setSelectedWordIdx(null);
-
-        if (isUnitMode) {
-            const matchArray = [];
-            for (let i = 0; i < words.length; i++) {
-                matchArray.push(newMatches[i] || "");
-            }
-            onAnswer(matchArray.join('+'));
-        }
     };
 
     return (
-        <div className="flex flex-col h-full space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 overflow-hidden">
+        <div className="flex flex-col h-full md:h-[600px] space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 overflow-y-auto md:overflow-hidden p-1">
                 {/* Words Column */}
                 <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 sticky top-0 bg-slate-50 py-2">Words</h3>
@@ -924,6 +916,21 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
                 </div>
             </div>
 
+            {isUnitMode && !isReview && (
+                <button
+                    onClick={() => {
+                        const matchArray = [];
+                        for (let i = 0; i < words.length; i++) {
+                            matchArray.push(matches[i] || "");
+                        }
+                        onAnswer(matchArray.join('+'));
+                    }}
+                    className="bg-indigo-600 text-white px-10 py-5 rounded-[2rem] font-black shadow-xl shadow-indigo-500/20 transition-all hover:bg-indigo-500 active:scale-95 flex items-center justify-center gap-2 mt-4 shrink-0"
+                >
+                    <Send size={24} /> SAVOLNI YAKUNLASH
+                </button>
+            )}
+
             {!isUnitMode && !isReview && (
                 <button
                     onClick={() => {
@@ -934,7 +941,7 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
                         onAnswer(matchArray.join('+'));
                     }}
                     disabled={Object.keys(matches).length === 0}
-                    className="bg-indigo-600 text-white px-10 py-5 rounded-[2rem] font-black shadow-xl shadow-indigo-500/20 transition-all hover:bg-indigo-500 active:scale-95 flex items-center justify-center gap-2"
+                    className="bg-indigo-600 text-white px-10 py-5 rounded-[2rem] font-black shadow-xl shadow-indigo-500/20 transition-all hover:bg-indigo-500 active:scale-95 flex items-center justify-center gap-2 shrink-0"
                 >
                     <Send size={24} /> JAVOBNI YUBORISH
                 </button>
