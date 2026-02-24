@@ -21,6 +21,8 @@ const normalizeAnswer = (val: string | number): string => {
     s = s.replace(/[“”]/g, '"');
     // Replace all basic punctuation with a space to preserve word boundaries
     s = s.replace(/[.,!?;:]/g, " ");
+    // Normalize separator '+' to space
+    s = s.replace(/\+/g, " ");
     // Normalize multiple spaces and ensure trimmed
     s = s.replace(/\s+/g, " ");
     return s.trim();
@@ -685,8 +687,19 @@ function WordBoxView({ question, unitAnswers, currentUnitIndex, onAnswer, isUnit
 
         setBlanks(newBlanks);
         if (isUnitMode) {
-            const sortedBlanks = Object.keys(newBlanks).map(Number).sort((a, b) => a - b);
-            const answerString = sortedBlanks.map(k => newBlanks[k]).join('+');
+            // Preservation of indices: find max index to ensure we don't truncate
+            const parts = question.text.split(/(\[\d+\])/g);
+            const gapIndices = parts
+                .map((p: string) => p.match(/\[(\d+)\]/))
+                .filter((m: RegExpMatchArray | null) => m)
+                .map((m: RegExpMatchArray | null) => parseInt(m![1]));
+            const maxIdx = Math.max(...gapIndices, 0);
+
+            const answerArray = [];
+            for (let i = 1; i <= maxIdx; i++) {
+                answerArray.push(newBlanks[i] || "");
+            }
+            const answerString = answerArray.join('+');
             onAnswer(answerString);
         }
     };
@@ -757,8 +770,18 @@ function WordBoxView({ question, unitAnswers, currentUnitIndex, onAnswer, isUnit
                 {!isUnitMode && !isReview && (
                     <button
                         onClick={() => {
-                            const sortedBlanks = Object.keys(blanks).map(Number).sort((a, b) => a - b);
-                            const answerString = sortedBlanks.map(k => blanks[k]).join('+');
+                            const parts = question.text.split(/(\[\d+\])/g);
+                            const gapIndices = parts
+                                .map((p: string) => p.match(/\[(\d+)\]/))
+                                .filter((m: RegExpMatchArray | null) => m)
+                                .map((m: RegExpMatchArray | null) => parseInt(m![1]));
+                            const maxIdx = Math.max(...gapIndices, 0);
+
+                            const answerArray = [];
+                            for (let i = 1; i <= maxIdx; i++) {
+                                answerArray.push(blanks[i] || "");
+                            }
+                            const answerString = answerArray.join('+');
                             onAnswer(answerString);
                         }}
                         disabled={Object.keys(blanks).length === 0}

@@ -6,6 +6,8 @@ export const normalizeAnswer = (val: string | number): string => {
     s = s.replace(/[“”]/g, '"');
     // Remove all basic punctuation throughout the string
     s = s.replace(/[.,!?;:]/g, " ");
+    // Normalize separator '+' to space for word-box and multi-gap questions
+    s = s.replace(/\+/g, " ");
     // Normalize multiple spaces and ensure trimmed
     s = s.replace(/\s+/g, " ");
     return s.trim();
