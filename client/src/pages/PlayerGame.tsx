@@ -132,13 +132,6 @@ export default function PlayerGame() {
         if (pin) {
             socket.emit('player-answer', { pin, answer: val, questionIndex: currentUnitIndex });
         }
-
-        // Auto move to next if not the last
-        if (currentUnitIndex < unitQuestions.length - 1) {
-            goToQuestion(currentUnitIndex + 1);
-        } else {
-            setView('UNIT_SUMMARY');
-        }
     };
 
     const goToQuestion = (index: number) => {
@@ -520,14 +513,6 @@ export default function PlayerGame() {
                         <p className="text-2xl md:text-3xl font-black text-slate-800 leading-tight">
                             {question.text}
                         </p>
-                        {isUnitMode && !isReview && (
-                            <button
-                                onClick={() => goToQuestion(currentUnitIndex + 1)}
-                                className="mt-8 w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 active:scale-95"
-                            >
-                                DAVOM ETISH
-                            </button>
-                        )}
                     </div>
                 </div>
             );
@@ -934,20 +919,7 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
                 </div>
             </div>
 
-            {isUnitMode && !isReview && (
-                <button
-                    onClick={() => {
-                        const matchArray = [];
-                        for (let i = 0; i < words.length; i++) {
-                            matchArray.push(matches[i] || "");
-                        }
-                        onAnswer(matchArray.join('+'));
-                    }}
-                    className="bg-indigo-600 text-white px-10 py-5 rounded-[2rem] font-black shadow-xl shadow-indigo-500/20 transition-all hover:bg-indigo-500 active:scale-95 flex items-center justify-center gap-2 mt-4 shrink-0"
-                >
-                    <Send size={24} /> SAVOLNI YAKUNLASH
-                </button>
-            )}
+            {/* Remove manual submit button in Unit Mode to rely on footer navigation */}
 
             {!isUnitMode && !isReview && (
                 <button
