@@ -471,34 +471,39 @@ export default function PlayerGame() {
             const isFalseCorrect = isReview && correctInfo?.correctIndex === 1;
 
             return (
-                <div className="h-full grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button
-                        onClick={() => !isReview && sendAnswer(0)} // True
-                        disabled={isReview}
-                        className={`rounded-[2rem] flex flex-col items-center justify-center group transition-all shadow-xl relative overflow-hidden border-4
-                            ${isReview
-                                ? (isTrueCorrect ? 'bg-emerald-500 border-yellow-400 scale-105' : currentAns === 0 ? 'bg-red-500 border-transparent opacity-50' : 'bg-slate-200 border-transparent opacity-30')
-                                : (isUnitMode && currentAns === 0 ? 'bg-blue-600 border-yellow-400 scale-105 shadow-blue-500/40' : 'bg-blue-500 border-transparent shadow-blue-500/20 active:scale-95')}`}
-                    >
-                        <div className="w-16 h-16 md:w-24 md:h-24 bg-white/20 rounded-full flex items-center justify-center text-3xl md:text-5xl mb-2 md:mb-4 text-white">
-                            <CheckCircle2 size={32} className="md:w-12 md:h-12" />
-                        </div>
-                        <span className="text-xl md:text-2xl font-black text-white uppercase tracking-widest">TRUE</span>
-                    </button>
+                <div className="flex flex-col h-full space-y-6">
+                    <div className="text-xl md:text-2xl font-bold text-slate-800 text-center leading-relaxed px-4">
+                        {question.text}
+                    </div>
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button
+                            onClick={() => !isReview && sendAnswer(0)} // True
+                            disabled={isReview}
+                            className={`rounded-[2rem] flex flex-col items-center justify-center group transition-all shadow-xl relative overflow-hidden border-4
+                                ${isReview
+                                    ? (isTrueCorrect ? 'bg-emerald-500 border-yellow-400 scale-105' : currentAns === 0 ? 'bg-red-500 border-transparent opacity-50' : 'bg-slate-200 border-transparent opacity-30')
+                                    : (isUnitMode && currentAns === 0 ? 'bg-blue-600 border-yellow-400 scale-105 shadow-blue-500/40' : 'bg-blue-500 border-transparent shadow-blue-500/20 active:scale-95')}`}
+                        >
+                            <div className="w-16 h-16 md:w-24 md:h-24 bg-white/20 rounded-full flex items-center justify-center text-3xl md:text-5xl mb-2 md:mb-4 text-white">
+                                <CheckCircle2 size={32} className="md:w-12 md:h-12" />
+                            </div>
+                            <span className="text-xl md:text-2xl font-black text-white uppercase tracking-widest">TRUE</span>
+                        </button>
 
-                    <button
-                        onClick={() => !isReview && sendAnswer(1)} // False
-                        disabled={isReview}
-                        className={`rounded-[2rem] flex flex-col items-center justify-center group transition-all shadow-xl relative overflow-hidden border-4
-                            ${isReview
-                                ? (isFalseCorrect ? 'bg-emerald-500 border-yellow-400 scale-105' : currentAns === 1 ? 'bg-red-500 border-transparent opacity-50' : 'bg-slate-200 border-transparent opacity-30')
-                                : (isUnitMode && currentAns === 1 ? 'bg-red-600 border-yellow-400 scale-105 shadow-red-500/40' : 'bg-red-500 border-transparent shadow-red-500/20 active:scale-95')}`}
-                    >
-                        <div className="w-16 h-16 md:w-24 md:h-24 bg-white/20 rounded-full flex items-center justify-center text-3xl md:text-5xl mb-2 md:mb-4 text-white">
-                            <XCircle size={32} className="md:w-12 md:h-12" />
-                        </div>
-                        <span className="text-xl md:text-2xl font-black text-white uppercase tracking-widest">FALSE</span>
-                    </button>
+                        <button
+                            onClick={() => !isReview && sendAnswer(1)} // False
+                            disabled={isReview}
+                            className={`rounded-[2rem] flex flex-col items-center justify-center group transition-all shadow-xl relative overflow-hidden border-4
+                                ${isReview
+                                    ? (isFalseCorrect ? 'bg-emerald-500 border-yellow-400 scale-105' : currentAns === 1 ? 'bg-red-500 border-transparent opacity-50' : 'bg-slate-200 border-transparent opacity-30')
+                                    : (isUnitMode && currentAns === 1 ? 'bg-red-600 border-yellow-400 scale-105 shadow-red-500/40' : 'bg-red-500 border-transparent shadow-red-500/20 active:scale-95')}`}
+                        >
+                            <div className="w-16 h-16 md:w-24 md:h-24 bg-white/20 rounded-full flex items-center justify-center text-3xl md:text-5xl mb-2 md:mb-4 text-white">
+                                <XCircle size={32} className="md:w-12 md:h-12" />
+                            </div>
+                            <span className="text-xl md:text-2xl font-black text-white uppercase tracking-widest">FALSE</span>
+                        </button>
+                    </div>
                 </div>
             );
         }
@@ -531,32 +536,37 @@ export default function PlayerGame() {
         // Multiple Choice
         const currentAnsMCQ = unitAnswers[currentUnitIndex];
         return (
-            <div className="h-full grid grid-cols-2 grid-rows-2 gap-3 md:gap-4">
-                {[0, 1, 2, 3].map(i => {
-                    const isCorrect = isReview && correctInfo?.correctIndex === i;
-                    const isWrongSelection = isReview && currentAnsMCQ === i && !isCorrect;
+            <div className="flex flex-col h-full space-y-6">
+                <div className="text-xl md:text-2xl font-bold text-slate-800 text-center leading-relaxed px-4">
+                    {question.text}
+                </div>
+                <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-3 md:gap-4">
+                    {[0, 1, 2, 3].map(i => {
+                        const isCorrect = isReview && correctInfo?.correctIndex === i;
+                        const isWrongSelection = isReview && currentAnsMCQ === i && !isCorrect;
 
-                    return (
-                        <button
-                            key={i}
-                            onClick={() => !isReview && sendAnswer(i)}
-                            disabled={isReview}
-                            className={`border-4 rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center group transition-all shadow-xl relative overflow-hidden
-                                ${isReview
-                                    ? (isCorrect ? 'bg-emerald-500 border-yellow-400 scale-105 z-10 shadow-emerald-500/20' : isWrongSelection ? 'bg-red-500 border-transparent opacity-60' : 'bg-slate-50 border-transparent opacity-30')
-                                    : (isUnitMode && currentAnsMCQ === i ? 'border-yellow-400 bg-slate-50 active:scale-95' : 'border-slate-100 bg-white hover:border-blue-300 active:scale-95')}`}
-                        >
-                            <div className={`w-14 h-14 md:w-20 md:h-20 rounded-xl md:rounded-2xl flex items-center justify-center text-2xl md:text-4xl shadow-lg mb-2 md:mb-4 group-hover:scale-110 transition-transform relative z-10 text-white
-                                ${i === 0 ? 'bg-blue-500' : i === 1 ? 'bg-emerald-500' : i === 2 ? 'bg-orange-500' : 'bg-indigo-500'}`}>
-                                <span>{i === 0 ? '▲' : i === 1 ? '◆' : i === 2 ? '●' : '■'}</span>
-                            </div>
-                            <span className={`text-sm md:text-lg font-bold relative z-10 text-center px-4 leading-tight
-                                ${isReview && (isCorrect || isWrongSelection) ? 'text-white' : 'text-slate-700'}`}>
-                                {question.options[i]}
-                            </span>
-                        </button>
-                    );
-                })}
+                        return (
+                            <button
+                                key={i}
+                                onClick={() => !isReview && sendAnswer(i)}
+                                disabled={isReview}
+                                className={`border-4 rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center group transition-all shadow-xl relative overflow-hidden
+                                    ${isReview
+                                        ? (isCorrect ? 'bg-emerald-500 border-yellow-400 scale-105 z-10 shadow-emerald-500/20' : isWrongSelection ? 'bg-red-500 border-transparent opacity-60' : 'bg-slate-50 border-transparent opacity-30')
+                                        : (isUnitMode && currentAnsMCQ === i ? 'border-yellow-400 bg-slate-50 active:scale-95' : 'border-slate-100 bg-white hover:border-blue-300 active:scale-95')}`}
+                            >
+                                <div className={`w-14 h-14 md:w-20 md:h-20 rounded-xl md:rounded-2xl flex items-center justify-center text-2xl md:text-4xl shadow-lg mb-2 md:mb-4 group-hover:scale-110 transition-transform relative z-10 text-white
+                                    ${i === 0 ? 'bg-blue-500' : i === 1 ? 'bg-emerald-500' : i === 2 ? 'bg-orange-500' : 'bg-indigo-500'}`}>
+                                    <span>{i === 0 ? '▲' : i === 1 ? '◆' : i === 2 ? '●' : '■'}</span>
+                                </div>
+                                <span className={`text-sm md:text-lg font-bold relative z-10 text-center px-4 leading-tight
+                                    ${isReview && (isCorrect || isWrongSelection) ? 'text-white' : 'text-slate-700'}`}>
+                                    {question.options[i]}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
         );
     };
@@ -577,13 +587,10 @@ export default function PlayerGame() {
 
                 <div className="flex-1 px-6 text-center">
                     {isUnitMode && (
-                        <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 truncate max-w-[240px] mx-auto">
+                        <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 mx-auto">
                             {question?.info || getCurrentTopic() || quizTitle || 'Unit Quiz'}
                         </h2>
                     )}
-                    <h1 className="text-lg md:text-xl font-black text-slate-800 leading-tight">
-                        {question?.type === 'info-slide' ? 'Information' : question?.text}
-                    </h1>
                 </div>
 
                 <div className="w-20 flex justify-end">
@@ -863,7 +870,7 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
         setSelectedWordIdx(null);
     }, [currentUnitIndex, unitAnswers, question, correctInfo, isReview]);
 
-    const handleMatch = (defItem: { letter: string, text: string, originalIndex: number }) => {
+    const handleMatch = (defItem: { letter: string, text: string, originalIndex?: number }) => {
         if (isReview || selectedWordIdx === null) return;
 
         const newMatches = { ...matches, [selectedWordIdx]: defItem.text };
@@ -872,7 +879,10 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
     };
 
     return (
-        <div className="flex flex-col space-y-8 pb-10">
+        <div className="flex flex-col space-y-6 pb-10">
+            <div className="text-xl md:text-2xl font-bold text-slate-800 text-center leading-relaxed px-4">
+                {question.text}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-1">
                 {/* Words Column */}
                 <div className="space-y-4">
