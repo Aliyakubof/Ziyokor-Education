@@ -797,6 +797,34 @@ export default function CreateQuiz() {
                                                 </div>
                                             </div>
                                         )}
+                                        {qType === 'word-box' && (
+                                            <div className="space-y-4">
+                                                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-xs text-blue-800">
+                                                    <strong>Word Box (Fill-in-gap):</strong><br />
+                                                    1. Savol matnida bo'shliqlar uchun <code>[1]</code>, <code>[2]</code> kabi belgilardan foydalaning.<br />
+                                                    2. "Word Box" - bu talabaga ko'rinadigan so'zlar ro'yxati (`+` bilan ajrating).<br />
+                                                    3. "To'g'ri javoblar" - bo'shliqlarga mos keladigan javoblar tartib bilan (`+` bilan ajrating).
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Word Box (So'zlar ro'yxati)</label>
+                                                    <textarea
+                                                        className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 min-h-[80px]"
+                                                        placeholder="apple+banana+cherry"
+                                                        value={opts.join('+')}
+                                                        onChange={e => setOpts(e.target.value.split('+').map(s => s.trim()))}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">To'g'ri javoblar (Tartib bilan)</label>
+                                                    <textarea
+                                                        className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 min-h-[80px]"
+                                                        placeholder="apple+banana"
+                                                        value={acceptedAnswers}
+                                                        onChange={e => setAcceptedAnswers(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="flex items-center justify-between gap-4 pt-4">
