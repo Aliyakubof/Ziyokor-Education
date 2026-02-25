@@ -25,6 +25,7 @@ export default function CreateQuiz() {
 
     const [questions, setQuestions] = useState<QuestionDraft[]>([]);
     const [allQuizzes, setAllQuizzes] = useState<any[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         fetchAllQuizzes();
@@ -192,6 +193,9 @@ export default function CreateQuiz() {
 
     const saveQuiz = async () => {
         if (!title || questions.length === 0) return alert("Sarlavha va kamida bitta savol qo'shing");
+        if (isSaving) return;
+
+        setIsSaving(true);
         try {
             const url = id ? `/api/unit-quizzes/${id}` : '/api/unit-quizzes';
             const method = id ? 'PUT' : 'POST';
@@ -210,13 +214,14 @@ export default function CreateQuiz() {
             if (res.ok) {
                 alert(id ? "Test muvaffaqiyatli yangilandi!" : "Yangi test muvaffaqiyatli yaratildi!");
                 fetchAllQuizzes(); // Refresh the list below
-                // Don't navigate away, stay on the page as requested
             } else {
                 throw new Error(data.error || 'Xatolik');
             }
         } catch (err) {
             console.error(err);
             alert("Saqlashda xatolik yuz berdi");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -971,11 +976,11 @@ export default function CreateQuiz() {
 
                             <button
                                 onClick={saveQuiz}
-                                disabled={!title || questions.length === 0}
-                                className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xl font-black py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 btn-premium flex items-center justify-center gap-3"
+                                disabled={!title || questions.length === 0 || isSaving}
+                                className={`w-full ${isSaving ? 'bg-slate-400' : 'bg-emerald-600 hover:bg-emerald-500'} disabled:bg-slate-200 disabled:text-slate-400 text-white text-xl font-black py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 btn-premium flex items-center justify-center gap-3`}
                             >
-                                <Save size={24} />
-                                SAQLASH
+                                <Save size={24} className={isSaving ? 'animate-spin' : ''} />
+                                {isSaving ? 'SAQLANMOQDA...' : 'SAQLASH'}
                             </button>
                         </section>
                     </div>

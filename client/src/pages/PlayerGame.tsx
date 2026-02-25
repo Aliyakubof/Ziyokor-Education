@@ -832,12 +832,20 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
 
     useEffect(() => {
         const correctLetters = "ABCDEFGHIJKLMN";
-        const defsList = (isReview ? (correctInfo?.acceptedAnswers || []) : (question.acceptedAnswers || []));
+        // Create a list with original labels to know which definition corresponds to which original index
+        const originalWithLabels = (isReview ? (correctInfo?.acceptedAnswers || []) : (question.acceptedAnswers || []))
+            .map((text: string, index: number) => ({ text, index }));
 
-        // During review, we show definitions as they are. During play, we show them with letters.
-        const mapped = defsList.map((d: string, i: number) => ({
+        // Shuffle the list for non-review mode
+        let displayedDefs = [...originalWithLabels];
+        if (!isReview) {
+            displayedDefs = displayedDefs.sort(() => Math.random() - 0.5);
+        }
+
+        const mapped = displayedDefs.map((item: any, i: number) => ({
             letter: correctLetters[i] || '?',
-            text: d
+            text: item.text,
+            originalIndex: item.index
         }));
         setDefsWithLetters(mapped);
 
@@ -855,10 +863,10 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
         setSelectedWordIdx(null);
     }, [currentUnitIndex, unitAnswers, question, correctInfo, isReview]);
 
-    const handleMatch = (defLetter: string) => {
+    const handleMatch = (defItem: { letter: string, text: string, originalIndex: number }) => {
         if (isReview || selectedWordIdx === null) return;
 
-        const newMatches = { ...matches, [selectedWordIdx]: defLetter };
+        const newMatches = { ...matches, [selectedWordIdx]: defItem.text };
         setMatches(newMatches);
         setSelectedWordIdx(null);
     };
@@ -882,8 +890,8 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
                                 {word}
                             </div>
                             {matches[i] && (
-                                <div className="bg-emerald-500 text-white w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black">
-                                    {matches[i]}
+                                <div className="bg-emerald-500 text-white px-2 h-6 rounded-lg flex items-center justify-center text-[10px] font-black uppercase">
+                                    moslandi
                                 </div>
                             )}
                         </button>
@@ -898,7 +906,7 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
                         return (
                             <button
                                 key={i}
-                                onClick={() => handleMatch(def.letter)}
+                                onClick={() => handleMatch(def)}
                                 className={`w-full p-4 rounded-2xl border-2 text-left transition-all flex gap-4
                                     ${isReview ? 'border-slate-100 bg-white opacity-80 cursor-default' :
                                         isSelected ? 'border-slate-100 bg-slate-50 text-slate-400 opacity-50' :

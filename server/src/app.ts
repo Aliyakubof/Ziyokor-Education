@@ -11,7 +11,7 @@ import { schema } from './schema';
 import { Player } from './types';
 import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyReports } from './bot';
 import { generateQuizResultPDF } from './pdfGenerator';
-import { normalizeAnswer, checkAnswer } from './utils';
+import { normalizeAnswer, checkAnswer, countCorrectParts } from './utils';
 import { checkAnswerWithAI } from './aiChecker';
 
 const app = express();
@@ -1071,7 +1071,7 @@ async function awardRewards(studentId: string, score: number) {
         const isDoubleXP = (day === 0 || day === 6);
         const actualScore = isDoubleXP ? score * 2 : score;
 
-        const coinsToAward = Math.floor(actualScore / 10);
+        const coinsToAward = Math.floor(actualScore);
         const studentRes = await query('SELECT last_activity_at, streak_count, group_id FROM students WHERE id = $1', [studentId]);
         if (studentRes.rowCount === 0) return;
         const student = studentRes.rows[0];
@@ -1579,33 +1579,28 @@ io.on('connection', (socket) => {
         if (qIdx < 0 || qIdx >= game.quiz.questions.length) return;
 
         const question = game.quiz.questions[qIdx];
-        const prevAnswerWasCorrect = (player as any).correctMap?.[qIdx] || false;
+        if (!(player as any).partialScoreMap) (player as any).partialScoreMap = {};
+        const prevPartialScore = (player as any).partialScoreMap[qIdx] || 0;
 
-        let isCorrect = false;
-        const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'];
+        let currentScore = 0;
+        const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching'];
 
-        if (textTypes.includes(question.type || '')) {
+        if (question.type === 'matching' || question.type === 'word-box') {
+            currentScore = countCorrectParts(answer, question.acceptedAnswers || []);
+        } else if (textTypes.includes(question.type || '')) {
             if (checkAnswer(answer, question.acceptedAnswers || [])) {
-                isCorrect = true;
+                currentScore = 1;
             }
-            player.answers[qIdx] = answer;
         } else {
             const ansIdx = Number(answer);
-            player.answers[qIdx] = ansIdx;
             if (ansIdx === question.correctIndex) {
-                isCorrect = true;
+                currentScore = 1;
             }
         }
 
-        if (!(player as any).correctMap) (player as any).correctMap = {};
-
-        if (isCorrect && !prevAnswerWasCorrect) {
-            player.score += 100;
-            (player as any).correctMap[qIdx] = true;
-        } else if (!isCorrect && prevAnswerWasCorrect) {
-            player.score -= 100;
-            (player as any).correctMap[qIdx] = false;
-        }
+        player.answers[qIdx] = answer;
+        player.score = player.score - prevPartialScore + currentScore;
+        (player as any).partialScoreMap[qIdx] = currentScore;
 
         if (game.isUnitQuiz) {
             broadcastPlayerUpdate(pin);

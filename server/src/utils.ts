@@ -26,3 +26,17 @@ export const checkAnswer = (studentAns: string | number, acceptedAnswers: string
 
     return isSynonymMatch || isSequenceMatch;
 };
+
+export const countCorrectParts = (studentAns: string | number, acceptedAnswers: string[]): number => {
+    if (!studentAns) return 0;
+    const sParts = String(studentAns).split('+').map(p => normalizeAnswer(p));
+    const aParts = acceptedAnswers.map(p => normalizeAnswer(p));
+    let count = 0;
+    // Compare each part by index
+    for (let i = 0; i < aParts.length; i++) {
+        if (sParts[i] === aParts[i]) {
+            count++;
+        }
+    }
+    return count;
+};
