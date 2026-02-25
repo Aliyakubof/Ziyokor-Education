@@ -577,7 +577,7 @@ export default function PlayerGame() {
                 <div className="flex items-center gap-3">
                     <div className="bg-indigo-50 border border-indigo-100 px-4 py-1.5 rounded-xl">
                         <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block">
-                            {question?.info || 'Savol'}
+                            Savol
                         </span>
                         <div className="text-lg font-black text-indigo-600">
                             {isUnitMode ? (currentUnitIndex + 1) : question?.questionIndex} / {isUnitMode ? unitQuestions.length : question?.totalQuestions}
