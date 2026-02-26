@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Ziyokor Education',
   webDir: 'dist',
   server: {
-    allowNavigation: ['64.226.94.154'],
+    allowNavigation: ['64.226.94.154', 'zeducation.uz', '*.zeducation.uz'],
     cleartext: true
   }
 };

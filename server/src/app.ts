@@ -17,6 +17,8 @@ import { checkAnswerWithAI } from './aiChecker';
 const app = express();
 const allowedOrigins = [
     process.env.FRONTEND_URL,
+    'https://zeducation.uz',
+    'https://www.zeducation.uz',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5175',
