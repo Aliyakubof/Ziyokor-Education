@@ -213,6 +213,10 @@ export default function CreateQuiz() {
             const data = await res.json();
             if (res.ok) {
                 alert(id ? "Test muvaffaqiyatli yangilandi!" : "Yangi test muvaffaqiyatli yaratildi!");
+                if (!id && data.id) {
+                    // Redirect to edit page of the newly created quiz to prevent duplicate saves
+                    navigate(`/edit-quiz/${data.id}`, { replace: true });
+                }
                 fetchAllQuizzes(); // Refresh the list below
             } else {
                 throw new Error(data.error || 'Xatolik');

@@ -279,20 +279,8 @@ app.put('/api/admin/students/:id/password', async (req, res) => {
     }
 });
 
-// Admin: Unit Quizzes
-app.post('/api/unit-quizzes', async (req, res) => {
-    try {
-        const { title, questions, level, unit } = req.body;
-        const id = uuidv4();
-        await query(
-            'INSERT INTO unit_quizzes (id, title, questions, level, unit) VALUES ($1, $2, $3, $4, $5)',
-            [id, title, JSON.stringify(questions), level, unit]
-        );
-        res.json({ id, title, questions, level, unit });
-    } catch (err) {
-        res.status(500).json({ error: 'Error creating unit quiz' });
-    }
-});
+// Admin: Unit Quizzes (Routes moved/consolidated below)
+
 
 app.get('/api/student/quizzes', async (req, res) => {
     try {
