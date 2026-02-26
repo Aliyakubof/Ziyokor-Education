@@ -13,7 +13,7 @@ export default function InteractiveBackground() {
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
 
-        let mouse = { x: -1000, y: -1000, radius: 200 };
+        let mouse = { x: -1000, y: -1000, radius: 150 };
 
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
@@ -31,38 +31,63 @@ export default function InteractiveBackground() {
             mouse.y = -1000;
         });
 
+        // Letters and symbols fitting a language learning app
+        const characters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'a', 'b', 'c', 'd', 'e', '!', '?', '@', '#', '1', '2', '3', 'Vocab', 'Unit', 'Test'];
+        const colors = [
+            'rgba(79, 70, 229, 0.12)', // Indigo
+            'rgba(147, 51, 234, 0.08)', // Purple
+            'rgba(59, 130, 246, 0.12)', // Blue
+        ];
+
         class Particle {
             x: number;
             y: number;
             size: number;
             speedX: number;
             speedY: number;
+            character: string;
+            color: string;
+            angle: number;
+            spin: number;
 
             constructor() {
                 this.x = Math.random() * width;
                 this.y = Math.random() * height;
-                this.size = Math.random() * 2.5 + 0.5;
-                this.speedX = (Math.random() - 0.5) * 0.8;
-                this.speedY = (Math.random() - 0.5) * 0.8;
+                this.size = Math.random() * 24 + 12; // Font sizes between 12px and 36px
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.8 - 0.2; // Slowly moving upwards generally
+                this.character = characters[Math.floor(Math.random() * characters.length)];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.angle = Math.random() * 360;
+                this.spin = (Math.random() - 0.5) * 1; // subtle rotation
             }
 
             draw() {
                 if (!ctx) return;
-                ctx.fillStyle = 'rgba(79, 70, 229, 0.6)'; // Indigo nodes
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate((this.angle * Math.PI) / 180);
+                ctx.fillStyle = this.color;
+                ctx.font = `bold ${this.size}px "Inter", sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.character, 0, 0);
+                ctx.restore();
             }
 
             update() {
-                // Bounce off edges
-                if (this.x > width || this.x < 0) this.speedX = -this.speedX;
-                if (this.y > height || this.y < 0) this.speedY = -this.speedY;
+                // Wrap around edges to keep them flowing continuously
+                if (this.x > width + 50) this.x = -50;
+                else if (this.x < -50) this.x = width + 50;
+
+                if (this.y > height + 50) this.y = -50;
+                else if (this.y < -50) this.y = height + 50;
 
                 this.x += this.speedX;
                 this.y += this.speedY;
+                this.angle += this.spin;
 
-                // Mouse interaction - magnetic pull slightly
+                // Mouse interaction - letters gently move out of the way
                 let dx = mouse.x - this.x;
                 let dy = mouse.y - this.y;
                 let distance = Math.sqrt(dx * dx + dy * dy);
@@ -71,9 +96,9 @@ export default function InteractiveBackground() {
                     const forceDirectionX = dx / distance;
                     const forceDirectionY = dy / distance;
                     const force = (mouse.radius - distance) / mouse.radius;
-                    // gentle push away
-                    this.x -= forceDirectionX * force * 1.5;
-                    this.y -= forceDirectionY * force * 1.5;
+                    this.x -= forceDirectionX * force * 3;
+                    this.y -= forceDirectionY * force * 3;
+                    this.angle += forceDirectionX * 2; // spin a bit extra when pushed
                 }
             }
         }
@@ -82,7 +107,7 @@ export default function InteractiveBackground() {
 
         function init() {
             particlesArray = [];
-            let numberOfParticles = (width * height) / 10000; // Density
+            let numberOfParticles = (width * height) / 15000; // Optimal density for words/letters
             for (let i = 0; i < numberOfParticles; i++) {
                 particlesArray.push(new Particle());
             }
@@ -90,53 +115,13 @@ export default function InteractiveBackground() {
 
         function animate() {
             if (!ctx) return;
-            // Clear with a slight trail effect or transparent background
             ctx.clearRect(0, 0, width, height);
 
             for (let i = 0; i < particlesArray.length; i++) {
                 particlesArray[i].update();
                 particlesArray[i].draw();
             }
-            connect();
             requestAnimationFrame(animate);
-        }
-
-        function connect() {
-            let opacityValue = 1;
-            for (let a = 0; a < particlesArray.length; a++) {
-                for (let b = a; b < particlesArray.length; b++) {
-                    let dx = particlesArray[a].x - particlesArray[b].x;
-                    let dy = particlesArray[a].y - particlesArray[b].y;
-                    let distance = Math.sqrt(dx * dx + dy * dy);
-
-                    // Connect particles close to each other
-                    if (distance < 140) {
-                        opacityValue = 1 - (distance / 140);
-                        if (!ctx) return;
-                        ctx.strokeStyle = `rgba(147, 51, 234, ${opacityValue * 0.3})`; // Purple connecting lines
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                        ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
-                        ctx.stroke();
-                    }
-
-                    // Extra connection logic specifically for the mouse pointer
-                    let mouseDx = mouse.x - particlesArray[a].x;
-                    let mouseDy = mouse.y - particlesArray[a].y;
-                    let mouseDistance = Math.sqrt(mouseDx * mouseDx + mouseDy * mouseDy);
-                    if (mouseDistance < 180) {
-                        if (!ctx) return;
-                        opacityValue = 1 - (mouseDistance / 180);
-                        ctx.strokeStyle = `rgba(59, 130, 246, ${opacityValue * 0.5})`; // Blue lines towards mouse
-                        ctx.lineWidth = 1.5;
-                        ctx.beginPath();
-                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                        ctx.lineTo(mouse.x, mouse.y);
-                        ctx.stroke();
-                    }
-                }
-            }
         }
 
         init();
