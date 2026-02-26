@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext';
 import { LogIn, Settings, Users, PlusCircle, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiFetch } from '../api';
 import logo from '../assets/logo.jpeg';
+import InteractiveBackground from '../components/InteractiveBackground';
 
 export default function Home() {
     const { isAuthenticated, role, logout, user } = useAuth();
@@ -18,17 +19,17 @@ export default function Home() {
 
     const slides = [
         {
-            image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200&auto=format&fit=crop",
+            image: "https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1200&auto=format&fit=crop", // Diverse students in classroom
             title: "Interaktiv Ta'lim",
             description: "O'quvchilar uchun qiziqarli va samarali bilim olish tizimi"
         },
         {
-            image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1200&auto=format&fit=crop",
+            image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200&auto=format&fit=crop", // Student writing in notebook / studying
             title: "Guruhlar Boshqaruvi",
             description: "O'qituvchilar uchun qulay va tezkor guruh nazorati"
         },
         {
-            image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop",
+            image: "https://images.unsplash.com/photo-1546410531-bea5acadb6a0?q=80&w=1200&auto=format&fit=crop", // Computer screen, typing, testing
             title: "Bilimni Sinash",
             description: "Zamonaviy testlar va natijalarni real vaqtda kuzatish"
         }
@@ -84,7 +85,8 @@ export default function Home() {
     };
 
     return (
-        <div className="min-h-screen bg-transparent font-sans text-slate-900 flex flex-col">
+        <div className="min-h-screen bg-transparent font-sans text-slate-900 flex flex-col relative z-0">
+            <InteractiveBackground />
             {/* Navbar */}
             <nav className="border-b border-slate-100 py-4 px-6 md:px-12 bg-white sticky top-0 z-50 shadow-sm">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
