@@ -995,7 +995,20 @@ export default function CreateQuiz() {
                     <h2 className="text-2xl font-black text-slate-800 mb-8">Mavjud Testlar Ro'yxati</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
                         {allQuizzes.length > 0 ? (
-                            allQuizzes.map((quiz) => (
+                            [...allQuizzes].sort((a, b) => {
+                                const levelWeights: { [key: string]: number } = {
+                                    'Beginner': 1,
+                                    'Elementary': 2,
+                                    'Pre-Intermediate': 3,
+                                    'Intermediate': 4
+                                };
+                                const weightA = levelWeights[a.level] || 99;
+                                const weightB = levelWeights[b.level] || 99;
+                                if (weightA !== weightB) {
+                                    return weightA - weightB;
+                                }
+                                return parseInt(a.unit) - parseInt(b.unit);
+                            }).map((quiz) => (
                                 <div key={quiz.id} className="bg-white border border-slate-200 p-6 rounded-2xl flex flex-col justify-between hover:border-indigo-500 transition-all shadow-sm">
                                     <div>
                                         <h3 className="font-bold text-slate-800 text-lg mb-1">{quiz.title}</h3>
