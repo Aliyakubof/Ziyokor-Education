@@ -1,8 +1,11 @@
 import { Telegraf } from 'telegraf';
 import { query } from './db';
+import { setupTelegramGame } from './telegram_game';
 
 const token = process.env.TELEGRAM_BOT_TOKEN || '8564105202:AAFHcou7QISJjWQe0UQqjPLITIbkZq_2-c4';
 export const bot = new Telegraf(token);
+
+setupTelegramGame(bot);
 
 // Prevent bot from crashing the server on network errors
 bot.catch((err: any, ctx: any) => {
