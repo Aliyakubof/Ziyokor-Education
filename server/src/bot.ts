@@ -31,6 +31,9 @@ bot.start(async (ctx) => {
         }
 
         if (payload === 'teacher') {
+            if (ctx.chat.type !== 'private') {
+                return ctx.reply('❌ O\'qituvchi sifatida kirish faqat shaxsiy yozishmalarda (botning o\'zida) amalga oshiriladi.');
+            }
             userStates[chatId] = 'awaiting_teacher_phone';
             ctx.reply(
                 'Assalomu alaykum! Ziyokor Education botiga o\'qituvchi sifatida xush kelibsiz.\n' +
@@ -47,6 +50,14 @@ bot.start(async (ctx) => {
         }
 
         console.log(`[Bot] Start command from ${chatId}`);
+
+        if (ctx.chat.type !== 'private') {
+            return ctx.reply(
+                'Assalomu alaykum! Ziyokor Education guruh botiga xush kelibsiz.\n\n' +
+                'O\'yin o\'ynash uchun /start_game buyrug\'idan foydalaning.'
+            );
+        }
+
         ctx.reply(
             'Assalomu alaykum! Ziyokor Education botiga xush kelibsiz.\n\n' +
             '👤 <b>O\'quvchi yoki Ota-ona</b> bo\'lsangiz, tizimga ulanish uchun 7 xonali ID kodingizni yuboring.\n\n' +
@@ -68,6 +79,9 @@ bot.start(async (ctx) => {
 });
 
 bot.hears("👨‍🏫 O\'qituvchi sifatida kirish", (ctx) => {
+    if (ctx.chat.type !== 'private') {
+        return ctx.reply('❌ O\'qituvchi sifatida kirish faqat shaxsiy yozishmalarda amalga oshiriladi.');
+    }
     const chatId = ctx.chat.id.toString();
     userStates[chatId] = 'awaiting_teacher_phone';
     ctx.reply(
