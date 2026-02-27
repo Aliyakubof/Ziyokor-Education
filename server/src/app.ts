@@ -342,27 +342,42 @@ app.post('/api/student/quiz/submit', async (req, res) => {
         for (let i = 0; i < questions.length; i++) {
             const q = questions[i];
             const studentAns = answers[i];
-            const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'];
+            const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite']; // word-box removed from strict textTypes
 
             let isCorrect = false;
             let aiResult = null;
+            let currentScore = 0;
 
-            if (textTypes.includes(q.type)) {
+            if (q.type === 'matching' || q.type === 'word-box') {
+                const partsCorrect = countCorrectParts(studentAns, q.acceptedAnswers || []);
+                const totalParts = q.acceptedAnswers ? q.acceptedAnswers.length : 1;
+
+                // For partial scoring UI (1 pt per correct part instead of 100 for all)
+                currentScore = partsCorrect;
+                score += currentScore;
+
+                if (partsCorrect === totalParts && totalParts > 0) {
+                    isCorrect = true;
+                }
+            } else if (textTypes.includes(q.type)) {
                 if (checkAnswer(studentAns || "", q.acceptedAnswers || [])) {
                     isCorrect = true;
-                    score += 100;
+                    currentScore = 1;
+                    score += 1;
                 } else if (!isCorrect && studentAns) {
                     // Try AI checking for potentially complex answers
                     aiResult = await checkAnswerWithAI(q.text, studentAns, q.acceptedAnswers?.[0] || "", q.type);
                     if (aiResult.score >= 80) {
                         isCorrect = true;
-                        score += 100;
+                        currentScore = 1;
+                        score += 1;
                     }
                 }
             } else {
                 if (Number(studentAns) === q.correctIndex) {
                     isCorrect = true;
-                    score += 100;
+                    currentScore = 1;
+                    score += 1;
                 }
             }
 
@@ -390,15 +405,35 @@ app.post('/api/student/quiz/submit', async (req, res) => {
 
             if (teacherRes.rows[0]?.telegram_chat_id) {
                 const { telegram_chat_id, student_name, group_name } = teacherRes.rows[0];
-                const percentage = Math.round((score / (questions.length * 100)) * 100);
+
+                // Calculate max possible score:
+                let maxScore = 0;
+                questions.forEach((question: any) => {
+                    if (question.type === 'matching' || question.type === 'word-box') {
+                        maxScore += question.acceptedAnswers ? question.acceptedAnswers.length : 1;
+                    } else {
+                        maxScore += 1;
+                    }
+                });
+
+                const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
                 const status = percentage > 59 ? "(O'tdi ✅)" : "(O'tmadi ❌)";
-                await notifyTeacher(telegram_chat_id, `🎯 <b>Mashq tugatildi!(Solo Mode) </b>\n👤 O'quvchi: ${student_name}\n🏫 Guruh: ${group_name}\n📝 Test: ${quiz.title}\n📊 Natija: ${score} XP (${percentage}%) ${status}`);
+                await notifyTeacher(telegram_chat_id, `🎯 <b>Mashq tugatildi!(Solo Mode) </b>\n👤 O'quvchi: ${student_name}\n🏫 Guruh: ${group_name}\n📝 Test: ${quiz.title}\n📊 Natija: ${score} / ${maxScore} ball (${percentage}%) ${status}`);
             }
         } catch (e) {
             console.error('Error notifying teacher about solo quiz:', e);
         }
 
-        const percentage = questions.length > 0 ? Math.round((score / (questions.length * 100)) * 100) : 0;
+        // Send back true percentage calculation to frontend
+        let maxScore = 0;
+        questions.forEach((question: any) => {
+            if (question.type === 'matching' || question.type === 'word-box') {
+                maxScore += question.acceptedAnswers ? question.acceptedAnswers.length : 1;
+            } else {
+                maxScore += 1;
+            }
+        });
+        const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
         res.json({ score, results, percentage });
     } catch (err) {
         console.error('Solo Quiz Submission Error:', err);
