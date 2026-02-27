@@ -4,6 +4,8 @@ import { createServer } from 'http';
 import https from 'https';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 import { games, generatePin, generateStudentId, generateParentId, studentSockets } from './store';
 import { query } from './db';
@@ -39,7 +41,22 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
 }));
-app.use(express.json());
+
+// Apply basic security headers
+app.use(helmet());
+
+// Apply rate limiting (Max 150 requests per 15 minutes)
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 150, // Limit each IP to 150 requests per `window`
+    message: { error: 'Juda ko\'p so\'rov yuborildi. Iltimos, 15 daqiqadan so\'ng qayta urinib ko\'ring.' },
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use('/api/', apiLimiter);
+
+// Limit payload size to 10kb
+app.use(express.json({ limit: '10kb' }));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -1842,6 +1859,12 @@ function startWeeklySchedulers() {
         }
     }, 60 * 60 * 1000); // 1 hour
 }
+
+// Global Error Handler to prevent leaking stack traces
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled Server Error:', err);
+    res.status(500).json({ error: 'Serverda xatolik yuz berdi' });
+});
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
