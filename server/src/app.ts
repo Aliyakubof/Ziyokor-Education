@@ -45,18 +45,6 @@ app.use(cors({
 // Apply basic security headers
 app.use(helmet());
 
-// Apply rate limiting (Max 100000 requests per 15 minutes)
-const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100000, // Limit each IP to 100000 requests per `window` to allow same-wifi classrooms
-    handler: (req: express.Request, res: express.Response) => {
-        res.status(429).json({ error: 'Juda ko\'p so\'rov yuborildi. Iltimos, 15 daqiqadan so\'ng qayta urinib ko\'ring.' });
-    },
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-});
-app.use('/api/', apiLimiter);
-
 // Limit payload size to 10kb
 app.use(express.json({ limit: '10kb' }));
 
