@@ -464,13 +464,13 @@ app.get('/api/unit-quizzes/:id', async (req, res) => {
 
 app.post('/api/unit-quizzes', async (req, res) => {
     try {
-        const { title, questions, level, unit } = req.body;
+        const { title, questions, level, unit, time_limit } = req.body;
         const id = uuidv4();
         await query(
-            'INSERT INTO unit_quizzes (id, title, questions, level, unit) VALUES ($1, $2, $3, $4, $5)',
-            [id, title, JSON.stringify(questions), level, unit]
+            'INSERT INTO unit_quizzes (id, title, questions, level, unit, time_limit) VALUES ($1, $2, $3, $4, $5, $6)',
+            [id, title, JSON.stringify(questions), level, unit, time_limit || 30]
         );
-        res.json({ id, title, questions, level, unit });
+        res.json({ id, title, questions, level, unit, time_limit: time_limit || 30 });
     } catch (err) {
         console.error('Error creating unit quiz:', err);
         res.status(500).json({ error: 'Error creating unit quiz' });
@@ -479,13 +479,13 @@ app.post('/api/unit-quizzes', async (req, res) => {
 
 app.put('/api/unit-quizzes/:id', async (req, res) => {
     try {
-        const { title, questions, level, unit } = req.body;
+        const { title, questions, level, unit, time_limit } = req.body;
         const { id } = req.params;
         await query(
-            'UPDATE unit_quizzes SET title = $1, questions = $2, level = $3, unit = $4 WHERE id = $5',
-            [title, JSON.stringify(questions), level, unit, id]
+            'UPDATE unit_quizzes SET title = $1, questions = $2, level = $3, unit = $4, time_limit = $5 WHERE id = $6',
+            [title, JSON.stringify(questions), level, unit, time_limit || 30, id]
         );
-        res.json({ id, title, questions, level, unit });
+        res.json({ id, title, questions, level, unit, time_limit: time_limit || 30 });
     } catch (err) {
         console.error('Error updating unit quiz:', err);
         res.status(500).json({ error: 'Error updating unit quiz' });
