@@ -45,8 +45,8 @@ app.use(cors({
 // Apply basic security headers
 app.use(helmet());
 
-// Limit payload size to 10kb
-app.use(express.json({ limit: '10kb' }));
+// Limit payload size to 50mb (increased to allow saving large quizzes)
+app.use(express.json({ limit: '50mb' }));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
