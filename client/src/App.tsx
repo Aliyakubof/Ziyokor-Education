@@ -19,7 +19,7 @@ import UnitLobby from './pages/UnitLobby';
 import UnitJoin from './pages/UnitJoin';
 import Login from './pages/Login';
 import GroupDetails from './pages/GroupDetails';
-import BattleDetails from './pages/BattleDetails';
+import BattleDetails from './pages/BattleDetails.tsx';
 import { AuthProvider, useAuth } from './AuthContext';
 
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' | 'manager' }) => {

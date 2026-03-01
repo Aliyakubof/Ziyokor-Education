@@ -6,11 +6,10 @@ import {
     Flame, ShieldAlert,
     TrendingUp, Award
 } from 'lucide-react';
-import { useAuth } from '../AuthContext';
+
 
 export default function BattleDetails() {
     const { id } = useParams();
-    const { user } = useAuth();
     const navigate = useNavigate();
     const [battle, setBattle] = useState<any>(null);
     const [loading, setLoading] = useState(true);
