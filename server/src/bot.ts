@@ -330,17 +330,6 @@ async function sendTeacherWeeklyReport(ctx: any, teacherId: string) {
             LIMIT 1
         `, [teacherId]);
 
-
-
-        // 4. Inactive Students
-        const inactiveRes = await query(`
-            SELECT s.name, g.name as group_name
-            FROM students s
-            JOIN groups g ON s.group_id = g.id
-            WHERE g.teacher_id = $1
-              AND (s.last_activity_at < NOW() - INTERVAL '7 days' OR s.last_activity_at IS NULL)
-        `, [teacherId]);
-
         let report = `📊 <b>HAFTALIK HISOBOT: ${teacherName}</b>\n\n`;
         report += `📝 Testlar: ${testsCount} ta\n`;
         report += `📞 Bog'lanishlar: ${contactsCount} ta\n`;
@@ -349,15 +338,8 @@ async function sendTeacherWeeklyReport(ctx: any, teacherId: string) {
             report += `🏆 Top o'quvchi: ${topRes.rows[0].name} (${topRes.rows[0].weekly_score} XP)\n`;
         }
 
-        if (inactiveRes.rowCount && inactiveRes.rowCount > 0) {
-            report += `\n💤 <b>Faol bo'lmagan o'quvchilar:</b>\n`;
-            inactiveRes.rows.slice(0, 10).forEach((r: any) => {
-                report += `• ${r.name} (${r.group_name})\n`;
-            });
-            if (inactiveRes.rowCount > 10) report += `...va yana ${inactiveRes.rowCount - 10} kishi.\n`;
-        }
-
         // Warning check (8 days)
+
         if (lastTestAt) {
             const lastDate = new Date(lastTestAt);
             const diffDays = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -616,18 +598,6 @@ export async function sendWeeklyReports() {
                     LIMIT 3
                 `, [teacher.id]);
 
-
-
-                // 2. Inactive Students
-                const inactiveRes = await query(`
-                    SELECT s.name, g.name as group_name
-                    FROM students s
-                    JOIN groups g ON s.group_id = g.id
-                    WHERE g.teacher_id = $1
-                      AND (s.last_activity_at < NOW() - INTERVAL '7 days' OR s.last_activity_at IS NULL)
-                `, [teacher.id]);
-
-
                 let msg = `📊 <b>Haftalik Hisobot: ${teacher.name}</b>\n\n`;
 
                 if (topRes.rowCount && topRes.rowCount > 0) {
@@ -639,15 +609,8 @@ export async function sendWeeklyReports() {
                     msg += `🏆 Hafta davomida testlar o'tkazilmagan.\n`;
                 }
 
-                if (inactiveRes.rowCount && inactiveRes.rowCount > 0) {
-                    msg += `\n💤 <b>Faol bo'lmagan o'quvchilar:</b>\n`;
-                    inactiveRes.rows.slice(0, 10).forEach((r: any) => {
-                        msg += `• ${r.name} (${r.group_name})\n`;
-                    });
-                    if (inactiveRes.rowCount > 10) msg += `...va yana ${inactiveRes.rowCount - 10} kishi.\n`;
-                }
-
                 await bot.telegram.sendMessage(teacher.telegram_chat_id, msg, { parse_mode: 'HTML' });
+
             } catch (e) {
                 console.error(`[Bot] Error sending report to teacher ${teacher.id}:`, e);
             }
