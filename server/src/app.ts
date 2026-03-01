@@ -246,9 +246,10 @@ app.put('/api/admin/teachers/:id', async (req, res) => {
 });
 
 // Manager Dashboard API Endpoints
-try {
-    console.log('Manager teachers request received');
-    const result = await query(`
+app.get('/api/manager/teachers', async (req, res) => {
+    try {
+        console.log('Manager teachers request received');
+        const result = await query(`
             SELECT 
                 t.*, 
                 COUNT(DISTINCT g.id) as group_count,
@@ -259,12 +260,12 @@ try {
             GROUP BY t.id
             ORDER BY t.name ASC
         `);
-    console.log(`Query successful, fetched ${result.rowCount} teachers`);
-    res.json(result.rows);
-} catch (err: any) {
-    console.error('Error in /api/manager/teachers:', err);
-    res.status(500).json({ error: 'Error fetching teachers lists', details: err.message });
-}
+        console.log(`Query successful, fetched ${result.rowCount} teachers`);
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error in /api/manager/teachers:', err);
+        res.status(500).json({ error: 'Error fetching teachers lists', details: err.message });
+    }
 });
 
 app.get('/api/manager/teachers/:teacherId/groups', async (req, res) => {
