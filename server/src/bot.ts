@@ -175,8 +175,8 @@ async function isManager(chatId: string) {
 }
 
 bot.hears('📊 Haftalik Hisobot', async (ctx) => {
-    const chatId = ctx.chat.id.toString();
-    if (!await isManager(chatId)) return;
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId || !await isManager(chatId)) return;
 
     try {
         const teachers = await query('SELECT id, name FROM teachers WHERE id NOT IN ($1, $2) ORDER BY name ASC', ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']);
@@ -197,15 +197,15 @@ bot.hears('📊 Haftalik Hisobot', async (ctx) => {
 
 bot.action(/^mg_rep_(.+)$/, async (ctx) => {
     const teacherId = ctx.match[1];
-    const chatId = ctx.chat.id.toString();
-    if (!await isManager(chatId)) return;
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId || !await isManager(chatId)) return;
 
     await sendTeacherWeeklyReport(ctx, teacherId);
 });
 
 bot.hears('📉 Potentional fail', async (ctx) => {
-    const chatId = ctx.chat.id.toString();
-    if (!await isManager(chatId)) return;
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId || !await isManager(chatId)) return;
 
     try {
         const teachers = await query('SELECT id, name FROM teachers WHERE id NOT IN ($1, $2) ORDER BY name ASC', ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']);
