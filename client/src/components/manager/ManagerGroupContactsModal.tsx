@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../api';
-import { Phone, Users, X, PhoneCall } from 'lucide-react';
+import { Users, X } from 'lucide-react';
 
 interface Group {
     id: string;
