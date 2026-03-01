@@ -7,6 +7,7 @@ import PlayerGame from './pages/PlayerGame';
 import HostGame from './pages/HostGame';
 import AdminPanel from './pages/AdminPanel';
 import TeacherDashboard from './pages/TeacherDashboard';
+import ManagerDashboard from './pages/ManagerDashboard.tsx';
 import StudentLogin from './pages/StudentLogin';
 
 import StudentDashboard from './pages/StudentDashboard';
@@ -20,7 +21,7 @@ import Login from './pages/Login';
 import GroupDetails from './pages/GroupDetails';
 import { AuthProvider, useAuth } from './AuthContext';
 
-const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' }) => {
+const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' | 'manager' }) => {
   const { isAuthenticated, role } = useAuth();
 
   if (!isAuthenticated) {
@@ -119,6 +120,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminPanel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager"
+              element={
+                <ProtectedRoute requiredRole="manager">
+                  <ManagerDashboard />
                 </ProtectedRoute>
               }
             />

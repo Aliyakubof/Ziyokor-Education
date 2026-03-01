@@ -176,6 +176,14 @@ app.post('/api/login', async (req, res) => {
         });
     }
 
+    // Hardcoded Manager
+    if (phone === '998947212531' && password === '2531') {
+        return res.json({
+            user: { id: '00000000-0000-0000-0000-000000000001', name: 'Menejer', phone: '998947212531' },
+            role: 'manager'
+        });
+    }
+
     // Teacher Login from Database
     try {
         const result = await query(
@@ -232,6 +240,72 @@ app.put('/api/admin/teachers/:id', async (req, res) => {
     } catch (err) {
         console.error('Error updating teacher:', err);
         res.status(500).json({ error: 'Error updating teacher' });
+    }
+});
+
+// Manager Dashboard API Endpoints
+app.get('/api/manager/teachers', async (req, res) => {
+    try {
+        const result = await query(`
+            SELECT 
+                t.*, 
+                COUNT(DISTINCT g.id) as group_count,
+                COUNT(DISTINCT s.id) as student_count
+            FROM teachers t
+            LEFT JOIN groups g ON t.id = g.teacher_id
+            LEFT JOIN students s ON g.id = s.group_id
+            GROUP BY t.id
+            ORDER BY t.name ASC
+        `);
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error fetching manager teachers:', err);
+        res.status(500).json({ error: 'Error fetching teachers lists', details: err.message });
+    }
+});
+
+app.get('/api/manager/teachers/:teacherId/groups', async (req, res) => {
+    try {
+        const result = await query(`
+            SELECT 
+                g.*, 
+                COUNT(s.id) as student_count
+            FROM groups g
+            LEFT JOIN students s ON g.id = s.group_id
+            WHERE g.teacher_id = $1
+            GROUP BY g.id
+            ORDER BY g.name ASC
+        `, [req.params.teacherId]);
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error fetching manager groups:', err);
+        res.status(500).json({ error: 'Error fetching groups', details: err.message });
+    }
+});
+
+app.get('/api/manager/groups/:groupId/results', async (req, res) => {
+    try {
+        const result = await query(
+            'SELECT * FROM game_results WHERE group_id = $1 ORDER BY created_at DESC',
+            [req.params.groupId]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching manager group results:', err);
+        res.status(500).json({ error: 'Error fetching group results' });
+    }
+});
+
+app.get('/api/manager/groups/:groupId/students', async (req, res) => {
+    try {
+        const result = await query(
+            'SELECT id, name, phone, parent_name, parent_phone, coins FROM students WHERE group_id = $1 ORDER BY name ASC',
+            [req.params.groupId]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching manager group students:', err);
+        res.status(500).json({ error: 'Error fetching group students' });
     }
 });
 
