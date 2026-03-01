@@ -172,7 +172,7 @@ export default function BattleDetails() {
                     {/* Top Contributors Group A */}
                     <div className="bg-slate-900/50 rounded-3xl p-5 md:p-6 border border-white/5">
                         <h3 className="text-indigo-400 font-black text-[10px] md:text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <TrendingUp size={14} /> {battle.group_a_name} Top-3
+                            <TrendingUp size={14} /> {battle.group_a_name}
                         </h3>
                         <div className="space-y-2.5 md:space-y-3">
                             {battle.membersA.map((m: any, idx: number) => (
@@ -182,7 +182,7 @@ export default function BattleDetails() {
                                             {idx + 1}
                                         </div>
                                         <div>
-                                            <div className="text-xs md:text-sm font-bold truncate max-w-[100px] md:max-w-[120px] text-indigo-100">{m.name}</div>
+                                            <div className="text-xs md:text-sm font-bold text-indigo-100">{m.name}</div>
                                             <div className="text-[10px] text-indigo-400 font-bold uppercase">{m.coins} Coins</div>
                                         </div>
                                     </div>
@@ -198,7 +198,7 @@ export default function BattleDetails() {
                     {/* Top Contributors Group B */}
                     <div className="bg-slate-900/50 rounded-3xl p-5 md:p-6 border border-white/5">
                         <h3 className="text-rose-400 font-black text-[10px] md:text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <TrendingUp size={14} /> {battle.group_b_name} Top-3
+                            <TrendingUp size={14} /> {battle.group_b_name}
                         </h3>
                         <div className="space-y-2.5 md:space-y-3">
                             {battle.membersB.map((m: any, idx: number) => (
@@ -208,7 +208,7 @@ export default function BattleDetails() {
                                             {idx + 1}
                                         </div>
                                         <div>
-                                            <div className="text-xs md:text-sm font-bold truncate max-w-[100px] md:max-w-[120px] text-rose-100">{m.name}</div>
+                                            <div className="text-xs md:text-sm font-bold text-rose-100">{m.name}</div>
                                             <div className="text-[10px] text-rose-400 font-bold uppercase">{m.coins} Coins</div>
                                         </div>
                                     </div>
