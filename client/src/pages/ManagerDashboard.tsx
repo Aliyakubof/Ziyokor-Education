@@ -43,7 +43,9 @@ const ManagerDashboard: React.FC = () => {
         setLoading(true);
         try {
             const res = await apiFetch('/api/manager/teachers');
+            console.log('Manager teachers API status:', res.status);
             const data = await res.json();
+            console.log('Manager teachers data received:', data);
             setTeachers(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error('Error fetching teachers for manager:', err);
