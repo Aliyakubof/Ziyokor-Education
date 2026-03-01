@@ -4,7 +4,6 @@ import { useAuth } from '../AuthContext';
 import { LogIn, Settings, Users, PlusCircle, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiFetch } from '../api';
 import logo from '../assets/logo.jpeg';
-import InteractiveBackground from '../components/InteractiveBackground';
 
 export default function Home() {
     const { isAuthenticated, role, logout, user } = useAuth();
@@ -19,17 +18,17 @@ export default function Home() {
 
     const slides = [
         {
-            image: "https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1200&auto=format&fit=crop", // Diverse students in classroom
+            image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop", // Mountains
             title: "Interaktiv Ta'lim",
             description: "O'quvchilar uchun qiziqarli va samarali bilim olish tizimi"
         },
         {
-            image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1200&auto=format&fit=crop", // Student writing in notebook / studying
+            image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1200&auto=format&fit=crop", // Forest
             title: "Guruhlar Boshqaruvi",
             description: "O'qituvchilar uchun qulay va tezkor guruh nazorati"
         },
         {
-            image: "https://images.unsplash.com/photo-1546410531-bea5acadb6a0?q=80&w=1200&auto=format&fit=crop", // Computer screen, typing, testing
+            image: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1200&auto=format&fit=crop", // Foggy landscape
             title: "Bilimni Sinash",
             description: "Zamonaviy testlar va natijalarni real vaqtda kuzatish"
         }
@@ -85,8 +84,7 @@ export default function Home() {
     };
 
     return (
-        <div className="min-h-screen bg-transparent font-sans text-slate-900 flex flex-col relative z-0">
-            <InteractiveBackground />
+        <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col relative z-0">
             {/* Navbar */}
             <nav className="border-b border-slate-100 py-4 px-6 md:px-12 bg-white sticky top-0 z-50 shadow-sm">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
