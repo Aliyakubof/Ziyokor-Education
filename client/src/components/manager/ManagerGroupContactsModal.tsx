@@ -81,28 +81,8 @@ const ManagerGroupContactsModal: React.FC<ManagerGroupContactsModalProps> = ({ g
                                         </div>
 
                                         <div className="space-y-3">
-                                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">O'quvchi raqami</div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-bold text-slate-700 font-mono tracking-tight">{student.phone || 'Kiritilmagan'}</span>
-                                                    {student.phone && (
-                                                        <a href={`tel:${student.phone}`} className="w-8 h-8 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 flex items-center justify-center transition-colors border border-indigo-100">
-                                                            <Phone size={14} />
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            </div>
-
                                             <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
-                                                <div className="text-[10px] font-black uppercase tracking-widest text-orange-400 mb-1">Ota-ona: {student.parent_name || 'Noma\'lum'}</div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-bold text-orange-800 font-mono tracking-tight">{student.parent_phone || 'Kiritilmagan'}</span>
-                                                    {student.parent_phone && (
-                                                        <a href={`tel:${student.parent_phone}`} className="w-8 h-8 rounded-full bg-white hover:bg-orange-100 text-orange-600 flex items-center justify-center transition-colors border border-orange-200 shadow-sm">
-                                                            <PhoneCall size={14} />
-                                                        </a>
-                                                    )}
-                                                </div>
+                                                <div className="text-[10px] font-black uppercase tracking-widest text-orange-400">Ota-ona: {student.parent_name || "Noma'lum"}</div>
                                             </div>
 
                                             {student.last_contacted_at && (

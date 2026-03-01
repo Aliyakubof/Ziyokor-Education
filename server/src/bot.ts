@@ -167,6 +167,123 @@ bot.command('me', async (ctx) => {
 bot.command('logout', handleLogout);
 bot.hears('🚪 Chiqish', handleLogout);
 
+const MANAGER_PHONE = '998947212531';
+
+async function isManager(chatId: string) {
+    const res = await query('SELECT * FROM teachers WHERE telegram_chat_id = $1 AND phone = $2', [chatId, MANAGER_PHONE]);
+    return (res.rowCount || 0) > 0;
+}
+
+bot.hears('📊 Haftalik Hisobot', async (ctx) => {
+    const chatId = ctx.chat.id.toString();
+    if (!await isManager(chatId)) return;
+
+    ctx.reply('⏳ Haftalik hisobot tayyorlanmoqda, iltimos kuting...');
+    await sendWeeklyReportsForManager(ctx, chatId);
+});
+
+bot.hears('📉 Potentional fail', async (ctx) => {
+    const chatId = ctx.chat.id.toString();
+    if (!await isManager(chatId)) return;
+
+    try {
+        const teachers = await query('SELECT id, name FROM teachers WHERE id != $1 ORDER BY name ASC', ['00000000-0000-0000-0000-000000000000']);
+        if (teachers.rowCount === 0) return ctx.reply('O\'qituvchilar topilmadi.');
+
+        const buttons = teachers.rows.map((t: any) => ([{
+            text: t.name,
+            callback_data: `mg_t_${t.id}`
+        }]));
+
+        ctx.reply('👨‍🏫 O\'qituvchini tanlang:', {
+            reply_markup: { inline_keyboard: buttons }
+        });
+    } catch (err) {
+        console.error('Potential fail error:', err);
+        ctx.reply('Xatolik yuz berdi.');
+    }
+});
+
+// Inline handlers for Manager Potential Fail
+bot.action(/^mg_t_(.+)$/, async (ctx) => {
+    const teacherId = ctx.match[1];
+    try {
+        const groups = await query('SELECT id, name FROM groups WHERE teacher_id = $1 ORDER BY name ASC', [teacherId]);
+        if (groups.rowCount === 0) return ctx.answerCbQuery('Bu o\'qituvchida guruhlar yo\'q.');
+
+        const buttons = groups.rows.map((g: any) => ([{
+            text: g.name,
+            callback_data: `mg_g_${g.id}`
+        }]));
+
+        await ctx.editMessageText('📚 Guruhni tanlang:', {
+            reply_markup: { inline_keyboard: buttons }
+        });
+    } catch (err) {
+        ctx.answerCbQuery('Xatolik.');
+    }
+});
+
+bot.action(/^mg_g_(.+)$/, async (ctx) => {
+    const groupId = ctx.match[1];
+    try {
+        // Find top 5 lowest coins/score students in group
+        const students = await query(`
+            SELECT name, coins, last_activity_at 
+            FROM students 
+            WHERE group_id = $1 
+            ORDER BY coins ASC 
+            LIMIT 5
+        `, [groupId]);
+
+        if (students.rowCount === 0) return ctx.answerCbQuery('O\'quvchilar yo\'q.');
+
+        let msg = `📉 <b>Guruhdagi eng past ko'rsatkichli o'quvchilar:</b>\n\n`;
+        students.rows.forEach((s: any, i: number) => {
+            msg += `${i + 1}. ${s.name} - ${s.coins} XP\n`;
+            if (s.last_activity_at) {
+                msg += `   🕒 Oxirgi faollik: ${new Date(s.last_activity_at).toLocaleDateString('uz-UZ')}\n`;
+            } else {
+                msg += `   🕒 Faollik qayd etilmagan.\n`;
+            }
+        });
+
+        await ctx.editMessageText(msg, { parse_mode: 'HTML' });
+    } catch (err) {
+        ctx.answerCbQuery('Xatolik.');
+    }
+});
+
+async function sendWeeklyReportsForManager(ctx: any, managerChatId: string) {
+    try {
+        const teachers = await query('SELECT id, name FROM teachers WHERE id != $1', ['00000000-0000-0000-0000-000000000000']);
+        let fullReport = `📊 <b>MANAGER HAFTALIK HISOBOTI</b>\n\n`;
+
+        for (const teacher of teachers.rows) {
+            const topRes = await query(`
+                SELECT s.name, SUM((player->>'score')::int) as weekly_score
+                FROM game_results gr, jsonb_array_elements(player_results) as player
+                JOIN students s ON player->>'id' = s.id
+                JOIN groups g ON s.group_id = g.id
+                WHERE g.teacher_id = $1
+                  AND gr.created_at >= NOW() - INTERVAL '7 days'
+                GROUP BY s.id, s.name
+                ORDER BY weekly_score DESC
+                LIMIT 1
+            `, [teacher.id]);
+
+            if (topRes.rowCount && topRes.rowCount > 0) {
+                fullReport += `👨‍🏫 <b>${teacher.name}</b>:\n🏆 Top: ${topRes.rows[0].name} (${topRes.rows[0].weekly_score} XP)\n\n`;
+            }
+        }
+
+        await bot.telegram.sendMessage(managerChatId, fullReport, { parse_mode: 'HTML' });
+    } catch (err) {
+        console.error('Manager weekly report error:', err);
+        ctx.reply('Hisobot tayyorlashda xatolik.');
+    }
+}
+
 bot.on('contact', async (ctx) => {
     const chatId = ctx.chat.id.toString();
     const contact = ctx.message.contact;
@@ -252,7 +369,7 @@ async function handleManagerAutoLogin(ctx: any, chatId: string) {
             ctx.reply(`✅ Muvaffaqiyatli! Siz Menejer sifatida ulandingiz: ${result.rows[0].name}\nEndi barcha hisobotlar shu yerga yuboriladi.`, {
                 reply_markup: {
                     keyboard: [
-                        [{ text: "📊 Haftalik Hisobot" }, { text: "🚨 Xavf Guruhlari" }],
+                        [{ text: "📊 Haftalik Hisobot" }, { text: "📉 Potentional fail" }],
                         [{ text: "🚪 Chiqish" }]
                     ],
                     resize_keyboard: true
