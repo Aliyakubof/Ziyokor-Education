@@ -317,7 +317,8 @@ async function sendTeacherWeeklyReport(ctx: any, teacherId: string) {
         // 3. Top Student
         const topRes = await query(`
             SELECT s.name, SUM((player->>'score')::int) as weekly_score
-            FROM game_results gr, jsonb_array_elements(player_results) as player
+            FROM game_results gr
+            CROSS JOIN LATERAL jsonb_array_elements(gr.player_results) as player
             JOIN students s ON player->>'id' = s.id
             JOIN groups g ON gr.group_id = g.id
             WHERE g.teacher_id = $1
@@ -326,6 +327,7 @@ async function sendTeacherWeeklyReport(ctx: any, teacherId: string) {
             ORDER BY weekly_score DESC
             LIMIT 1
         `, [teacherId]);
+
 
         // 4. Inactive Students
         const inactiveRes = await query(`
@@ -600,7 +602,8 @@ export async function sendWeeklyReports() {
                 // 1. Top 3 Students
                 const topRes = await query(`
                     SELECT s.name, SUM((player->>'score')::int) as weekly_score
-                    FROM game_results gr, jsonb_array_elements(player_results) as player
+                    FROM game_results gr
+                    CROSS JOIN LATERAL jsonb_array_elements(gr.player_results) as player
                     JOIN students s ON player->>'id' = s.id
                     JOIN groups g ON gr.group_id = g.id
                     WHERE g.teacher_id = $1
@@ -609,6 +612,7 @@ export async function sendWeeklyReports() {
                     ORDER BY weekly_score DESC
                     LIMIT 3
                 `, [teacher.id]);
+
 
                 // 2. Inactive Students
                 const inactiveRes = await query(`
