@@ -178,11 +178,13 @@ bot.hears('📊 Haftalik Hisobot', async (ctx) => {
         const teachers = await query(`
             SELECT DISTINCT t.id, t.name 
             FROM teachers t
-            JOIN groups g ON t.id = g.teacher_id
-            WHERE t.id NOT IN ($1, $2) 
+            LEFT JOIN groups g ON t.id = g.teacher_id
+            WHERE t.id NOT IN ($1, $2)
+              AND (g.id IS NOT NULL OR t.telegram_chat_id IS NOT NULL)
             ORDER BY t.name ASC`,
             ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']
         );
+
         if (teachers.rowCount === 0) return ctx.reply('Faol o\'qituvchilar topilmadi.');
 
         const buttons = teachers.rows.map((t: any) => ([{
@@ -214,11 +216,13 @@ bot.hears('📉 Potentional fail', async (ctx) => {
         const teachers = await query(`
             SELECT DISTINCT t.id, t.name 
             FROM teachers t
-            JOIN groups g ON t.id = g.teacher_id
-            WHERE t.id NOT IN ($1, $2) 
+            LEFT JOIN groups g ON t.id = g.teacher_id
+            WHERE t.id NOT IN ($1, $2)
+              AND (g.id IS NOT NULL OR t.telegram_chat_id IS NOT NULL)
             ORDER BY t.name ASC`,
             ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']
         );
+
         if (teachers.rowCount === 0) return ctx.reply('Faol o\'qituvchilar topilmadi.');
 
         const buttons = teachers.rows.map((t: any) => ([{
