@@ -67,10 +67,10 @@ const Login = () => {
 
             if (userRole === 'student') {
                 navigate('/student/dashboard');
-            } else if (userRole === 'admin') {
-                navigate('/admin');
+            } else if (userRole === 'manager') {
+                navigate('/manager');
             } else {
-                navigate('/teacher'); // or /
+                navigate('/teacher');
             }
 
         } catch (err: any) {
