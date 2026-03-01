@@ -202,7 +202,39 @@ bot.on('text', async (ctx) => {
 });
 
 async function handleTeacherLogin(ctx: any, chatId: string, phone: string) {
-    // ... logic
+    try {
+        console.log(`[Bot] Teacher login attempt: ${phone} (chat: ${chatId})`);
+        // Try exact match first
+        let result = await query(
+            'UPDATE teachers SET telegram_chat_id = $1 WHERE phone = $2 RETURNING *',
+            [chatId, phone]
+        );
+
+        // If no match, try adding/removing '+'
+        if (result.rowCount === 0) {
+            const altPhone = phone.startsWith('+') ? phone.slice(1) : `+${phone}`;
+            result = await query(
+                'UPDATE teachers SET telegram_chat_id = $1 WHERE phone = $2 RETURNING *',
+                [chatId, altPhone]
+            );
+        }
+
+        if (result.rowCount && result.rowCount > 0) {
+            console.log(`[Bot] Teacher logged in: ${result.rows[0].name}`);
+            ctx.reply(`✅ Muvaffaqiyatli! Siz O'qituvchi sifatida ulandingiz: ${result.rows[0].name}`, {
+                reply_markup: {
+                    keyboard: [[{ text: "🚪 Chiqish" }]],
+                    resize_keyboard: true
+                }
+            });
+        } else {
+            console.log(`[Bot] Teacher not found for phone: ${phone}`);
+            ctx.reply('❌ Bu raqam bilan o\'qituvchi topilmadi. Admin bilan bog\'laning yoki raqamni to\'g\'ri kiriting (998...)');
+        }
+    } catch (err) {
+        console.error('[Bot] Teacher login error:', err);
+        ctx.reply('❌ Tizimda xatolik yuz berdi.');
+    }
 }
 
 async function handleManagerAutoLogin(ctx: any, chatId: string) {
