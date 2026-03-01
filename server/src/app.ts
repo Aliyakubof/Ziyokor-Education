@@ -206,7 +206,7 @@ app.post('/api/login', async (req, res) => {
     // Teacher Login from Database
     try {
         const result = await query(
-            'SELECT id, name, phone FROM teachers WHERE phone = $1 AND password = $2',
+            'SELECT id, name, phone FROM teachers WHERE REPLACE(phone, \'+\', \'\') = $1 AND password = $2',
             [phone, password]
         );
 
