@@ -625,6 +625,52 @@ app.get('/api/groups/:teacherId', async (req, res) => {
     }
 });
 
+app.get('/api/battles/:id/details', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Battle info
+        const battleRes = await query(`
+            SELECT b.*, g1.name as group_a_name, g2.name as group_b_name 
+            FROM group_battles b
+            JOIN groups g1 ON b.group_a_id = g1.id
+            JOIN groups g2 ON b.group_b_id = g2.id
+            WHERE b.id = $1
+        `, [id]);
+
+        if (battleRes.rowCount === 0) return res.status(404).json({ error: 'Battle not found' });
+        const battle = battleRes.rows[0];
+
+        // 2. Members Group A (Top 3)
+        const membersARes = await query(`
+            SELECT name, weekly_battle_score, avatar_url, coins
+            FROM students
+            WHERE group_id = $1
+            ORDER BY weekly_battle_score DESC
+            LIMIT 3
+        `, [battle.group_a_id]);
+
+        // 3. Members Group B (Top 3)
+        const membersBRes = await query(`
+            SELECT name, weekly_battle_score, avatar_url, coins
+            FROM students
+            WHERE group_id = $1
+            ORDER BY weekly_battle_score DESC
+            LIMIT 3
+        `, [battle.group_b_id]);
+
+        res.json({
+            ...battle,
+            membersA: membersARes.rows,
+            membersB: membersBRes.rows,
+            endsAt: new Date(new Date(battle.week_start).getTime() + 7 * 24 * 60 * 60 * 1000)
+        });
+    } catch (err) {
+        console.error('Battle details error:', err);
+        res.status(500).json({ error: 'Error fetching battle details' });
+    }
+});
+
 app.get('/api/battles/current/:groupId', async (req, res) => {
     try {
         const battleRes = await query(`

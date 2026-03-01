@@ -137,16 +137,22 @@ export default function StudentDashboard() {
 
                 {/* Group Battle Progress Bar */}
                 {battle && (
-                    <div className="mt-4 bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+                    <div
+                        onClick={() => navigate(`/student/battle/${battle.id}`)}
+                        className="mt-4 bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors group/battle"
+                    >
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest flex items-center gap-1">
                                 <Swords size={12} /> Haftalik Battle
                             </span>
-                            {isWeekend() && (
-                                <span className="bg-orange-500 text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg shadow-orange-500/20">
-                                    Double XP Weekend 🔥
-                                </span>
-                            )}
+                            <div className="flex items-center gap-2">
+                                {isWeekend() && (
+                                    <span className="bg-orange-500 text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-lg shadow-orange-500/20">
+                                        Double XP 🔥
+                                    </span>
+                                )}
+                                <ChevronRight size={14} className="text-indigo-300 group-hover/battle:translate-x-1 transition-transform" />
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-3">

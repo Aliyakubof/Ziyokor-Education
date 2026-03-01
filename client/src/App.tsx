@@ -19,6 +19,7 @@ import UnitLobby from './pages/UnitLobby';
 import UnitJoin from './pages/UnitJoin';
 import Login from './pages/Login';
 import GroupDetails from './pages/GroupDetails';
+import BattleDetails from './pages/BattleDetails';
 import { AuthProvider, useAuth } from './AuthContext';
 
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' | 'manager' }) => {
@@ -91,6 +92,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="student">
                   <DuelLobby />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/battle/:id"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <BattleDetails />
                 </ProtectedRoute>
               }
             />

@@ -31,7 +31,7 @@ interface Battle {
 }
 
 // --- Battle Status Component ---
-const BattleStatus = ({ battle, groupId }: { battle: Battle | null; groupId: string }) => {
+const BattleStatus = ({ battle, groupId, onViewDetails }: { battle: Battle | null; groupId: string; onViewDetails: (id: string) => void }) => {
     if (!battle) return <span className="text-slate-300 text-xs italic">Battle yo'q</span>;
 
     const isA = battle.group_a_id === groupId;
@@ -43,10 +43,16 @@ const BattleStatus = ({ battle, groupId }: { battle: Battle | null; groupId: str
     const percentage = Math.round((myScore / total) * 100);
 
     return (
-        <div className="flex flex-col gap-1 min-w-[120px]">
+        <div
+            onClick={(e) => { e.stopPropagation(); onViewDetails(battle.id); }}
+            className="flex flex-col gap-1 min-w-[120px] cursor-pointer hover:bg-indigo-50 p-1 rounded-lg transition-colors group/battle"
+        >
             <div className="flex justify-between text-[10px] font-bold">
                 <span className="text-indigo-600 truncate max-w-[60px]">Siz</span>
-                <span className="text-red-500 truncate max-w-[60px]">{oppName}</span>
+                <div className="flex items-center gap-1">
+                    <span className="text-red-500 truncate max-w-[60px]">{oppName}</span>
+                    <ChevronDown size={10} className="-rotate-90 text-slate-300 group-hover/battle:text-indigo-400" />
+                </div>
             </div>
             <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
                 <div
@@ -245,7 +251,11 @@ const GroupRow = ({
             {/* Battle Status */}
             {!isAdmin && (
                 <td className="p-4">
-                    <BattleStatus battle={battle} groupId={group.id} />
+                    <BattleStatus
+                        battle={battle}
+                        groupId={group.id}
+                        onViewDetails={(id) => navigate(`/student/battle/${id}`)}
+                    />
                 </td>
             )}
 
