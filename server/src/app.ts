@@ -180,6 +180,7 @@ app.post('/api/login', async (req, res) => {
     // Hardcoded Manager
     if (phone === '998947212531' && password === '2531') {
         return res.json({
+            token: 'mock-manager-token',
             user: { id: '00000000-0000-0000-0000-000000000001', name: 'Menejer', phone: '998947212531' },
             role: 'manager'
         });
@@ -258,6 +259,7 @@ app.get('/api/manager/teachers', async (req, res) => {
             GROUP BY t.id
             ORDER BY t.name ASC
         `);
+        console.log(`Fetched ${result.rowCount} teachers for manager dashboard`);
         res.json(result.rows);
     } catch (err: any) {
         console.error('Error fetching manager teachers:', err);

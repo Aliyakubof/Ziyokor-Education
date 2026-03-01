@@ -9,7 +9,7 @@ interface User {
     groupId?: string;
 }
 
-type UserRole = 'admin' | 'teacher' | 'student';
+type UserRole = 'admin' | 'teacher' | 'student' | 'manager';
 
 interface AuthContextType {
     user: User | null;
