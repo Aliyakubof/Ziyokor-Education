@@ -251,7 +251,10 @@ async function handleManagerAutoLogin(ctx: any, chatId: string) {
             console.log(`[Bot] Manager auto-linked: ${result.rows[0].name}`);
             ctx.reply(`✅ Muvaffaqiyatli! Siz Menejer sifatida ulandingiz: ${result.rows[0].name}\nEndi barcha hisobotlar shu yerga yuboriladi.`, {
                 reply_markup: {
-                    keyboard: [[{ text: "🚪 Chiqish" }]],
+                    keyboard: [
+                        [{ text: "📊 Haftalik Hisobot" }, { text: "🚨 Xavf Guruhlari" }],
+                        [{ text: "🚪 Chiqish" }]
+                    ],
                     resize_keyboard: true
                 }
             });

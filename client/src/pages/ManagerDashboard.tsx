@@ -126,10 +126,6 @@ const ManagerDashboard: React.FC = () => {
                                         <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                                             <GraduationCap size={24} />
                                         </div>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                            Faol
-                                        </div>
                                     </div>
 
                                     <h3 className="text-lg font-bold text-slate-800 mb-4 group-hover:text-indigo-600 transition-colors truncate" title={teacher.name}>
