@@ -40,6 +40,7 @@ const RootRoute = () => {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   if (role === 'student') return <Navigate to="/student/dashboard" replace />;
+  if (role === 'manager') return <Navigate to="/manager" replace />;
 
   return <Home />;
 };

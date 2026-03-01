@@ -191,6 +191,20 @@ export default function Home() {
                         </Link>
                     )}
 
+                    {/* Manager - Only for Manager or Admin */}
+                    {(role === 'manager' || role === 'admin') && (
+                        <Link to="/manager" className="w-full md:w-[280px] group bg-indigo-50 hover:bg-white border border-indigo-100 hover:border-indigo-300 rounded-2xl p-8 transition-all hover:shadow-xl hover:shadow-indigo-500/10 flex flex-col items-center relative overflow-hidden">
+                            <div className="bg-indigo-600 text-white p-4 rounded-xl mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-indigo-200">
+                                <Users size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 mb-2">Menejer Paneli</h3>
+                            <p className="text-slate-500 text-sm font-medium mb-4">Natijalar nazorati</p>
+                            <span className="inline-flex items-center justify-center bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                                Monitoring
+                            </span>
+                        </Link>
+                    )}
+
                     {/* Student Dashboard */}
                     {role === 'student' && (
                         <Link to="/student/dashboard" className="w-full md:w-[280px] group bg-slate-50 hover:bg-white border border-slate-200 hover:border-indigo-200 rounded-2xl p-8 transition-all hover:shadow-xl hover:shadow-indigo-500/10 flex flex-col items-center relative overflow-hidden">
