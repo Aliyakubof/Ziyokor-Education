@@ -166,7 +166,8 @@ app.get('/api/health', async (req, res) => {
 
 // Authentication
 app.post('/api/login', async (req, res) => {
-    const { phone, password } = req.body;
+    const { phone: rawPhone, password } = req.body;
+    const phone = String(rawPhone || '').replace(/\D/g, '');
 
     // Hardcoded Admin
     if (phone === '998901234567' && password === '4567') {
