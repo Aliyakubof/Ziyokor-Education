@@ -260,6 +260,30 @@ async function sendWeeklyReportsForManager(ctx: any, managerChatId: string) {
         let fullReport = `📊 <b>MANAGER HAFTALIK HISOBOTI</b>\n\n`;
 
         for (const teacher of teachers.rows) {
+            // 1. Tests in last 7 days and Last test date
+            const activityRes = await query(`
+                SELECT 
+                    COUNT(*) FILTER (WHERE gr.created_at >= NOW() - INTERVAL '7 days') as tests_count,
+                    MAX(gr.created_at) as last_test_at
+                FROM game_results gr
+                JOIN groups g ON gr.group_id = g.id
+                WHERE g.teacher_id = $1
+            `, [teacher.id]);
+
+            const testsCount = parseInt(activityRes.rows[0].tests_count || '0');
+            const lastTestAt = activityRes.rows[0].last_test_at;
+
+            // 2. Contacts in last 7 days
+            const contactsRes = await query(`
+                SELECT COUNT(*) as contacts_count
+                FROM contact_logs cl
+                JOIN students s ON cl.student_id = s.id
+                JOIN groups g ON s.group_id = g.id
+                WHERE g.teacher_id = $1 AND cl.contacted_at >= NOW() - INTERVAL '7 days'
+            `, [teacher.id]);
+            const contactsCount = parseInt(contactsRes.rows[0].contacts_count || '0');
+
+            // 3. Top Student
             const topRes = await query(`
                 SELECT s.name, SUM((player->>'score')::int) as weekly_score
                 FROM game_results gr, jsonb_array_elements(player_results) as player
@@ -272,9 +296,26 @@ async function sendWeeklyReportsForManager(ctx: any, managerChatId: string) {
                 LIMIT 1
             `, [teacher.id]);
 
+            fullReport += `👨‍🏫 <b>${teacher.name}</b>:\n`;
+            fullReport += `📝 Testlar: ${testsCount} ta\n`;
+            fullReport += `📞 Bog'lanishlar: ${contactsCount} ta\n`;
+
             if (topRes.rowCount && topRes.rowCount > 0) {
-                fullReport += `👨‍🏫 <b>${teacher.name}</b>:\n🏆 Top: ${topRes.rows[0].name} (${topRes.rows[0].weekly_score} XP)\n\n`;
+                fullReport += `🏆 Top: ${topRes.rows[0].name} (${topRes.rows[0].weekly_score} XP)\n`;
             }
+
+            // Warning check (8 days)
+            if (lastTestAt) {
+                const lastDate = new Date(lastTestAt);
+                const diffDays = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                if (diffDays >= 8) {
+                    fullReport += `⚠️ <b>Ogohlantirish: ${diffDays} kundan beri test o'tkazilmagan!</b>\n`;
+                }
+            } else {
+                fullReport += `⚠️ <b>Ogohlantirish: Hali birorta ham test o'tkazilmagan!</b>\n`;
+            }
+
+            fullReport += `\n`;
         }
 
         await bot.telegram.sendMessage(managerChatId, fullReport, { parse_mode: 'HTML' });
