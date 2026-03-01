@@ -178,8 +178,29 @@ bot.hears('📊 Haftalik Hisobot', async (ctx) => {
     const chatId = ctx.chat.id.toString();
     if (!await isManager(chatId)) return;
 
-    ctx.reply('⏳ Haftalik hisobot tayyorlanmoqda, iltimos kuting...');
-    await sendWeeklyReportsForManager(ctx, chatId);
+    try {
+        const teachers = await query('SELECT id, name FROM teachers WHERE id NOT IN ($1, $2) ORDER BY name ASC', ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']);
+        if (teachers.rowCount === 0) return ctx.reply('O\'qituvchilar topilmadi.');
+
+        const buttons = teachers.rows.map((t: any) => ([{
+            text: t.name,
+            callback_data: `mg_rep_${t.id}`
+        }]));
+
+        ctx.reply('📊 Hisobot uchun o\'qituvchini tanlang:', {
+            reply_markup: { inline_keyboard: buttons }
+        });
+    } catch (err) {
+        ctx.reply('Xatolik yuz berdi.');
+    }
+});
+
+bot.action(/^mg_rep_(.+)$/, async (ctx) => {
+    const teacherId = ctx.match[1];
+    const chatId = ctx.chat.id.toString();
+    if (!await isManager(chatId)) return;
+
+    await sendTeacherWeeklyReport(ctx, teacherId);
 });
 
 bot.hears('📉 Potentional fail', async (ctx) => {
@@ -187,7 +208,7 @@ bot.hears('📉 Potentional fail', async (ctx) => {
     if (!await isManager(chatId)) return;
 
     try {
-        const teachers = await query('SELECT id, name FROM teachers WHERE id != $1 ORDER BY name ASC', ['00000000-0000-0000-0000-000000000000']);
+        const teachers = await query('SELECT id, name FROM teachers WHERE id NOT IN ($1, $2) ORDER BY name ASC', ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']);
         if (teachers.rowCount === 0) return ctx.reply('O\'qituvchilar topilmadi.');
 
         const buttons = teachers.rows.map((t: any) => ([{
@@ -254,75 +275,77 @@ bot.action(/^mg_g_(.+)$/, async (ctx) => {
     }
 });
 
-async function sendWeeklyReportsForManager(ctx: any, managerChatId: string) {
+async function sendTeacherWeeklyReport(ctx: any, teacherId: string) {
     try {
-        const teachers = await query('SELECT id, name FROM teachers WHERE id != $1', ['00000000-0000-0000-0000-000000000000']);
-        let fullReport = `📊 <b>MANAGER HAFTALIK HISOBOTI</b>\n\n`;
+        const teacherRes = await query('SELECT name FROM teachers WHERE id = $1', [teacherId]);
+        if (teacherRes.rowCount === 0) return ctx.answerCbQuery('O\'qituvchi topilmadi.');
+        const teacherName = teacherRes.rows[0].name;
 
-        for (const teacher of teachers.rows) {
-            // 1. Tests in last 7 days and Last test date
-            const activityRes = await query(`
-                SELECT 
-                    COUNT(*) FILTER (WHERE gr.created_at >= NOW() - INTERVAL '7 days') as tests_count,
-                    MAX(gr.created_at) as last_test_at
-                FROM game_results gr
-                JOIN groups g ON gr.group_id = g.id
-                WHERE g.teacher_id = $1
-            `, [teacher.id]);
+        // 1. Tests in last 7 days and Last test date
+        const activityRes = await query(`
+            SELECT 
+                COUNT(*) FILTER (WHERE gr.created_at >= NOW() - INTERVAL '7 days') as tests_count,
+                MAX(gr.created_at) as last_test_at
+            FROM game_results gr
+            JOIN groups g ON gr.group_id = g.id
+            WHERE g.teacher_id = $1
+        `, [teacherId]);
 
-            const testsCount = parseInt(activityRes.rows[0].tests_count || '0');
-            const lastTestAt = activityRes.rows[0].last_test_at;
+        const testsCount = parseInt(activityRes.rows[0].tests_count || '0');
+        const lastTestAt = activityRes.rows[0].last_test_at;
 
-            // 2. Contacts in last 7 days
-            const contactsRes = await query(`
-                SELECT COUNT(*) as contacts_count
-                FROM contact_logs cl
-                JOIN students s ON cl.student_id = s.id
-                JOIN groups g ON s.group_id = g.id
-                WHERE g.teacher_id = $1 AND cl.contacted_at >= NOW() - INTERVAL '7 days'
-            `, [teacher.id]);
-            const contactsCount = parseInt(contactsRes.rows[0].contacts_count || '0');
+        // 2. Contacts in last 7 days
+        const contactsRes = await query(`
+            SELECT COUNT(*) as contacts_count
+            FROM contact_logs cl
+            JOIN students s ON cl.student_id = s.id
+            JOIN groups g ON s.group_id = g.id
+            WHERE g.teacher_id = $1 AND cl.contacted_at >= NOW() - INTERVAL '7 days'
+        `, [teacherId]);
+        const contactsCount = parseInt(contactsRes.rows[0].contacts_count || '0');
 
-            // 3. Top Student
-            const topRes = await query(`
-                SELECT s.name, SUM((player->>'score')::int) as weekly_score
-                FROM game_results gr, jsonb_array_elements(player_results) as player
-                JOIN students s ON player->>'id' = s.id
-                JOIN groups g ON s.group_id = g.id
-                WHERE g.teacher_id = $1
-                  AND gr.created_at >= NOW() - INTERVAL '7 days'
-                GROUP BY s.id, s.name
-                ORDER BY weekly_score DESC
-                LIMIT 1
-            `, [teacher.id]);
+        // 3. Top Student
+        const topRes = await query(`
+            SELECT s.name, SUM((player->>'score')::int) as weekly_score
+            FROM game_results gr, jsonb_array_elements(player_results) as player
+            JOIN students s ON player->>'id' = s.id
+            JOIN groups g ON s.group_id = g.id
+            WHERE g.teacher_id = $1
+              AND gr.created_at >= NOW() - INTERVAL '7 days'
+            GROUP BY s.id, s.name
+            ORDER BY weekly_score DESC
+            LIMIT 1
+        `, [teacherId]);
 
-            fullReport += `👨‍🏫 <b>${teacher.name}</b>:\n`;
-            fullReport += `📝 Testlar: ${testsCount} ta\n`;
-            fullReport += `📞 Bog'lanishlar: ${contactsCount} ta\n`;
+        let report = `📊 <b>HAFTALIK HISOBOT: ${teacherName}</b>\n\n`;
+        report += `📝 Testlar: ${testsCount} ta\n`;
+        report += `📞 Bog'lanishlar: ${contactsCount} ta\n`;
 
-            if (topRes.rowCount && topRes.rowCount > 0) {
-                fullReport += `🏆 Top: ${topRes.rows[0].name} (${topRes.rows[0].weekly_score} XP)\n`;
-            }
-
-            // Warning check (8 days)
-            if (lastTestAt) {
-                const lastDate = new Date(lastTestAt);
-                const diffDays = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                if (diffDays >= 8) {
-                    fullReport += `⚠️ <b>Ogohlantirish: ${diffDays} kundan beri test o'tkazilmagan!</b>\n`;
-                }
-            } else {
-                fullReport += `⚠️ <b>Ogohlantirish: Hali birorta ham test o'tkazilmagan!</b>\n`;
-            }
-
-            fullReport += `\n`;
+        if (topRes.rowCount && topRes.rowCount > 0) {
+            report += `🏆 Top o'quvchi: ${topRes.rows[0].name} (${topRes.rows[0].weekly_score} XP)\n`;
         }
 
-        await bot.telegram.sendMessage(managerChatId, fullReport, { parse_mode: 'HTML' });
+        // Warning check (8 days)
+        if (lastTestAt) {
+            const lastDate = new Date(lastTestAt);
+            const diffDays = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays >= 8) {
+                report += `\n⚠️ <b>Ogohlantirish: ${diffDays} kundan beri test o'tkazilmagan!</b>\n`;
+            }
+        } else {
+            report += `\n⚠️ <b>Ogohlantirish: Hali birorta ham test o'tkazilmagan!</b>\n`;
+        }
+
+        await ctx.editMessageText(report, { parse_mode: 'HTML' });
     } catch (err) {
-        console.error('Manager weekly report error:', err);
-        ctx.reply('Hisobot tayyorlashda xatolik.');
+        console.error('Teacher weekly report error:', err);
+        ctx.answerCbQuery('Hisobotda xatolik.');
     }
+}
+
+async function sendWeeklyReportsForManager(ctx: any, managerChatId: string) {
+    // Keep this for scheduled tasks if needed, or remove if only manual list is wanted.
+    // For now keeping it since we might want to send full report via cron.
 }
 
 bot.on('contact', async (ctx) => {
