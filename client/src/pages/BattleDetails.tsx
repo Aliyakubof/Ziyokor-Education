@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api';
 import {
     ChevronLeft, Swords, Trophy, Timer,
-    Flame, Zap, Users, ShieldAlert,
+    Flame, ShieldAlert,
     TrendingUp, Award
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
@@ -72,8 +72,6 @@ export default function BattleDetails() {
         </div>
     );
 
-    const isGroupA = battle.membersA.some((m: any) => m.name === user?.name); // Simplistic check
-    const myGroupScore = battle.group_a_id === battle.group_a_id ? battle.score_a : battle.score_b; // This logic needs careful mapping from backend
     // Since we don't have user.groupId easily here without fetch, we check name or just use the IDs
 
     const scoreTotal = battle.score_a + battle.score_b || 1;

@@ -98,7 +98,7 @@ function App() {
             <Route
               path="/student/battle/:id"
               element={
-                <ProtectedRoute requiredRole="student">
+                <ProtectedRoute>
                   <BattleDetails />
                 </ProtectedRoute>
               }
