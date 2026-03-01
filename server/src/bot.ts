@@ -86,7 +86,7 @@ bot.start(async (ctx) => {
     }
 });
 
-bot.hears("👨‍🏫 O\'qituvchi sifatida kirish", (ctx) => {
+bot.hears("👨‍🏫 O'qituvchi sifatida kirish", (ctx) => {
     if (ctx.chat.type !== 'private') {
         return ctx.reply('❌ O\'qituvchi sifatida kirish faqat shaxsiy yozishmalarda amalga oshiriladi.');
     }
@@ -157,20 +157,16 @@ bot.command('me', async (ctx) => {
             return ctx.reply(`👨‍🎓 Siz quyidagi o'quvchilarga ulangansiz:\n${names}`);
         }
 
-        ctx.reply('🤷‍♂️ Siz tizimga ulanmagansiz. /start ni bosing.');
+        ctx.reply('👤 Siz hali tizimga ulanmagansiz. Ulanish uchun /start ni bosing.');
     } catch (err) {
         console.error('[Bot] /me error:', err);
-        ctx.reply('❌ Tekshirishda xatolik.');
     }
 });
-
-bot.command('logout', handleLogout);
-bot.hears('🚪 Chiqish', handleLogout);
 
 const MANAGER_PHONE = '998947212531';
 
 async function isManager(chatId: string) {
-    const res = await query('SELECT * FROM teachers WHERE telegram_chat_id = $1 AND phone = $2', [chatId, MANAGER_PHONE]);
+    const res = await query('SELECT * FROM teachers WHERE telegram_chat_id = $1 AND REPLACE(phone, \'+\', \'\') = $2', [chatId, MANAGER_PHONE]);
     return (res.rowCount || 0) > 0;
 }
 
@@ -179,8 +175,15 @@ bot.hears('📊 Haftalik Hisobot', async (ctx) => {
     if (!chatId || !await isManager(chatId)) return;
 
     try {
-        const teachers = await query('SELECT id, name FROM teachers WHERE id NOT IN ($1, $2) ORDER BY name ASC', ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']);
-        if (teachers.rowCount === 0) return ctx.reply('O\'qituvchilar topilmadi.');
+        const teachers = await query(`
+            SELECT DISTINCT t.id, t.name 
+            FROM teachers t
+            JOIN groups g ON t.id = g.teacher_id
+            WHERE t.id NOT IN ($1, $2) 
+            ORDER BY t.name ASC`,
+            ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']
+        );
+        if (teachers.rowCount === 0) return ctx.reply('Faol o\'qituvchilar topilmadi.');
 
         const buttons = teachers.rows.map((t: any) => ([{
             text: t.name,
@@ -208,15 +211,22 @@ bot.hears('📉 Potentional fail', async (ctx) => {
     if (!chatId || !await isManager(chatId)) return;
 
     try {
-        const teachers = await query('SELECT id, name FROM teachers WHERE id NOT IN ($1, $2) ORDER BY name ASC', ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']);
-        if (teachers.rowCount === 0) return ctx.reply('O\'qituvchilar topilmadi.');
+        const teachers = await query(`
+            SELECT DISTINCT t.id, t.name 
+            FROM teachers t
+            JOIN groups g ON t.id = g.teacher_id
+            WHERE t.id NOT IN ($1, $2) 
+            ORDER BY t.name ASC`,
+            ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']
+        );
+        if (teachers.rowCount === 0) return ctx.reply('Faol o\'qituvchilar topilmadi.');
 
         const buttons = teachers.rows.map((t: any) => ([{
             text: t.name,
             callback_data: `mg_t_${t.id}`
         }]));
 
-        ctx.reply('👨‍🏫 O\'qituvchini tanlang:', {
+        ctx.reply('📉 Potentional fail uchun o\'qituvchini tanlang:', {
             reply_markup: { inline_keyboard: buttons }
         });
     } catch (err) {
@@ -309,12 +319,21 @@ async function sendTeacherWeeklyReport(ctx: any, teacherId: string) {
             SELECT s.name, SUM((player->>'score')::int) as weekly_score
             FROM game_results gr, jsonb_array_elements(player_results) as player
             JOIN students s ON player->>'id' = s.id
-            JOIN groups g ON s.group_id = g.id
+            JOIN groups g ON gr.group_id = g.id
             WHERE g.teacher_id = $1
               AND gr.created_at >= NOW() - INTERVAL '7 days'
             GROUP BY s.id, s.name
             ORDER BY weekly_score DESC
             LIMIT 1
+        `, [teacherId]);
+
+        // 4. Inactive Students
+        const inactiveRes = await query(`
+            SELECT s.name, g.name as group_name
+            FROM students s
+            JOIN groups g ON s.group_id = g.id
+            WHERE g.teacher_id = $1
+              AND (s.last_activity_at < NOW() - INTERVAL '7 days' OR s.last_activity_at IS NULL)
         `, [teacherId]);
 
         let report = `📊 <b>HAFTALIK HISOBOT: ${teacherName}</b>\n\n`;
@@ -323,6 +342,14 @@ async function sendTeacherWeeklyReport(ctx: any, teacherId: string) {
 
         if (topRes.rowCount && topRes.rowCount > 0) {
             report += `🏆 Top o'quvchi: ${topRes.rows[0].name} (${topRes.rows[0].weekly_score} XP)\n`;
+        }
+
+        if (inactiveRes.rowCount && inactiveRes.rowCount > 0) {
+            report += `\n💤 <b>Faol bo'lmagan o'quvchilar:</b>\n`;
+            inactiveRes.rows.slice(0, 10).forEach((r: any) => {
+                report += `• ${r.name} (${r.group_name})\n`;
+            });
+            if (inactiveRes.rowCount > 10) report += `...va yana ${inactiveRes.rowCount - 10} kishi.\n`;
         }
 
         // Warning check (8 days)
@@ -344,8 +371,7 @@ async function sendTeacherWeeklyReport(ctx: any, teacherId: string) {
 }
 
 async function sendWeeklyReportsForManager(ctx: any, managerChatId: string) {
-    // Keep this for scheduled tasks if needed, or remove if only manual list is wanted.
-    // For now keeping it since we might want to send full report via cron.
+    // Keep this for scheduled tasks if needed
 }
 
 bot.on('contact', async (ctx) => {
@@ -354,6 +380,8 @@ bot.on('contact', async (ctx) => {
     let phone = contact.phone_number.replace('+', '');
     handleTeacherLogin(ctx, chatId, phone);
 });
+
+bot.hears('🚪 Chiqish', handleLogout);
 
 bot.on('text', async (ctx) => {
     const chatId = ctx.chat.id.toString();
@@ -461,7 +489,7 @@ async function handleStudentLogin(ctx: any, chatId: string, studentId: string) {
         }
         const student = studentRes.rows[0];
 
-        // Subscription check and add... (existing logic)
+        // Subscription check and add
         await addSubscription(ctx, chatId, student);
     } catch (err) {
         console.error('[Bot] Student login error:', err);
@@ -574,7 +602,7 @@ export async function sendWeeklyReports() {
                     SELECT s.name, SUM((player->>'score')::int) as weekly_score
                     FROM game_results gr, jsonb_array_elements(player_results) as player
                     JOIN students s ON player->>'id' = s.id
-                    JOIN groups g ON s.group_id = g.id
+                    JOIN groups g ON gr.group_id = g.id
                     WHERE g.teacher_id = $1
                       AND gr.created_at >= NOW() - INTERVAL '7 days'
                     GROUP BY s.id, s.name
@@ -590,6 +618,7 @@ export async function sendWeeklyReports() {
                     WHERE g.teacher_id = $1
                       AND (s.last_activity_at < NOW() - INTERVAL '7 days' OR s.last_activity_at IS NULL)
                 `, [teacher.id]);
+
 
                 let msg = `📊 <b>Haftalik Hisobot: ${teacher.name}</b>\n\n`;
 
@@ -614,6 +643,7 @@ export async function sendWeeklyReports() {
             } catch (e) {
                 console.error(`[Bot] Error sending report to teacher ${teacher.id}:`, e);
             }
+
         }
     } catch (err) {
         console.error('[Bot] sendWeeklyReports error:', err);
