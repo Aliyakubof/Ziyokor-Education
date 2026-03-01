@@ -49,6 +49,14 @@ bot.start(async (ctx) => {
             return;
         }
 
+        if (payload === 'manager') {
+            if (ctx.chat.type !== 'private') {
+                return ctx.reply('❌ Menejer sifatida ulanish faqat shaxsiy yozishmalarda amalga oshiriladi.');
+            }
+            await handleManagerAutoLogin(ctx, chatId);
+            return;
+        }
+
         console.log(`[Bot] Start command from ${chatId}`);
 
         if (ctx.chat.type !== 'private') {
@@ -194,38 +202,34 @@ bot.on('text', async (ctx) => {
 });
 
 async function handleTeacherLogin(ctx: any, chatId: string, phone: string) {
+    // ... logic
+}
+
+async function handleManagerAutoLogin(ctx: any, chatId: string) {
     try {
-        console.log(`[Bot] Teacher login attempt: ${phone} (chat: ${chatId})`);
-        // Try exact match first
-        let result = await query(
+        console.log(`[Bot] Manager auto-login attempt (chat: ${chatId})`);
+        const managerPhone = '998947212531'; // Hardcoded manager phone as per app.ts
+
+        const result = await query(
             'UPDATE teachers SET telegram_chat_id = $1 WHERE phone = $2 RETURNING *',
-            [chatId, phone]
+            [chatId, managerPhone]
         );
 
-        // If no match, try adding/removing '+'
-        if (result.rowCount === 0) {
-            const altPhone = phone.startsWith('+') ? phone.slice(1) : `+${phone}`;
-            result = await query(
-                'UPDATE teachers SET telegram_chat_id = $1 WHERE phone = $2 RETURNING *',
-                [chatId, altPhone]
-            );
-        }
-
         if (result.rowCount && result.rowCount > 0) {
-            console.log(`[Bot] Teacher logged in: ${result.rows[0].name}`);
-            ctx.reply(`✅ Muvaffaqiyatli! Siz O'qituvchi sifatida ulandingiz: ${result.rows[0].name}`, {
+            console.log(`[Bot] Manager auto-linked: ${result.rows[0].name}`);
+            ctx.reply(`✅ Muvaffaqiyatli! Siz Menejer sifatida ulandingiz: ${result.rows[0].name}\nEndi barcha hisobotlar shu yerga yuboriladi.`, {
                 reply_markup: {
                     keyboard: [[{ text: "🚪 Chiqish" }]],
                     resize_keyboard: true
                 }
             });
         } else {
-            console.log(`[Bot] Teacher not found for phone: ${phone}`);
-            ctx.reply('❌ Bu raqam bilan o\'qituvchi topilmadi. Admin bilan bog\'laning yoki raqamni to\'g\'ri kiriting (998...)');
+            console.log(`[Bot] Manager not found for auto-login`);
+            ctx.reply('❌ Menejer ma\'lumotlari topilmadi. Tizimga kirganingizni tekshiring.');
         }
     } catch (err) {
-        console.error('[Bot] Teacher login error:', err);
-        ctx.reply('❌ Tizimda xatolik yuz berdi.');
+        console.error('[Bot] Manager auto-login error:', err);
+        ctx.reply('❌ Avtomatik ulanishda xatolik yuz berdi.');
     }
 }
 
