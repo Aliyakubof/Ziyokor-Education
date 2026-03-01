@@ -188,7 +188,7 @@ const ManagerDashboard: React.FC = () => {
                     <div className="h-10 w-px bg-slate-200 hidden md:block mx-2"></div>
 
                     <a
-                        href="https://t.me/ziyokoreducation_bot"
+                        href="https://t.me/Z_education_bot"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 px-4 py-2 bg-[#0088cc] text-white hover:bg-[#0077b5] rounded-xl transition-all font-bold text-xs shadow-sm"
