@@ -106,52 +106,54 @@ export default function BattleDetails() {
             </div>
 
             {/* Battle Arena */}
-            <div className="px-6 -mt-16 relative z-20">
-                <div className="bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 shadow-2xl relative overflow-hidden">
+            <div className="px-4 md:px-6 -mt-16 relative z-20">
+                <div className="bg-slate-900/80 backdrop-blur-xl rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 border border-white/5 shadow-2xl relative overflow-hidden">
                     {/* VS Elements */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 opacity-10 pointer-events-none">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 opacity-10 pointer-events-none hidden md:block">
                         <span className="text-9xl font-black italic tracking-tighter">VS</span>
                     </div>
 
-                    <div className="flex justify-between items-center relative z-10 gap-4 mb-10">
+                    <div className="flex flex-row justify-between items-center relative z-10 gap-2 md:gap-4 mb-8 md:mb-10">
                         {/* Group A */}
                         <div className="flex-1 text-center">
-                            <div className="w-20 h-20 bg-gradient-to-tr from-indigo-500 to-blue-600 rounded-3xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-indigo-500/30 rotate-3">
-                                <ShieldAlert size={36} className="text-white" />
+                            <div className="w-14 h-14 md:w-20 md:h-20 bg-gradient-to-tr from-indigo-500 to-blue-600 rounded-2xl md:rounded-3xl mx-auto mb-3 md:mb-4 flex items-center justify-center shadow-lg shadow-indigo-500/30 rotate-3 transition-transform hover:rotate-6">
+                                <ShieldAlert size={28} className="text-white md:hidden" />
+                                <ShieldAlert size={36} className="text-white hidden md:block" />
                             </div>
-                            <h3 className="font-black text-sm uppercase tracking-tight mb-1 truncate">{battle.group_a_name}</h3>
-                            <div className="text-2xl font-black text-indigo-400">{battle.score_a.toLocaleString()}</div>
+                            <h3 className="font-black text-[10px] md:text-sm uppercase tracking-tight mb-1 truncate max-w-[80px] md:max-w-none mx-auto">{battle.group_a_name}</h3>
+                            <div className="text-lg md:text-2xl font-black text-indigo-400">{battle.score_a.toLocaleString()}</div>
                         </div>
 
                         {/* VS Divider */}
-                        <div className="w-14 h-14 bg-slate-950 rounded-full flex items-center justify-center border-2 border-slate-800 shadow-xl relative">
-                            <span className="text-xl font-black italic text-rose-500">VS</span>
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full blur-sm opacity-50 pulse"></div>
+                        <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-950 rounded-full flex items-center justify-center border-2 border-slate-800 shadow-xl relative shrink-0">
+                            <span className="text-sm md:text-xl font-black italic text-rose-500">VS</span>
+                            <div className="absolute -top-0.5 -right-0.5 w-3 h-3 md:w-4 md:h-4 bg-rose-500 rounded-full blur-sm opacity-50 animate-pulse"></div>
                         </div>
 
                         {/* Group B */}
                         <div className="flex-1 text-center">
-                            <div className="w-20 h-20 bg-gradient-to-tr from-rose-500 to-orange-600 rounded-3xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-rose-500/30 -rotate-3">
-                                <Flame size={36} className="text-white" />
+                            <div className="w-14 h-14 md:w-20 md:h-20 bg-gradient-to-tr from-rose-500 to-orange-600 rounded-2xl md:rounded-3xl mx-auto mb-3 md:mb-4 flex items-center justify-center shadow-lg shadow-rose-500/30 -rotate-3 transition-transform hover:-rotate-6">
+                                <Flame size={28} className="text-white md:hidden" />
+                                <Flame size={36} className="text-white hidden md:block" />
                             </div>
-                            <h3 className="font-black text-sm uppercase tracking-tight mb-1 truncate">{battle.group_b_name}</h3>
-                            <div className="text-2xl font-black text-rose-400">{battle.score_b.toLocaleString()}</div>
+                            <h3 className="font-black text-[10px] md:text-sm uppercase tracking-tight mb-1 truncate max-w-[80px] md:max-w-none mx-auto">{battle.group_b_name}</h3>
+                            <div className="text-lg md:text-2xl font-black text-rose-400">{battle.score_b.toLocaleString()}</div>
                         </div>
                     </div>
 
                     {/* Progress Bar */}
                     <div className="relative h-6 bg-slate-950 rounded-full overflow-hidden flex border border-white/5 shadow-inner mb-2">
                         <div
-                            className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all duration-1000 ease-out"
+                            className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all duration-1000 ease-out relative"
                             style={{ width: `${percentA}%` }}
                         >
-                            <div className="h-full w-full opacity-30 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-shimmer"></div>
+                            <div className="absolute inset-0 opacity-30 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-shimmer"></div>
                         </div>
                         <div
-                            className="h-full bg-gradient-to-l from-rose-600 to-rose-400 transition-all duration-1000 ease-out"
+                            className="h-full bg-gradient-to-l from-rose-600 to-rose-400 transition-all duration-1000 ease-out relative"
                             style={{ width: `${percentB}%` }}
                         >
-                            <div className="h-full w-full opacity-20 bg-[linear-gradient(-45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-shimmer"></div>
+                            <div className="absolute inset-0 opacity-20 bg-[linear-gradient(-45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-shimmer"></div>
                         </div>
                         {/* Middle Pointer */}
                         <div className="absolute top-0 bottom-0 w-1 bg-white/20 left-[50%] -translate-x-1/2"></div>
@@ -163,27 +165,27 @@ export default function BattleDetails() {
                 </div>
 
                 {/* Leaderboards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-6 md:mt-8">
                     {/* Top Contributors Group A */}
-                    <div className="bg-slate-900/50 rounded-3xl p-6 border border-white/5">
-                        <h3 className="text-indigo-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="bg-slate-900/50 rounded-3xl p-5 md:p-6 border border-white/5">
+                        <h3 className="text-indigo-400 font-black text-[10px] md:text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
                             <TrendingUp size={14} /> {battle.group_a_name} Top-3
                         </h3>
-                        <div className="space-y-3">
+                        <div className="space-y-2.5 md:space-y-3">
                             {battle.membersA.map((m: any, idx: number) => (
                                 <div key={idx} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5 group hover:bg-indigo-500/10 transition-colors">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center font-black text-indigo-400 text-xs">
+                                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center font-black text-indigo-400 text-[10px] md:text-xs">
                                             {idx + 1}
                                         </div>
                                         <div>
-                                            <div className="text-sm font-bold truncate max-w-[120px] text-indigo-100">{m.name}</div>
+                                            <div className="text-xs md:text-sm font-bold truncate max-w-[100px] md:max-w-[120px] text-indigo-100">{m.name}</div>
                                             <div className="text-[10px] text-indigo-400 font-bold uppercase">{m.coins} Coins</div>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-sm font-black text-indigo-400">+{m.weekly_battle_score}</div>
-                                        <div className="text-[10px] font-bold text-slate-500">Hissa</div>
+                                        <div className="text-xs md:text-sm font-black text-indigo-400">+{m.weekly_battle_score}</div>
+                                        <div className="text-[10px] font-bold text-slate-500 italic">XP</div>
                                     </div>
                                 </div>
                             ))}
@@ -191,25 +193,25 @@ export default function BattleDetails() {
                     </div>
 
                     {/* Top Contributors Group B */}
-                    <div className="bg-slate-900/50 rounded-3xl p-6 border border-white/5">
-                        <h3 className="text-rose-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="bg-slate-900/50 rounded-3xl p-5 md:p-6 border border-white/5">
+                        <h3 className="text-rose-400 font-black text-[10px] md:text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
                             <TrendingUp size={14} /> {battle.group_b_name} Top-3
                         </h3>
-                        <div className="space-y-3">
+                        <div className="space-y-2.5 md:space-y-3">
                             {battle.membersB.map((m: any, idx: number) => (
                                 <div key={idx} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5 group hover:bg-rose-500/10 transition-colors">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center font-black text-rose-400 text-xs">
+                                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-rose-500/20 flex items-center justify-center font-black text-rose-400 text-[10px] md:text-xs">
                                             {idx + 1}
                                         </div>
                                         <div>
-                                            <div className="text-sm font-bold truncate max-w-[120px] text-rose-100">{m.name}</div>
+                                            <div className="text-xs md:text-sm font-bold truncate max-w-[100px] md:max-w-[120px] text-rose-100">{m.name}</div>
                                             <div className="text-[10px] text-rose-400 font-bold uppercase">{m.coins} Coins</div>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-sm font-black text-rose-400">+{m.weekly_battle_score}</div>
-                                        <div className="text-[10px] font-bold text-slate-500">Hissa</div>
+                                        <div className="text-xs md:text-sm font-black text-rose-400">+{m.weekly_battle_score}</div>
+                                        <div className="text-[10px] font-bold text-slate-500 italic">XP</div>
                                     </div>
                                 </div>
                             ))}
@@ -218,18 +220,20 @@ export default function BattleDetails() {
                 </div>
 
                 {/* Reward Section */}
-                <div className="mt-8 bg-gradient-to-tr from-amber-500/10 to-orange-500/10 rounded-3xl p-6 border border-amber-500/20 relative overflow-hidden">
-                    <div className="relative z-10 flex items-center gap-6">
-                        <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/10">
-                            <Trophy size={32} className="text-amber-500" />
+                <div className="mt-6 md:mt-8 bg-gradient-to-tr from-amber-500/10 to-orange-500/10 rounded-3xl p-5 md:p-6 border border-amber-500/20 relative overflow-hidden">
+                    <div className="relative z-10 flex items-center gap-4 md:gap-6">
+                        <div className="w-14 h-14 md:w-16 md:h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/10 shrink-0">
+                            <Trophy size={28} className="text-amber-500 md:hidden" />
+                            <Trophy size={32} className="text-amber-500 hidden md:block" />
                         </div>
                         <div>
-                            <h3 className="font-black text-lg text-amber-500 leading-tight">G'oliblik Mukofoti</h3>
-                            <p className="text-xs text-amber-500/80 font-medium">Har bir g'olib o'quvchi +500 Coins va maxsus "Champion" avatariga ega bo'ladi!</p>
+                            <h3 className="font-black text-base md:text-lg text-amber-500 leading-tight">G'oliblik Mukofoti</h3>
+                            <p className="text-[10px] md:text-xs text-amber-500/80 font-medium">Har bir g'olib o'quvchi +500 Coins va maxsus "Champion" avatariga ega bo'ladi!</p>
                         </div>
                     </div>
-                    <div className="absolute top-0 right-0 p-2">
-                        <Award size={48} className="text-amber-500/10 rotate-12" />
+                    <div className="absolute top-0 right-0 p-2 opacity-20 md:opacity-100">
+                        <Award size={32} className="text-amber-500 rotate-12 md:hidden" />
+                        <Award size={48} className="text-amber-500 rotate-12 hidden md:block" />
                     </div>
                 </div>
             </div>
