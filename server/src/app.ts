@@ -57,6 +57,7 @@ const io = new Server(httpServer, {
 });
 
 const ADMIN_ID = '00000000-0000-0000-0000-000000000000';
+const MANAGER_ID = '00000000-0000-0000-0000-000000000001';
 
 // Database Initialization
 async function initDb() {
@@ -129,6 +130,7 @@ async function initDb() {
 
         console.log('Database initialized successfully');
         await ensureAdminExists();
+        await ensureManagerExists();
     } catch (err) {
         console.error('Error initializing database:', err);
     }
@@ -146,6 +148,21 @@ async function ensureAdminExists() {
         }
     } catch (err) {
         console.error('Error ensuring admin exists:', err);
+    }
+}
+
+async function ensureManagerExists() {
+    try {
+        const res = await query('SELECT * FROM teachers WHERE id = $1', [MANAGER_ID]);
+        if (res.rowCount === 0) {
+            await query(
+                'INSERT INTO teachers (id, name, phone, password) VALUES ($1, $2, $3, $4)',
+                [MANAGER_ID, 'Menejer', '998947212531', '2531']
+            );
+            console.log('Manager record created in teachers table');
+        }
+    } catch (err) {
+        console.error('Error ensuring manager exists:', err);
     }
 }
 
@@ -181,7 +198,7 @@ app.post('/api/login', async (req, res) => {
     if (phone === '998947212531' && password === '2531') {
         return res.json({
             token: 'mock-manager-token',
-            user: { id: '00000000-0000-0000-0000-000000000001', name: 'Menejer', phone: '998947212531' },
+            user: { id: MANAGER_ID, name: 'Menejer', phone: '998947212531' },
             role: 'manager'
         });
     }
@@ -303,7 +320,7 @@ app.get('/api/manager/groups/:groupId/results', async (req, res) => {
 app.get('/api/manager/groups/:groupId/students', async (req, res) => {
     try {
         const result = await query(
-            'SELECT id, name, phone, parent_name, parent_phone, coins FROM students WHERE group_id = $1 ORDER BY name ASC',
+            'SELECT id, name, phone, parent_name, parent_phone, last_contacted_at, last_contacted_relative, coins FROM students WHERE group_id = $1 ORDER BY name ASC',
             [req.params.groupId]
         );
         res.json(result.rows);

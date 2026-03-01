@@ -13,6 +13,8 @@ interface StudentContact {
     phone: string;
     parent_name: string;
     parent_phone: string;
+    last_contacted_at?: string;
+    last_contacted_relative?: string;
 }
 
 interface ManagerGroupContactsModalProps {
@@ -102,6 +104,20 @@ const ManagerGroupContactsModal: React.FC<ManagerGroupContactsModalProps> = ({ g
                                                     )}
                                                 </div>
                                             </div>
+
+                                            {student.last_contacted_at && (
+                                                <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                                                    <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-1">So'nggi bog'lanish</div>
+                                                    <div className="text-xs font-bold text-emerald-800">
+                                                        {new Date(student.last_contacted_at).toLocaleString('uz-UZ', {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })} - {student.last_contacted_relative}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

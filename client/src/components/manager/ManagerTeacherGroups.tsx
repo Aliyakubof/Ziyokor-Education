@@ -65,7 +65,7 @@ const ManagerTeacherGroups: React.FC<ManagerTeacherGroupsProps> = ({ teacherId, 
                         <div key={group.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all group/card flex flex-col justify-between h-full">
                             <div>
                                 <div className="flex justify-between items-start mb-4">
-                                    <h3 className="text-xl font-bold text-slate-900 group-hover/card:text-indigo-600 transition-colors uppercase tracking-tight">{group.name}</h3>
+                                    <h3 className="text-xl font-bold text-slate-900 group-hover/card:text-indigo-600 transition-colors uppercase tracking-tight truncate flex-1" title={group.name}>{group.name}</h3>
                                     <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider rounded-lg border border-indigo-100">
                                         {group.level}
                                     </span>
