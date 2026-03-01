@@ -22,23 +22,27 @@ export default function BattleDetails() {
     useEffect(() => {
         if (!battle?.endsAt) return;
 
-        const timer = setInterval(() => {
+        const updateTimer = () => {
             const ends = new Date(battle.endsAt).getTime();
             const now = new Date().getTime();
             const diff = ends - now;
 
             if (diff <= 0) {
                 setTimeLeft('Tugadi');
-                clearInterval(timer);
-                return;
+                return false;
             }
 
             const days = Math.floor(diff / (1000 * 60 * 60 * 24));
             const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-            setTimeLeft(`${days}k ${hours}s ${minutes}d`);
-        }, 60000);
+            setTimeLeft(`${days}k ${hours}s ${minutes}d ${seconds}s`);
+            return true;
+        };
+
+        updateTimer();
+        const timer = setInterval(updateTimer, 1000);
 
         return () => clearInterval(timer);
     }, [battle]);
@@ -98,10 +102,9 @@ export default function BattleDetails() {
                 </div>
 
                 <div className="relative z-10 text-center mt-4">
-                    <div className="inline-flex items-center gap-2 bg-rose-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 shadow-lg shadow-rose-600/20">
-                        <Swords size={12} /> Haftalik Battle
+                    <div className="inline-flex items-center gap-2 bg-rose-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest mb-2 shadow-lg shadow-rose-600/30">
+                        <Swords size={14} /> Haftalik Battle
                     </div>
-                    <h1 className="text-3xl font-black italic tracking-tighter">GRUPPALAR DUELI</h1>
                 </div>
             </div>
 
