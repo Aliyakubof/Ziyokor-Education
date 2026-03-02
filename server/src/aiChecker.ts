@@ -6,42 +6,43 @@ const apiKey = process.env.GEMINI_API_KEY || "";
 const genAI = new GoogleGenerativeAI(apiKey);
 
 export interface AICheckResult {
-    score: number; // 0 to 100
+    isCorrect: boolean;
+    contentScore: number; // 0 to 100
+    grammarScore: number; // 0 to 100
     feedback: string;
 }
 
 export async function checkAnswerWithAI(
     question: string,
     studentAnswer: string,
-    correctAnswer: string,
     questionType: string
 ): Promise<AICheckResult> {
     if (!apiKey) {
         console.error("GEMINI_API_KEY is not set");
-        return { score: 0, feedback: "AI checking is currently unavailable." };
+        return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "AI checking is currently unavailable." };
     }
 
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompt = `
-            You are an English teacher checking a student's answer for a quiz.
-            
-            Question: "${question}"
-            Student's Answer: "${studentAnswer}"
-            Reference/Correct Answer: "${correctAnswer}"
-            Question Type: "${questionType}"
+            Siz tajribali, adolatli va til qoidalariga e'tiborli ustozsiz.
+            Vazifangiz: Berilgan savolga o'quvchi tomonidan yozilgan javobni tekshirish.
 
-            Instructions:
-            1. Evaluate the student's answer based on the reference answer and question type.
-            2. For translation or open-ended questions, be flexible with minor typos or grammatical errors unless they change the meaning.
-            3. Provide a score from 0 to 100.
-            4. Provide a brief, encouraging feedback in Uzbek.
-            
-            Respond ONLY with a JSON object in this format:
+            Baho berish mezonlari:
+            1. Faktologik aniqlik (Mantiq): O'quvchining javobi savolga mantiqan va ilmiy tarafdan to'g'ri javob beryaptimi (orqadagi ma'no to'g'ri bo'lishi muhim)?
+            2. Grammatika va imlo: Javob imlo va grammatik qoidalarga mos (juda ko'p xatolarsiz) tushunarli yozilganmi?
+
+            Savol: "${question}"
+            O'quvchining javobi: "${studentAnswer}"
+            Savol turi: "${questionType}"
+
+            Natijani faqat quyidagi qat'iy JSON formatida qaytaring:
             {
-                "score": number,
-                "feedback": "string"
+              "isCorrect": boolean (agar hammayoq to'g'ri bo'lsa true, umuman chalg'igan yoki juda xato yozgan bo'lsa false),
+              "grammarScore": number (0 dan 100 gacha, gramatikasi qanday),
+              "contentScore": number (0 dan 100 gacha, mantiqi/fakti qanday),
+              "feedback": "string (O'quvchiga qisqacha o'zbek tilida izoh: nima to'g'ri, nima xato, qayerda imlo xatosi borligini ko'rsating)"
             }
         `;
 
@@ -58,6 +59,6 @@ export async function checkAnswerWithAI(
         throw new Error("Invalid AI response format");
     } catch (err) {
         console.error("AI Checker Error:", err);
-        return { score: 0, feedback: "Javobni tekshirishda xatolik yuz berdi." };
+        return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "Javobni tekshirishda xatolik yuz berdi." };
     }
 }

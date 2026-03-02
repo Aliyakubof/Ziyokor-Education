@@ -449,8 +449,8 @@ app.post('/api/student/quiz/submit', async (req, res) => {
                     score += 1;
                 } else if (!isCorrect && studentAns) {
                     // Try AI checking for potentially complex answers
-                    aiResult = await checkAnswerWithAI(q.text, studentAns, q.acceptedAnswers?.[0] || "", q.type);
-                    if (aiResult.score >= 80) {
+                    aiResult = await checkAnswerWithAI(q.text, studentAns, q.type);
+                    if (aiResult.isCorrect) {
                         isCorrect = true;
                         currentScore = 1;
                         score += 1;
