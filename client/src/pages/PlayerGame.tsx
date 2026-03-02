@@ -41,7 +41,13 @@ export default function PlayerGame() {
     const [isUnitMode, setIsUnitMode] = useState(false);
     const [unitQuestions, setUnitQuestions] = useState<QuestionData[]>([]);
     const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
-    const [unitAnswers, setUnitAnswers] = useState<Record<number, any>>({});
+    const [unitAnswers, setUnitAnswers] = useState<Record<number, any>>(() => {
+        // Restore answers from localStorage if available
+        try {
+            const saved = localStorage.getItem('unit-answers');
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    });
     const [unitCorrectAnswers, setUnitCorrectAnswers] = useState<any[]>([]);
     const [globalEndTime, setGlobalEndTime] = useState<number | null>(null);
     const [quizTitle, setQuizTitle] = useState('');
@@ -71,9 +77,23 @@ export default function PlayerGame() {
             setUnitQuestions(data.questions);
             setGlobalEndTime(data.endTime || null);
             setQuizTitle(data.title || '');
-            setCurrentUnitIndex(0);
-            setQuestion(data.questions[0]);
-            setView('PLAYING');
+
+            // Restore saved answers from localStorage — don't reset if student already answered
+            const savedAnswersRaw = localStorage.getItem('unit-answers');
+            const savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : {};
+            const hasExistingAnswers = Object.keys(savedAnswers).length > 0;
+
+            if (!hasExistingAnswers) {
+                setCurrentUnitIndex(0);
+                setQuestion(data.questions[0]);
+                setView('PLAYING');
+            } else {
+                // Student is reconnecting — restore their position
+                setUnitAnswers(savedAnswers);
+                setCurrentUnitIndex(0);
+                setQuestion(data.questions[0]);
+                setView('PLAYING');
+            }
         });
 
         socket.on('question-start', (q) => {
@@ -98,18 +118,8 @@ export default function PlayerGame() {
             setRank({ rank: myRank, score: myScore });
         });
 
-        // Anti-Cheat: Visibility Change (only send Cheating, never revert to Online)
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                const pin = localStorage.getItem('kahoot-pin');
-                const studentId = localStorage.getItem('student-id') || socket.id;
-                if (socket.connected && pin) {
-                    socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
-                }
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+        // Anti-Cheat listener removed from PlayerGame — answers are persisted in localStorage
+        // so students can safely switch tabs without losing their work.
 
         return () => {
             socket.off('connect', onConnect);
@@ -119,13 +129,14 @@ export default function PlayerGame() {
             socket.off('question-start');
             socket.off('unit-finished');
             socket.off('game-over');
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [isUnitMode]);
 
     const saveUnitAnswer = (val: number | string) => {
         const newAnswers = { ...unitAnswers, [currentUnitIndex]: val };
         setUnitAnswers(newAnswers);
+        // Persist to localStorage so answers survive tab switches / refreshes
+        localStorage.setItem('unit-answers', JSON.stringify(newAnswers));
 
         // Sync with server immediately for real-time progress for host
         const pin = localStorage.getItem('kahoot-pin');
@@ -156,6 +167,8 @@ export default function PlayerGame() {
         const pin = localStorage.getItem('kahoot-pin');
         if (pin) {
             socket.emit('unit-player-finish', { pin });
+            // Clear saved answers after submission
+            localStorage.removeItem('unit-answers');
         }
     };
 
