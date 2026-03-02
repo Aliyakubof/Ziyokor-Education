@@ -6,8 +6,9 @@ import {
     LogOut, History, Calendar,
     Gamepad2, Zap,
     LayoutDashboard, UserCircle, ChevronRight,
-    Trophy, ShoppingBag, Swords, BookOpen, Flame, Coins
+    Trophy, ShoppingBag, Swords, BookOpen, Flame, Coins, Lock, Camera
 } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 import logo from '../assets/logo.jpeg';
 
 export default function StudentDashboard() {
@@ -23,8 +24,11 @@ export default function StudentDashboard() {
         isHero: false,
         hasTrophy: false,
         weeklyBattleScore: 0,
-        groupId: ''
+        groupId: '',
+        avatarUrl: null as string | null,
+        hasAvatarUnlock: false
     });
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [battle, setBattle] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
     const [pin, setPin] = useState('');
@@ -80,6 +84,48 @@ export default function StudentDashboard() {
     const currentLevelProgress = stats.totalScore % 1000;
     const progressPercent = (currentLevelProgress / 1000) * 100;
 
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !user?.id) return;
+
+        try {
+            setIsUploadingAvatar(true);
+            const options = {
+                maxSizeMB: 0.1, // 100KB limits
+                maxWidthOrHeight: 400,
+                useWebWorker: true,
+                fileType: "image/jpeg"
+            };
+
+            const compressedBlob = await imageCompression(file, options);
+
+            // Read as base64
+            const reader = new FileReader();
+            reader.readAsDataURL(compressedBlob);
+            reader.onloadend = async () => {
+                const base64data = reader.result;
+
+                const res = await apiFetch(`/api/student/${user.id}/avatar`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ avatar_url: base64data })
+                });
+
+                if (res.ok) {
+                    setStats(prev => ({ ...prev, avatarUrl: base64data as string }));
+                } else {
+                    const errInfo = await res.json();
+                    alert(errInfo.error || "Rasm joylashda xatolik yuz berdi");
+                }
+                setIsUploadingAvatar(false);
+            };
+        } catch (error) {
+            console.error(error);
+            alert("Rasmni qayta ishlashda xatolik!");
+            setIsUploadingAvatar(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-24 md:pb-0 relative overflow-hidden">
             {/* Background Gradients */}
@@ -91,10 +137,14 @@ export default function StudentDashboard() {
             <header className="relative z-10 px-6 pt-8 pb-6 text-white">
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border-2 border-white/30 shadow-lg">
-                            <span className="text-2xl font-black">
-                                {user?.name?.charAt(0).toUpperCase()}
-                            </span>
+                        <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border-2 border-white/30 shadow-lg overflow-hidden relative">
+                            {stats.avatarUrl ? (
+                                <img src={stats.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-2xl font-black">
+                                    {user?.name?.charAt(0).toUpperCase()}
+                                </span>
+                            )}
                         </div>
                         <div>
                             <h1 className="text-xl font-bold leading-none mb-1">{user?.name}</h1>
@@ -354,10 +404,45 @@ export default function StudentDashboard() {
                 )}
 
                 {activeTab === 'profile' && (
-                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center">
-                        <div className="w-24 h-24 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl font-black text-white shadow-xl shadow-indigo-500/30">
-                            {user?.name?.charAt(0).toUpperCase()}
+                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center relative">
+                        {/* Avatar Section */}
+                        <div className="relative w-28 h-28 mx-auto mb-4 group inline-block">
+                            <div className="w-28 h-28 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-[2.5rem] flex items-center justify-center text-4xl font-black text-white shadow-xl shadow-indigo-500/30 overflow-hidden relative border-4 border-white">
+                                {stats.avatarUrl ? (
+                                    <img src={stats.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span>{user?.name?.charAt(0).toUpperCase()}</span>
+                                )}
+
+                                {/* Overlay for Upload or Lock */}
+                                <div className={`absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer ${isUploadingAvatar ? 'opacity-100' : ''}`}>
+                                    {isUploadingAvatar ? (
+                                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    ) : stats.hasAvatarUnlock ? (
+                                        <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-white">
+                                            <Camera size={24} className="mb-1" />
+                                            <span className="text-[10px] font-black uppercase">O'zgartirish</span>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleAvatarUpload}
+                                                disabled={isUploadingAvatar}
+                                            />
+                                        </label>
+                                    ) : (
+                                        <div
+                                            className="w-full h-full flex flex-col items-center justify-center text-white cursor-pointer"
+                                            onClick={() => navigate('/student/shop')}
+                                        >
+                                            <Lock size={24} className="mb-1 text-red-400" />
+                                            <span className="text-[10px] font-black uppercase text-center px-2 leading-tight">Do'kondan <br /> Oling</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
+
                         <h2 className="text-xl font-black text-slate-900 mb-1">{user?.name}</h2>
                         <p className="text-slate-500 font-medium mb-6">{user?.groupName}</p>
 

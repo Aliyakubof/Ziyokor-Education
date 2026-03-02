@@ -78,8 +78,14 @@ export default function BattleDetails() {
     // Since we don't have user.groupId easily here without fetch, we check name or just use the IDs
 
     const scoreTotal = battle.score_a + battle.score_b || 1;
-    const percentA = Math.round((battle.score_a / scoreTotal) * 100);
-    const percentB = 100 - percentA;
+    let percentA = Number(((battle.score_a / scoreTotal) * 100).toFixed(1));
+    let percentB = Number((100 - percentA).toFixed(1));
+
+    // Handle pure 0s cleanly
+    if (battle.score_a === 0 && battle.score_b === 0) {
+        percentA = 50;
+        percentB = 50;
+    }
 
     return (
         <div className="min-h-screen bg-slate-950 text-white font-sans pb-10">
@@ -161,9 +167,15 @@ export default function BattleDetails() {
                         {/* Middle Pointer */}
                         <div className="absolute top-0 bottom-0 w-1 bg-white/20 left-[50%] -translate-x-1/2"></div>
                     </div>
-                    <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 tracking-widest">
-                        <span>{percentA}% Power</span>
-                        <span>{percentB}% Power</span>
+                    <div className="flex justify-between text-[11px] md:text-sm font-black uppercase tracking-widest mt-3">
+                        <div className="flex items-center gap-1.5 text-indigo-400">
+                            <Flame size={16} className="text-indigo-500 animate-pulse" />
+                            <span>{percentA}% Power</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-rose-400">
+                            <span>{percentB}% Power</span>
+                            <Flame size={16} className="text-rose-500 animate-pulse" />
+                        </div>
                     </div>
                 </div>
 

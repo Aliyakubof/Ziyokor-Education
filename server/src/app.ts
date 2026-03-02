@@ -919,6 +919,12 @@ app.get('/api/student/:id/stats', async (req, res) => {
             WHERE coins > (SELECT coins FROM students WHERE id = $1)
         `, [id]);
 
+        // Check avatar unlock purchase
+        const unlockRes = await query(`
+            SELECT 1 FROM student_purchases 
+            WHERE student_id = $1 AND item_id = 'avatar_unlock'
+        `, [id]);
+
         res.json({
             coins: student.coins || 0,
             streakCount: student.streak_count || 0,
@@ -926,6 +932,8 @@ app.get('/api/student/:id/stats', async (req, res) => {
             hasTrophy: student.has_trophy || false,
             weeklyBattleScore: student.weekly_battle_score || 0,
             groupId: student.group_id,
+            avatarUrl: student.avatar_url || null,
+            hasAvatarUnlock: (unlockRes.rowCount || 0) > 0,
             gamesPlayed: parseInt(gamesRes.rows[0].games_count) || 0,
             totalScore: parseInt(scoreRes.rows[0].total_score) || 0,
             rank: parseInt(rankRes.rows[0].rank) || 1
@@ -1000,6 +1008,7 @@ const SHOP_ITEMS = [
     { id: 'avatar_1', name: 'Cool Glasses', type: 'avatar', price: 100, url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' },
     { id: 'avatar_2', name: 'Ninja Mask', type: 'avatar', price: 250, url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka' },
     { id: 'avatar_3', name: 'Crown', type: 'avatar', price: 500, url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Buster' },
+    { id: 'avatar_unlock', name: 'Shaxsiy Avatar Yuklash', type: 'unlock', price: 500, color: '#3b82f6' },
     { id: 'theme_dark', name: 'Dark Mode Pro', type: 'theme', price: 150, color: '#1a1a1a' },
     { id: 'theme_gold', name: 'Gold Theme', type: 'theme', price: 1000, color: '#ffd700' }
 ];
@@ -1038,6 +1047,33 @@ app.post('/api/student/purchase', async (req, res) => {
     } catch (err) {
         console.error('Purchase error:', err);
         res.status(500).json({ error: 'Xarid amalga oshmadi' });
+    }
+});
+
+app.put('/api/student/:id/avatar', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { avatar_url } = req.body;
+
+        if (!avatar_url) {
+            return res.status(400).json({ error: 'Rasm yuborilmadi' });
+        }
+
+        // Verify the student actually owns the avatar_unlock item
+        const checkUnlock = await query(
+            "SELECT 1 FROM student_purchases WHERE student_id = $1 AND item_id = 'avatar_unlock'",
+            [id]
+        );
+
+        if (checkUnlock.rowCount === 0) {
+            return res.status(403).json({ error: "Siz avval 'Shaxsiy Avatar Yuklash' huquqini sotib olishingiz kerak" });
+        }
+
+        await query('UPDATE students SET avatar_url = $1 WHERE id = $2', [avatar_url, id]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Avatar update error:', err);
+        res.status(500).json({ error: 'Rasm saqlanmadi' });
     }
 });
 
