@@ -91,14 +91,11 @@ const UnitJoin = () => {
                         <span className="text-emerald-600 font-bold">Iltimos, bu oynadan chiqib ketmang!</span>
                     </p>
 
-                    <div className="flex flex-col items-center gap-2 text-orange-600 bg-orange-50 p-5 rounded-2xl border border-orange-200">
+                    <div className="flex flex-col items-center gap-2 text-slate-500 bg-slate-50 p-5 rounded-2xl border border-slate-200">
                         <div className="flex items-center gap-2">
-                            <AlertCircle size={20} className="animate-pulse text-orange-500" />
-                            <span className="text-xs font-black uppercase tracking-widest">Diqqat! Anti-Cheat</span>
+                            <AlertCircle size={16} className="text-slate-400" />
+                            <span className="text-xs font-semibold text-slate-400">Iltimos, bu sahifadan ketmang</span>
                         </div>
-                        <p className="text-[10px] font-medium text-slate-500 text-center">
-                            Oynadan chiqsangiz yoki boshqa ilovaga o'tsangiz, o'qituvchiga ogohlantirish boradi.
-                        </p>
                     </div>
                 </div>
             </div>
