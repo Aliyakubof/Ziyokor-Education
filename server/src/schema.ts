@@ -112,4 +112,10 @@ CREATE TABLE IF NOT EXISTS group_battles (
     winner_id UUID REFERENCES groups(id),
     mvp_id TEXT REFERENCES students(id),
     created_at TIMESTAMP DEFAULT NOW()
-);`;
+);
+
+-- Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_students_coins ON students(coins DESC);
+CREATE INDEX IF NOT EXISTS idx_students_streak ON students(streak_count DESC);
+CREATE INDEX IF NOT EXISTS idx_students_group ON students(group_id);
+`;

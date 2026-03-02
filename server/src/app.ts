@@ -6,6 +6,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import compression from 'compression';
 import { v4 as uuidv4 } from 'uuid';
 import { games, generatePin, generateStudentId, generateParentId, studentSockets } from './store';
 import { query } from './db';
@@ -45,6 +46,9 @@ app.use(cors({
 
 // Apply basic security headers
 app.use(helmet());
+
+// Apply global response payload compression (GZip) - Reduces JSON payload sizes down ~70%
+app.use(compression());
 
 // Limit payload size to 50mb (increased to allow saving large quizzes)
 app.use(express.json({ limit: '50mb' }));
