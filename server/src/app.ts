@@ -15,6 +15,7 @@ import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyRepo
 import { generateQuizResultPDF } from './pdfGenerator';
 import { normalizeAnswer, checkAnswer, countCorrectParts } from './utils';
 import { checkAnswerWithAI } from './aiChecker';
+import { startCronJobs } from './cron';
 
 const app = express();
 const allowedOrigins = [
