@@ -7,6 +7,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
+import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { games, generatePin, generateStudentId, generateParentId, studentSockets } from './store';
 import { query } from './db';
@@ -211,19 +212,28 @@ app.post('/api/login', async (req, res) => {
     // Teacher Login from Database
     try {
         const result = await query(
-            'SELECT id, name, phone FROM teachers WHERE REPLACE(phone, \'+\', \'\') = $1 AND password = $2',
-            [phone, password]
+            'SELECT id, name, phone, password FROM teachers WHERE REPLACE(phone, \'+\', \'\') = $1',
+            [phone]
         );
 
         if (result.rowCount && result.rowCount > 0) {
-            return res.json({
-                user: result.rows[0],
-                role: 'teacher'
-            });
+            const teacher = result.rows[0];
+            const match = await bcrypt.compare(password, teacher.password);
+
+            // Allow fallback if it's not hashed yet (before migration) or if perfectly matched
+            if (match || password === teacher.password) {
+                // Return teacher payload without password
+                const { password: _, ...teacherPayload } = teacher;
+                return res.json({
+                    user: teacherPayload,
+                    role: 'teacher'
+                });
+            }
         }
 
         res.status(401).json({ error: 'Telefon raqam yoki parol noto\'g\'ri' });
     } catch (err) {
+        console.error('Teacher login error:', err);
         res.status(500).json({ error: 'Serverda xatolik yuz berdi' });
     }
 });
@@ -233,13 +243,14 @@ app.post('/api/admin/teachers', async (req, res) => {
     try {
         const { name, phone, password } = req.body;
         // Use provided password or fallback to last 4 digits of phone
-        const finalPassword = password || phone.slice(-4);
+        const rawPassword = password || phone.slice(-4);
+        const hashedPassword = await bcrypt.hash(rawPassword, 10);
         const id = uuidv4();
         await query(
             'INSERT INTO teachers (id, name, phone, password) VALUES ($1, $2, $3, $4)',
-            [id, name, phone, finalPassword]
+            [id, name, phone, hashedPassword]
         );
-        res.json({ id, name, phone, password: finalPassword });
+        res.json({ id, name, phone, password: hashedPassword });
     } catch (err) {
         console.error('Error creating teacher:', err);
         res.status(500).json({ error: 'Error creating teacher' });
@@ -254,13 +265,14 @@ app.put('/api/admin/teachers/:id', async (req, res) => {
         // Build update query dynamically based on provided fields? 
         // For simplicity, we expect all fields or at least some. 
         // Let's update all provided fields.
+        const finalPassword = password?.startsWith('$2') ? password : await bcrypt.hash(password, 10);
 
         await query(
             'UPDATE teachers SET name = $1, phone = $2, password = $3 WHERE id = $4',
-            [name, phone, password, id]
+            [name, phone, finalPassword, id]
         );
 
-        res.json({ id, name, phone, password });
+        res.json({ id, name, phone, password: finalPassword });
     } catch (err) {
         console.error('Error updating teacher:', err);
         res.status(500).json({ error: 'Error updating teacher' });
@@ -380,8 +392,9 @@ app.put('/api/admin/students/:id/password', async (req, res) => {
     try {
         const { password } = req.body;
         const { id } = req.params;
-        await query('UPDATE students SET password = $1 WHERE id = $2', [password, id]);
-        res.json({ success: true, id, password });
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await query('UPDATE students SET password = $1 WHERE id = $2', [hashedPassword, id]);
+        res.json({ success: true, id, password: hashedPassword });
     } catch (err: any) {
         console.error('Error updating student password:', err);
         res.status(500).json({ error: 'Error updating student password' });
@@ -858,12 +871,14 @@ app.post('/api/student/login', async (req, res) => {
 
         if (student.password) {
             // Verify password
-            if (student.password !== password) {
+            const match = await bcrypt.compare(password, student.password);
+            if (!match && student.password !== password) {
                 return res.status(401).json({ error: 'Parol noto\'g\'ri' });
             }
         } else {
             // First time login: Set password
-            await query('UPDATE students SET password = $1 WHERE id = $2', [password, id]);
+            const hashedPassword = await bcrypt.hash(password, 10);
+            await query('UPDATE students SET password = $1 WHERE id = $2', [hashedPassword, id]);
         }
 
         res.json({
