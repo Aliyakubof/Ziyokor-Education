@@ -184,8 +184,6 @@ export default function PlayerGame() {
     };
 
     if (view === 'FINISHED') {
-        const isUnitReviewAvailable = isUnitMode && unitCorrectAnswers.length > 0;
-
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-transparent">
                 <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border border-slate-200 relative z-10">
@@ -205,19 +203,11 @@ export default function PlayerGame() {
                         </div>
                     </div>
 
+                    <div className="mb-6 bg-sky-50 border border-sky-100 rounded-2xl px-5 py-4 text-sky-600 text-sm font-medium">
+                        📩 Natijalar va to'g'ri javoblar <span className="font-black">Telegram bot</span> orqali yuboriladi
+                    </div>
+
                     <div className="space-y-3">
-                        {isUnitReviewAvailable && (
-                            <button
-                                onClick={() => {
-                                    setCurrentUnitIndex(0);
-                                    setQuestion(unitQuestions[0]);
-                                    setView('UNIT_REVIEW');
-                                }}
-                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2"
-                            >
-                                JAVOBLARNI TEKSHIRISH
-                            </button>
-                        )}
                         <button
                             onClick={() => window.location.href = '/'}
                             className="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 font-black py-4 rounded-2xl transition-all border border-slate-200"
