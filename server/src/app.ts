@@ -898,7 +898,6 @@ app.post('/api/student/login', async (req, res) => {
     }
 });
 
-import { notifyStudentSubscribers } from './bot';
 
 app.post('/api/student/:id/usage', async (req, res) => {
     try {
@@ -914,17 +913,17 @@ app.post('/api/student/:id/usage', async (req, res) => {
         const formatTime = (ms: number) => {
             const minutes = Math.floor(ms / 60000) % 60;
             const hours = Math.floor(ms / 3600000);
-            return \`\${hours} soat \${minutes} minut\`;
+            return `${hours} soat ${minutes} minut`;
         };
 
         const student = studentRes.rows[0];
-        let report = \`📱 <b>Farzandingiz (\${student.name}) bugungi telefon ko'rsatkichi:</b>\\n\\n\`;
-        report += \`⏱ <b>Jami Vaqt:</b> \${formatTime(totalScreenTimeMs)}\\n\\n\`;
-        
+        let report = `📱 <b>Farzandingiz (${student.name}) bugungi telefon ko'rsatkichi:</b>\n\n`;
+        report += `⏱ <b>Jami Vaqt:</b> ${formatTime(totalScreenTimeMs)}\n\n`;
+
         if (topApps && Array.isArray(topApps) && topApps.length > 0) {
-            report += \`🔥 <b>Eng ko'p ishlatilgan dasturlar:</b>\\n\`;
+            report += `🔥 <b>Eng ko'p ishlatilgan dasturlar:</b>\n`;
             topApps.forEach((app, index) => {
-                report += \`\${index + 1}. \${app.name} — \${formatTime(app.timeMs)}\\n\`;
+                report += `${index + 1}. ${app.name} — ${formatTime(app.timeMs)}\n`;
             });
         }
 
@@ -1029,7 +1028,7 @@ app.get('/api/leaderboard', async (req, res) => {
             queryStr += ` ORDER BY s.coins DESC, s.streak_count DESC`;
         }
 
-        queryStr += ` LIMIT $${ params.length + 1 } `;
+        queryStr += ` LIMIT $${params.length + 1} `;
         params.push(parseInt(limit as string));
 
         const result = await query(queryStr, params);
@@ -1355,44 +1354,44 @@ async function awardRewards(studentId: string, score: number) {
                     await notifyStudentSubscribers(studentId, `🔥 <b>Dahshatli natija! < /b>\nSiz <b>${newStreak} kun</b > ketma - ket dars qildingiz.To'xtab qolmang! 🚀`);
                 }
             } else if (diffDays > 1) {
-    newStreak = 1;
-}
+                newStreak = 1;
+            }
         } else {
-    newStreak = 1;
-}
+            newStreak = 1;
+        }
 
-// Level Up Logic (Example: every 500 XP is high activity)
-if (actualScore >= 500) {
-    await notifyStudentSubscribers(studentId, `🌟 <b>Barakalla!</b>\nSiz bugun juda faolsiz! +${actualScore} XP to'pladingiz. 💰`);
-}
+        // Level Up Logic (Example: every 500 XP is high activity)
+        if (actualScore >= 500) {
+            await notifyStudentSubscribers(studentId, `🌟 <b>Barakalla!</b>\nSiz bugun juda faolsiz! +${actualScore} XP to'pladingiz. 💰`);
+        }
 
-// Update Student
-await query(
-    'UPDATE students SET coins = coins + $1, streak_count = $2, last_activity_at = $3, weekly_battle_score = weekly_battle_score + $4 WHERE id = $5',
-    [coinsToAward, newStreak, now, actualScore, studentId]
-);
+        // Update Student
+        await query(
+            'UPDATE students SET coins = coins + $1, streak_count = $2, last_activity_at = $3, weekly_battle_score = weekly_battle_score + $4 WHERE id = $5',
+            [coinsToAward, newStreak, now, actualScore, studentId]
+        );
 
-// Update Group Battle Score
-const battleRes = await query(`
+        // Update Group Battle Score
+        const battleRes = await query(`
             SELECT id, group_a_id, group_b_id 
             FROM group_battles 
             WHERE (group_a_id = $1 OR group_b_id = $1) AND status = 'active'
             ORDER BY created_at DESC LIMIT 1
         `, [student.group_id]);
 
-if (battleRes.rowCount && battleRes.rowCount > 0) {
-    const battle = battleRes.rows[0];
-    if (battle.group_a_id === student.group_id) {
-        await query('UPDATE group_battles SET score_a = score_a + $1 WHERE id = $2', [actualScore, battle.id]);
-    } else {
-        await query('UPDATE group_battles SET score_b = score_b + $1 WHERE id = $2', [actualScore, battle.id]);
-    }
-}
+        if (battleRes.rowCount && battleRes.rowCount > 0) {
+            const battle = battleRes.rows[0];
+            if (battle.group_a_id === student.group_id) {
+                await query('UPDATE group_battles SET score_a = score_a + $1 WHERE id = $2', [actualScore, battle.id]);
+            } else {
+                await query('UPDATE group_battles SET score_b = score_b + $1 WHERE id = $2', [actualScore, battle.id]);
+            }
+        }
 
-console.log(`[Rewards] Awarded ${coinsToAward} coins to student ${studentId}. New streak: ${newStreak} (Double XP: ${isDoubleXP})`);
+        console.log(`[Rewards] Awarded ${coinsToAward} coins to student ${studentId}. New streak: ${newStreak} (Double XP: ${isDoubleXP})`);
     } catch (err) {
-    console.error('[Rewards] Error awarding rewards:', err);
-}
+        console.error('[Rewards] Error awarding rewards:', err);
+    }
 }
 
 function scrubPlayers(game: any) {
