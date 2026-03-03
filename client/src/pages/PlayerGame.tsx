@@ -308,7 +308,9 @@ export default function PlayerGame() {
                                     <div className="text-left">
                                         <p className="text-sm font-bold text-slate-700 line-clamp-1">{q.text}</p>
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
-                                            {unitAnswers[idx] !== undefined ? (
+                                            {q.type === 'info-slide' ? (
+                                                <span className="text-blue-400">Mavzu / Ma'lumot</span>
+                                            ) : unitAnswers[idx] !== undefined ? (
                                                 <span className="text-emerald-500">Javob berilgan</span>
                                             ) : (
                                                 <span className="text-orange-400">Javobsiz</span>
@@ -661,8 +663,10 @@ export default function PlayerGame() {
                             if (view === 'UNIT_REVIEW') {
                                 const correctAns = unitCorrectAnswers[i];
                                 const playerAns = unitAnswers[i];
-                                if (playerAns === undefined) dotColor = 'bg-slate-300';
-                                else {
+                                if (playerAns === undefined) {
+                                    if (unitQuestions[i].type === 'info-slide') dotColor = 'bg-blue-300';
+                                    else dotColor = 'bg-slate-300';
+                                } else {
                                     const normalizedPlayerAns = normalizeAnswer(playerAns || '');
                                     const isCorrect = (correctAns?.type === 'multiple-choice' || correctAns?.type === 'true-false')
                                         ? playerAns === correctAns?.correctIndex
@@ -672,6 +676,7 @@ export default function PlayerGame() {
                             } else {
                                 if (i === currentUnitIndex) dotColor = 'bg-indigo-500 w-10';
                                 else if (unitAnswers[i] !== undefined) dotColor = 'bg-emerald-400';
+                                else if (unitQuestions[i].type === 'info-slide') dotColor = 'bg-blue-300';
                             }
 
                             return (
