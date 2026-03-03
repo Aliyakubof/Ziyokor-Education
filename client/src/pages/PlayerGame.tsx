@@ -202,7 +202,7 @@ export default function PlayerGame() {
         if (isUnitMode) {
             // Use a side effect to navigate to avoid rendering issues during the state update
             setTimeout(() => {
-                navigate('/student', { replace: true });
+                navigate('/student/dashboard', { replace: true });
             }, 0);
             return (
                 <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-brand-dark">

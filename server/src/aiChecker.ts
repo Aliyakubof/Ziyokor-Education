@@ -23,7 +23,7 @@ export async function checkAnswerWithAI(
     }
 
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         const prompt = `
             Siz tajribali, adolatli va til qoidalariga e'tiborli ustozsiz.
@@ -39,24 +39,31 @@ export async function checkAnswerWithAI(
 
             Natijani faqat quyidagi qat'iy JSON formatida qaytaring:
             {
-              "isCorrect": boolean (agar hammayoq to'g'ri bo'lsa true, umuman chalg'igan yoki juda xato yozgan bo'lsa false),
-              "grammarScore": number (0 dan 100 gacha, gramatikasi qanday),
-              "contentScore": number (0 dan 100 gacha, mantiqi/fakti qanday),
-              "feedback": "string (O'quvchiga qisqacha o'zbek tilida izoh: nima to'g'ri, nima xato, qayerda imlo xatosi borligini ko'rsating)"
+              "isCorrect": boolean,
+              "grammarScore": number,
+              "contentScore": number,
+              "feedback": "string"
             }
         `;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
-        const text = response.text();
+        let text = response.text();
 
-        // Extract JSON from response (Gemini sometimes wraps it in markdown)
+        // Extract JSON from response (Gemini sometimes wraps it in markdown blocks)
+        text = text.replace(/```json/g, "").replace(/```/g, "").trim();
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
+            const parsed = JSON.parse(jsonMatch[0]);
+            return {
+                isCorrect: !!parsed.isCorrect,
+                grammarScore: Number(parsed.grammarScore) || 0,
+                contentScore: Number(parsed.contentScore) || 0,
+                feedback: String(parsed.feedback || "")
+            };
         }
 
-        throw new Error("Invalid AI response format");
+        throw new Error("Invalid AI response format: " + text);
     } catch (err) {
         console.error("AI Checker Error:", err);
         return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "Javobni tekshirishda xatolik yuz berdi." };

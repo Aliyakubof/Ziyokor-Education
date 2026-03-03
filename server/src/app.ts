@@ -1865,11 +1865,13 @@ io.on('connection', (socket) => {
                 // Fallback to AI checking if the simple check fails
                 try {
                     const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
+
+                    // Store feedback regardless of correctness so students see it in the PDF
+                    (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
+                    (player as any).aiFeedbackMap[qIdx] = aiResult.feedback;
+
                     if (aiResult.isCorrect) {
                         currentScore = 1;
-                        // Store feedback on the player object if needed, but for now just score
-                        (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
-                        (player as any).aiFeedbackMap[qIdx] = aiResult.feedback;
                     }
                 } catch (err) {
                     console.error('[player-answer] AI check failed:', err);
@@ -1948,15 +1950,37 @@ async function finishGame(pin: string) {
 
                 if (teacherRes.rowCount && teacherRes.rowCount > 0 && teacherRes.rows[0].telegram_chat_id) {
                     try {
+                        const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
+                        const filename = `Result_${sanitizedGroupName}_${Date.now()}.pdf`;
+                        console.log(`[finishGame] Attempting to send PDF to teacher ${group.teacher_id} (Chat: ${teacherRes.rows[0].telegram_chat_id}, File: ${filename})`);
+
                         await bot.telegram.sendDocument(teacherRes.rows[0].telegram_chat_id, {
                             source: pdfBuffer,
-                            filename: `Result_${group.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`
+                            filename: filename
                         }, {
                             caption: `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}`,
                             parse_mode: 'HTML'
                         });
+                        console.log(`[finishGame] PDF successfully sent to teacher.`);
                     } catch (e) {
-                        console.error('[finishGame] PDF send error:', e);
+                        console.error('[finishGame] PDF send error to teacher:', e);
+                    }
+                }
+
+                // Send to Manager
+                const managerRes = await query("SELECT telegram_chat_id FROM teachers WHERE phone = '998947212531'");
+                if (managerRes.rowCount && managerRes.rows[0].telegram_chat_id) {
+                    try {
+                        const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
+                        await bot.telegram.sendDocument(managerRes.rows[0].telegram_chat_id, {
+                            source: pdfBuffer,
+                            filename: `Result_${sanitizedGroupName}_${Date.now()}.pdf`
+                        }, {
+                            caption: `📊 <b>${game.quiz.title}</b> (Menejer uchun)\n🏫 Guruh: ${group.name}\n👤 O'qituvchi: ${group.teacher_id}`,
+                            parse_mode: 'HTML'
+                        });
+                    } catch (e) {
+                        console.error('[finishGame] Manager PDF send error:', e);
                     }
                 }
 
@@ -1964,15 +1988,16 @@ async function finishGame(pin: string) {
                     const subRes = await query('SELECT telegram_chat_id FROM student_telegram_subscriptions WHERE student_id = $1', [player.id]);
                     for (const sub of subRes.rows) {
                         try {
+                            const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
                             await bot.telegram.sendDocument(sub.telegram_chat_id, {
                                 source: pdfBuffer,
-                                filename: `Result_${group.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`
+                                filename: `Result_${sanitizedGroupName}_${Date.now()}.pdf`
                             }, {
                                 caption: `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}\n👤 O'quvchi: ${player.name}`,
                                 parse_mode: 'HTML'
                             });
                         } catch (e) {
-                            console.error(`[finishGame] PDF send student error:`, e);
+                            console.error(`[finishGame] PDF send subscriber error for ${player.name}:`, e);
                         }
                     }
                     await awardRewards(player.id, player.score);
