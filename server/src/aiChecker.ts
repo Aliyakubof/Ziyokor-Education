@@ -1,9 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as dotenv from 'dotenv';
 dotenv.config();
 
 const apiKey = process.env.GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(apiKey);
 
 export interface AICheckResult {
     isCorrect: boolean;
@@ -23,7 +21,9 @@ export async function checkAnswerWithAI(
     }
 
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        // Reverting to gemini-2.5-flash-lite as even cheaper models (Gemma) are not supported on this endpoint yet
+        const modelName = "gemini-2.5-flash-lite";
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
         const prompt = `
             Siz tajribali, adolatli va til qoidalariga e'tiborli ustozsiz.
@@ -46,11 +46,28 @@ export async function checkAnswerWithAI(
             }
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let text = response.text();
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
 
-        // Extract JSON from response (Gemini sometimes wraps it in markdown blocks)
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`API Error (${response.status}): ${errorBody}`);
+        }
+
+        const data: any = await response.json();
+
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+            throw new Error("Invalid AI response: No candidates found");
+        }
+
+        let text = data.candidates[0].content.parts[0].text;
+
+        // Manual JSON extraction as backup/default
         text = text.replace(/```json/g, "").replace(/```/g, "").trim();
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
@@ -64,6 +81,7 @@ export async function checkAnswerWithAI(
         }
 
         throw new Error("Invalid AI response format: " + text);
+
     } catch (err) {
         console.error("AI Checker Error:", err);
         return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "Javobni tekshirishda xatolik yuz berdi." };

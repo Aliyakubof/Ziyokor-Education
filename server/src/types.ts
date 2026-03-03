@@ -5,6 +5,8 @@ export interface Player {
     answers: Record<string, string | number>; // questionIndex -> answerIndex or raw text
     status?: 'Online' | 'Offline' | 'Cheating';
     isCheater?: boolean;
+    partialScoreMap?: Record<number, number>; // questionIndex -> score (0 or 1, or fractional)
+    aiFeedbackMap?: Record<number, string>; // questionIndex -> AI feedback
 }
 
 export interface Teacher {

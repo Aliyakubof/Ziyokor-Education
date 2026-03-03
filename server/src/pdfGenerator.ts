@@ -60,15 +60,20 @@ export const generateQuizResultPDF = (
             let correctCount = 0;
             quiz.questions.forEach((q, qIdx) => {
                 if (q.type === 'info-slide') return;
-                const answer = player.answers[qIdx];
-                if (answer !== undefined) {
-                    if (['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'].includes(q.type || '')) {
-                        if (checkAnswer(answer, q.acceptedAnswers || [])) {
-                            correctCount++;
-                        }
-                    } else {
-                        if (Number(answer) === q.correctIndex) {
-                            correctCount++;
+
+                if (player.partialScoreMap && player.partialScoreMap[qIdx] !== undefined) {
+                    if (player.partialScoreMap[qIdx] > 0) correctCount++;
+                } else {
+                    const answer = player.answers[qIdx];
+                    if (answer !== undefined) {
+                        if (['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'].includes(q.type || '')) {
+                            if (checkAnswer(answer, q.acceptedAnswers || [])) {
+                                correctCount++;
+                            }
+                        } else {
+                            if (Number(answer) === q.correctIndex) {
+                                correctCount++;
+                            }
                         }
                     }
                 }
@@ -103,7 +108,9 @@ export const generateQuizResultPDF = (
 
                 const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'];
 
-                if (textTypes.includes(q.type || '')) {
+                if (player.partialScoreMap && player.partialScoreMap[qIdx] !== undefined) {
+                    isCorrect = player.partialScoreMap[qIdx] > 0;
+                } else if (textTypes.includes(q.type || '')) {
                     studentDisplayAnswer = answer !== undefined ? String(answer) : 'Javob berilmagan';
                     if (answer !== undefined && checkAnswer(answer, q.acceptedAnswers || [])) {
                         isCorrect = true;
