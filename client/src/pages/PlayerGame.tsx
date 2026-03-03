@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
 import { Trophy, Clock, CheckCircle2, Send, XCircle, Info } from 'lucide-react';
 
@@ -34,6 +35,7 @@ export default function PlayerGame() {
     const [rank, setRank] = useState<{ rank: number; score: number } | null>(null);
     const [question, setQuestion] = useState<QuestionData | null>(null);
     const [textAnswer, setTextAnswer] = useState('');
+    const navigate = useNavigate();
 
     const [isConnected, setIsConnected] = useState(socket.connected);
 
@@ -198,8 +200,15 @@ export default function PlayerGame() {
 
     if (view === 'FINISHED') {
         if (isUnitMode) {
-            window.location.href = '/student';
-            return null;
+            // Use a side effect to navigate to avoid rendering issues during the state update
+            setTimeout(() => {
+                navigate('/student', { replace: true });
+            }, 0);
+            return (
+                <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-brand-dark">
+                    <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                </div>
+            );
         }
 
         return (
