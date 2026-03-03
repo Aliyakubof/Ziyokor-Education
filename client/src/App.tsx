@@ -52,7 +52,13 @@ function App() {
     <AuthProvider>
       <AppMonitor>
         <BrowserRouter>
-          <div className="min-h-screen w-full overflow-x-hidden font-sans">
+          <div className="min-h-[100dvh] w-full overflow-x-hidden font-sans flex flex-col"
+            style={{
+              paddingTop: 'env(safe-area-inset-top)',
+              paddingBottom: 'env(safe-area-inset-bottom)',
+              paddingLeft: 'env(safe-area-inset-left)',
+              paddingRight: 'env(safe-area-inset-right)'
+            }}>
             <Routes>
               <Route path="/" element={<RootRoute />} />
               <Route path="/login" element={<Login />} />
