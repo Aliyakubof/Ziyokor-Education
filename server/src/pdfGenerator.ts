@@ -108,17 +108,26 @@ export const generateQuizResultPDF = (
 
                 const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'];
 
+                // 1. Determine the display answer based on question type
+                if (textTypes.includes(q.type || '')) {
+                    studentDisplayAnswer = answer !== undefined ? String(answer) : 'Javob berilmagan';
+                } else {
+                    const ansIdx = Number(answer);
+                    if (answer !== undefined && !isNaN(ansIdx)) {
+                        studentDisplayAnswer = q.options ? q.options[ansIdx] || 'Noma\'lum' : 'Noma\'lum';
+                    }
+                }
+
+                // 2. Determine if the answer is correct
                 if (player.partialScoreMap && player.partialScoreMap[qIdx] !== undefined) {
                     isCorrect = player.partialScoreMap[qIdx] > 0;
                 } else if (textTypes.includes(q.type || '')) {
-                    studentDisplayAnswer = answer !== undefined ? String(answer) : 'Javob berilmagan';
                     if (answer !== undefined && checkAnswer(answer, q.acceptedAnswers || [])) {
                         isCorrect = true;
                     }
                 } else {
                     const ansIdx = Number(answer);
                     if (answer !== undefined && !isNaN(ansIdx)) {
-                        studentDisplayAnswer = q.options[ansIdx] || 'Noma\'lum';
                         if (ansIdx === q.correctIndex) {
                             isCorrect = true;
                         }
