@@ -1399,7 +1399,11 @@ function scrubPlayers(game: any) {
         return game.players.map((p: any) => ({
             id: p.id,
             name: p.name,
-            answeredCount: Object.values(p.answers || {}).filter(a => a !== "" && a !== null && a !== undefined).length,
+            answeredCount: Object.entries(p.answers || {}).filter(([qIdx, a]) => {
+                const isValidAnswer = a !== "" && a !== null && a !== undefined;
+                const isNotInfoSlide = game.quiz?.questions?.[Number(qIdx)]?.type !== 'info-slide';
+                return isValidAnswer && isNotInfoSlide;
+            }).length,
             status: p.status,
             isFinished: p.isFinished,
             isCheater: p.isCheater

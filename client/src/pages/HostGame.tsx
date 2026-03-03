@@ -110,7 +110,7 @@ export default function HostGame() {
 
         socket.on('unit-game-started', (data: { questions: any[], endTime?: number, title?: string }) => {
             setIsUnitMode(true);
-            setTotalQuestionsCount(data.questions.length);
+            setTotalQuestionsCount(data.questions.filter(q => q.type !== 'info-slide').length);
             setGlobalEndTime(data.endTime || null);
             setQuizTitle(data.title || '');
             setGameStarted(true);

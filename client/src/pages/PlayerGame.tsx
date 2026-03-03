@@ -604,10 +604,14 @@ export default function PlayerGame() {
                 <div className="flex items-center gap-3">
                     <div className="bg-indigo-50 border border-indigo-100 px-4 py-1.5 rounded-xl">
                         <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block">
-                            Savol
+                            {isUnitMode && unitQuestions[currentUnitIndex]?.type === 'info-slide' ? "Ma'lumot" : 'Savol'}
                         </span>
                         <div className="text-lg font-black text-indigo-600">
-                            {isUnitMode ? (currentUnitIndex + 1) : question?.questionIndex} / {isUnitMode ? unitQuestions.length : question?.totalQuestions}
+                            {isUnitMode ?
+                                (unitQuestions[currentUnitIndex]?.type === 'info-slide'
+                                    ? 'ℹ️'
+                                    : `${unitQuestions.slice(0, currentUnitIndex + 1).filter((q: any) => q.type !== 'info-slide').length} / ${unitQuestions.filter((q: any) => q.type !== 'info-slide').length}`)
+                                : `${question?.questionIndex} / ${question?.totalQuestions}`}
                         </div>
                     </div>
                 </div>
