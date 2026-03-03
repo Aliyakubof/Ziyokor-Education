@@ -1399,7 +1399,7 @@ function scrubPlayers(game: any) {
         return game.players.map((p: any) => ({
             id: p.id,
             name: p.name,
-            answeredCount: Object.keys(p.answers || {}).length,
+            answeredCount: Object.values(p.answers || {}).filter(a => a !== "" && a !== null && a !== undefined).length,
             status: p.status,
             isFinished: p.isFinished,
             isCheater: p.isCheater
@@ -1768,7 +1768,8 @@ io.on('connection', (socket) => {
         }));
 
         broadcastPlayerUpdate(pin);
-        socket.emit('unit-finished', { score: player.score, correctAnswers });
+        const aiFeedbackMap = (player as any).aiFeedbackMap || {};
+        socket.emit('unit-finished', { score: player.score, correctAnswers, aiFeedbackMap });
     });
 
     // Student: Register socket (for Duel Lobby presence)
@@ -1834,7 +1835,7 @@ io.on('connection', (socket) => {
     });
 
     // Player/Student: Submit Answer
-    socket.on('player-answer', ({ pin, answer, questionIndex }: { pin: string, answer: string | number, questionIndex?: number }) => {
+    socket.on('player-answer', async ({ pin, answer, questionIndex }: { pin: string, answer: string | number, questionIndex?: number }) => {
         const game = games[pin];
         if (!game || game.status !== 'ACTIVE') return;
 
@@ -1843,7 +1844,10 @@ io.on('connection', (socket) => {
         if (!player) return;
 
         const qIdx = game.isUnitQuiz && questionIndex !== undefined ? questionIndex : game.currentQuestionIndex;
-        if (qIdx < 0 || qIdx >= game.quiz.questions.length) return;
+        if (qIdx < 0 || qIdx >= game.quiz.questions.length) {
+            console.log(`[player-answer] Invalid qIdx: ${qIdx}, total: ${game.quiz.questions.length}`);
+            return;
+        }
 
         const question = game.quiz.questions[qIdx];
         if (!(player as any).partialScoreMap) (player as any).partialScoreMap = {};
@@ -1853,10 +1857,23 @@ io.on('connection', (socket) => {
         const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching'];
 
         if (question.type === 'matching' || question.type === 'word-box') {
-            currentScore = countCorrectParts(answer, question.acceptedAnswers || []);
+            currentScore = countCorrectParts(String(answer), question.acceptedAnswers || []);
         } else if (textTypes.includes(question.type || '')) {
-            if (checkAnswer(answer, question.acceptedAnswers || [])) {
+            if (checkAnswer(String(answer), question.acceptedAnswers || [])) {
                 currentScore = 1;
+            } else if (answer) {
+                // Fallback to AI checking if the simple check fails
+                try {
+                    const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
+                    if (aiResult.isCorrect) {
+                        currentScore = 1;
+                        // Store feedback on the player object if needed, but for now just score
+                        (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
+                        (player as any).aiFeedbackMap[qIdx] = aiResult.feedback;
+                    }
+                } catch (err) {
+                    console.error('[player-answer] AI check failed:', err);
+                }
             }
         } else {
             const ansIdx = Number(answer);
@@ -1868,6 +1885,8 @@ io.on('connection', (socket) => {
         player.answers[qIdx] = answer;
         player.score = player.score - prevPartialScore + currentScore;
         (player as any).partialScoreMap[qIdx] = currentScore;
+
+        console.log(`[player-answer] Success. Player ${player.name} answered qIdx ${qIdx}. Total answers: ${Object.keys(player.answers).length}`);
 
         if (game.isUnitQuiz) {
             broadcastPlayerUpdate(pin);
@@ -1897,7 +1916,8 @@ async function finishGame(pin: string) {
         game.players.forEach(p => {
             const playerSocketId = studentSockets[p.id];
             if (playerSocketId) {
-                io.to(playerSocketId).emit('unit-finished', { score: p.score, correctAnswers });
+                const aiFeedbackMap = (p as any).aiFeedbackMap || {};
+                io.to(playerSocketId).emit('unit-finished', { score: p.score, correctAnswers, aiFeedbackMap });
             }
         });
     }

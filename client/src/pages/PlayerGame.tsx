@@ -49,6 +49,7 @@ export default function PlayerGame() {
         } catch { return {}; }
     });
     const [unitCorrectAnswers, setUnitCorrectAnswers] = useState<any[]>([]);
+    const [unitAIFeedback, setUnitAIFeedback] = useState<Record<number, string>>({});
     const [globalEndTime, setGlobalEndTime] = useState<number | null>(null);
     const [quizTitle, setQuizTitle] = useState('');
 
@@ -103,10 +104,11 @@ export default function PlayerGame() {
             setTextAnswer('');
         });
 
-        socket.on('unit-finished', (data: { score: number, correctAnswers: any[] }) => {
+        socket.on('unit-finished', (data: { score: number, correctAnswers: any[], aiFeedbackMap?: Record<number, string> }) => {
             setView('FINISHED');
             setRank({ rank: 0, score: data.score });
             setUnitCorrectAnswers(data.correctAnswers || []);
+            setUnitAIFeedback(data.aiFeedbackMap || {});
         });
 
         socket.on('game-over', (leaderboard) => {
@@ -118,8 +120,18 @@ export default function PlayerGame() {
             setRank({ rank: myRank, score: myScore });
         });
 
-        // Anti-Cheat listener removed from PlayerGame — answers are persisted in localStorage
-        // so students can safely switch tabs without losing their work.
+        // Anti-Cheat listener: Send cheating status to server if tab is switched
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                const pin = localStorage.getItem('kahoot-pin');
+                const studentId = localStorage.getItem('student-id') || socket.id || (socket as any).studentId;
+                if (pin && studentId && view !== 'FINISHED' && view !== 'UNIT_SUMMARY' && view !== 'UNIT_REVIEW') {
+                    socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
             socket.off('connect', onConnect);
@@ -129,6 +141,7 @@ export default function PlayerGame() {
             socket.off('question-start');
             socket.off('unit-finished');
             socket.off('game-over');
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [isUnitMode]);
 
@@ -184,6 +197,11 @@ export default function PlayerGame() {
     };
 
     if (view === 'FINISHED') {
+        if (isUnitMode) {
+            window.location.href = '/student';
+            return null;
+        }
+
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-transparent">
                 <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border border-slate-200 relative z-10">
@@ -384,6 +402,7 @@ export default function PlayerGame() {
             }
 
             // Normal single input handling (text-input, single fill-blank, find-mistake, rewrite)
+            const aiFeedback = isReview ? unitAIFeedback[currentUnitIndex] : null;
             return (
                 <div className="w-full max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200 mt-8 mb-4">
                     {isReview && (
@@ -417,8 +436,17 @@ export default function PlayerGame() {
                         placeholder="Answer..."
                     />
 
+                    {isReview && aiFeedback && (
+                        <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl mb-4 text-left">
+                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                <Info size={12} /> AI Fikri:
+                            </p>
+                            <p className="text-blue-700 font-bold text-sm leading-relaxed">{aiFeedback}</p>
+                        </div>
+                    )}
+
                     {isReview && !isCorrect && (
-                        <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl">
+                        <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl text-left">
                             <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">To'g'ri javoblar:</p>
                             <p className="text-indigo-600 font-bold">{correctInfo?.acceptedAnswers?.join('+')}</p>
                         </div>
@@ -602,6 +630,9 @@ export default function PlayerGame() {
                 <footer className="p-4 bg-white/80 backdrop-blur-md border-t border-slate-200 flex items-center justify-between shrink-0">
                     <button
                         onClick={() => {
+                            if (view !== 'UNIT_REVIEW' && question && ['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '') && textAnswer.trim() !== '') {
+                                saveUnitAnswer(textAnswer.trim());
+                            }
                             if (currentUnitIndex > 0) {
                                 const newIdx = currentUnitIndex - 1;
                                 setCurrentUnitIndex(newIdx);
@@ -645,7 +676,12 @@ export default function PlayerGame() {
 
                     {currentUnitIndex === unitQuestions.length - 1 ? (
                         <button
-                            onClick={() => setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY')}
+                            onClick={() => {
+                                if (view !== 'UNIT_REVIEW' && question && ['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '') && textAnswer.trim() !== '') {
+                                    saveUnitAnswer(textAnswer.trim());
+                                }
+                                setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY');
+                            }}
                             className={`px-6 py-3 rounded-2xl font-black shadow-lg transition-all flex items-center gap-2 active:scale-95
                                 ${view === 'UNIT_REVIEW' ? 'bg-slate-800 text-white' : 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-indigo-500/20 hover:scale-105'}`}
                         >
@@ -654,6 +690,9 @@ export default function PlayerGame() {
                     ) : (
                         <button
                             onClick={() => {
+                                if (view !== 'UNIT_REVIEW' && question && ['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '') && textAnswer.trim() !== '') {
+                                    saveUnitAnswer(textAnswer.trim());
+                                }
                                 const newIdx = currentUnitIndex + 1;
                                 setCurrentUnitIndex(newIdx);
                                 setQuestion(unitQuestions[newIdx]);
@@ -864,6 +903,14 @@ function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUni
         const newMatches = { ...matches, [selectedWordIdx]: defItem.text };
         setMatches(newMatches);
         setSelectedWordIdx(null);
+
+        if (isUnitMode) {
+            const matchArray = [];
+            for (let i = 0; i < words.length; i++) {
+                matchArray.push(newMatches[i] || "");
+            }
+            onAnswer(matchArray.join('+'));
+        }
     };
 
     return (
