@@ -137,6 +137,25 @@ async function initDb() {
             await query('UPDATE students SET parent_id = $1 WHERE id = $2', [pid, row.id]);
         }
 
+        // Migration: Update groups.teacher_id foreign key to ON DELETE SET NULL
+        try {
+            const constraintRes = await query(`
+                SELECT constraint_name 
+                FROM information_schema.key_column_usage 
+                WHERE table_name = 'groups' AND column_name = 'teacher_id' 
+                AND table_schema = 'public';
+            `);
+
+            if (constraintRes.rowCount && constraintRes.rowCount > 0) {
+                const constraintName = constraintRes.rows[0].constraint_name;
+                await query(`ALTER TABLE groups DROP CONSTRAINT IF EXISTS "${constraintName}";`);
+                await query(`ALTER TABLE groups ADD CONSTRAINT "${constraintName}" FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL;`);
+                console.log(`Database: Updated constraint ${constraintName} to ON DELETE SET NULL`);
+            }
+        } catch (migErr) {
+            console.error('Migration error (teacher_id constraint):', migErr);
+        }
+
         console.log('Database initialized successfully');
         await ensureAdminExists();
         await ensureManagerExists();
