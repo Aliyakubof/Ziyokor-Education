@@ -21,8 +21,7 @@ export async function checkAnswerWithAI(
     }
 
     try {
-        // Reverting to gemini-2.5-flash-lite as even cheaper models (Gemma) are not supported on this endpoint yet
-        const modelName = "gemini-2.5-flash-lite";
+        const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
         const prompt = `

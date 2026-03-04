@@ -118,6 +118,10 @@ export const generateQuizResultPDF = (
                     }
                 }
 
+                // Sanitize string to prevent PDF stream corruption from emojis/Cyrillic in standard Helvetica font
+                studentDisplayAnswer = studentDisplayAnswer.replace(/[^\x00-\xFF]/g, '?');
+
+
                 // 2. Determine if the answer is correct
                 if (player.partialScoreMap && player.partialScoreMap[qIdx] !== undefined) {
                     isCorrect = player.partialScoreMap[qIdx] > 0;

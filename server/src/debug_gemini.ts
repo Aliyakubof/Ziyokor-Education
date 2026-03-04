@@ -15,8 +15,12 @@ async function listModels() {
         // Actually, the error suggested calling ListModels.
         // In @google/generative-ai, we might need to use the REST API or another way.
 
-        const models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro", "gemini-1.0-pro"];
-        for (const modelName of models) {
+        const modelsToTest = [
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemma-3-1b-it"
+        ];
+        for (const modelName of modelsToTest) {
             console.log(`\nTesting model: ${modelName}`);
             try {
                 const model = genAI.getGenerativeModel({ model: modelName });
