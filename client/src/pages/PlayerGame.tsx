@@ -96,6 +96,12 @@ export default function PlayerGame() {
                 setCurrentUnitIndex(0);
                 setQuestion(data.questions[0]);
                 setView('PLAYING');
+
+                // Sync answers back to the server so the Host's dashboard progress is correct
+                const pinFromStore = localStorage.getItem('kahoot-pin');
+                if (pinFromStore) {
+                    socket.emit('player-sync-answers', { pin: pinFromStore, answers: savedAnswers });
+                }
             }
         });
 
@@ -434,17 +440,22 @@ export default function PlayerGame() {
                         {question.text}
                     </div>
 
-                    <input
-                        type="text"
+                    <textarea
+                        rows={2}
                         value={isReview ? (playerAns || '') : textAnswer}
                         readOnly={isReview}
-                        onChange={(e) => setTextAnswer(e.target.value)}
+                        onChange={(e) => {
+                            setTextAnswer(e.target.value);
+                            // Auto-resize logic
+                            e.target.style.height = 'auto';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                        }}
                         onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer.trim())}
-                        className={`w-full border-2 rounded-2xl px-6 py-4 text-center text-xl font-bold transition-all mb-6
+                        className={`w-full border-2 rounded-2xl px-6 py-4 text-center text-xl font-bold transition-all mb-6 resize-none overflow-hidden min-h-[80px]
                             ${isReview
                                 ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-red-50 border-red-500 text-red-700')
-                                : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-500'}`}
-                        placeholder="Answer..."
+                                : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-500 shadow-inner'}`}
+                        placeholder="Javobingizni yozing..."
                     />
 
                     {isReview && aiFeedback && (

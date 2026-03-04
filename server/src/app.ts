@@ -1394,6 +1394,82 @@ async function awardRewards(studentId: string, score: number) {
     }
 }
 
+async function bulkAwardRewards(players: { id: string, score: number }[]) {
+    try {
+        const validPlayers = players.filter(p => p.id && p.id.length === 7);
+        if (validPlayers.length === 0) return;
+
+        const now = new Date();
+        const day = now.getDay();
+        const isDoubleXP = (day === 0 || day === 6);
+
+        const ids = validPlayers.map(p => p.id);
+        const studentRes = await query('SELECT id, last_activity_at, streak_count, group_id FROM students WHERE id = ANY($1)', [ids]);
+        const studentMap = new Map(studentRes.rows.map(r => [r.id, r]));
+
+        const updates = [];
+        const battleUpdates = new Map<string, number>();
+
+        for (const p of validPlayers) {
+            const student = studentMap.get(p.id);
+            if (!student) continue;
+
+            const actualScore = isDoubleXP ? p.score * 2 : p.score;
+            const coinsToAward = Math.floor(actualScore);
+
+            let newStreak = student.streak_count || 0;
+            if (student.last_activity_at) {
+                const lastDate = new Date(student.last_activity_at);
+                const diffDays = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
+                if (diffDays === 1) {
+                    newStreak += 1;
+                    if ([3, 7, 10, 15, 30, 50, 100].includes(newStreak)) {
+                        notifyStudentSubscribers(p.id, `🔥 <b>Dahshatli natija!</b>\nSiz <b>${newStreak} kun</b> ketma-ket dars qildingiz. To'xtab qolmang! 🚀`);
+                    }
+                } else if (diffDays > 1) {
+                    newStreak = 1;
+                }
+            } else {
+                newStreak = 1;
+            }
+
+            if (actualScore >= 500) {
+                notifyStudentSubscribers(p.id, `🌟 <b>Barakalla!</b>\nSiz bugun juda faolsiz! +${actualScore} XP to'pladingiz. 💰`);
+            }
+
+            // Push promises representing batched concurrent queries
+            updates.push(query(
+                'UPDATE students SET coins = coins + $1, streak_count = $2, last_activity_at = $3, weekly_battle_score = weekly_battle_score + $4 WHERE id = $5',
+                [coinsToAward, newStreak, now, actualScore, p.id]
+            ));
+
+            battleUpdates.set(student.group_id, (battleUpdates.get(student.group_id) || 0) + actualScore);
+        }
+
+        // Apply concurrency (DB Pool will cap this around 50 max active queries at a time, efficiently queuing the rest)
+        await Promise.all(updates);
+
+        if (battleUpdates.size > 0) {
+            const groupIds = Array.from(battleUpdates.keys());
+            const battleRes = await query(`
+                SELECT id, group_a_id, group_b_id 
+                FROM group_battles 
+                WHERE (group_a_id = ANY($1) OR group_b_id = ANY($1)) AND status = 'active'
+            `, [groupIds]);
+
+            for (const battle of battleRes.rows) {
+                const scoreA = battleUpdates.get(battle.group_a_id) || 0;
+                const scoreB = battleUpdates.get(battle.group_b_id) || 0;
+                if (scoreA > 0) await query('UPDATE group_battles SET score_a = score_a + $1 WHERE id = $2', [scoreA, battle.id]);
+                if (scoreB > 0) await query('UPDATE group_battles SET score_b = score_b + $1 WHERE id = $2', [scoreB, battle.id]);
+            }
+        }
+        console.log(`[Bulk Rewards] Successfully awarded ${validPlayers.length} players simultaneously.`);
+    } catch (err) {
+        console.error('[Bulk Rewards] Error:', err);
+    }
+}
+
 function scrubPlayers(game: any) {
     if (game.isUnitQuiz) {
         return game.players.map((p: any) => ({
@@ -1414,19 +1490,44 @@ function scrubPlayers(game: any) {
 
 // Throttling mechanism for unit quiz updates
 const updateThrottles: Record<string, NodeJS.Timeout | null> = {};
+const pendingPlayerUpdates: Record<string, Set<string>> = {};
 
-function broadcastPlayerUpdate(pin: string) {
+function broadcastPlayerUpdate(pin: string, playerId?: string) {
     const game = games[pin];
     if (!game || !game.hostId || game.hostId === 'system') return;
 
     if (game.isUnitQuiz) {
+        if (!pendingPlayerUpdates[pin]) {
+            pendingPlayerUpdates[pin] = new Set();
+        }
+
+        if (playerId) {
+            pendingPlayerUpdates[pin].add(playerId);
+        } else {
+            pendingPlayerUpdates[pin].add('ALL');
+        }
+
         // If already scheduled, do nothing
         if (updateThrottles[pin]) return;
 
         // Schedule an update in 2 seconds
         updateThrottles[pin] = setTimeout(() => {
-            if (games[pin]) {
-                io.to(game.hostId).emit('player-update', scrubPlayers(games[pin]));
+            const currentGame = games[pin];
+            if (currentGame) {
+                const updates = pendingPlayerUpdates[pin];
+                const cleanPlayers = scrubPlayers(currentGame);
+
+                if (updates.has('ALL')) {
+                    io.to(currentGame.hostId).emit('player-update', cleanPlayers);
+                } else {
+                    const changedPlayers = cleanPlayers.filter((p: any) => updates.has(p.id));
+                    if (changedPlayers.length > 0) {
+                        io.to(currentGame.hostId).emit('player-update-delta', changedPlayers);
+                    }
+                }
+            }
+            if (pendingPlayerUpdates[pin]) {
+                pendingPlayerUpdates[pin].clear();
             }
             updateThrottles[pin] = null;
         }, 2000);
@@ -1500,7 +1601,7 @@ io.on('connection', (socket) => {
             const player = game.players.find(p => p.id === socket.id || p.id === (socket as any).studentId);
             if (player) {
                 player.status = 'Offline';
-                broadcastPlayerUpdate(pin);
+                broadcastPlayerUpdate(pin, player.id);
             }
         }
     });
@@ -1614,7 +1715,7 @@ io.on('connection', (socket) => {
             }
             if (player.status === 'Cheating' && status === 'Online') return;
             player.status = status;
-            broadcastPlayerUpdate(pin);
+            broadcastPlayerUpdate(pin, player.id);
         }
     });
 
@@ -1726,7 +1827,7 @@ io.on('connection', (socket) => {
                 if (player.status !== 'Cheating') {
                     player.status = 'Online';
                 }
-                broadcastPlayerUpdate(game.pin);
+                broadcastPlayerUpdate(game.pin, player.id);
             }
         }
 
@@ -1771,7 +1872,7 @@ io.on('connection', (socket) => {
             acceptedAnswers: q.acceptedAnswers
         }));
 
-        broadcastPlayerUpdate(pin);
+        broadcastPlayerUpdate(pin, player.id);
         const aiFeedbackMap = (player as any).aiFeedbackMap || {};
         socket.emit('unit-finished', { score: player.score, correctAnswers, aiFeedbackMap });
     });
@@ -1895,10 +1996,72 @@ io.on('connection', (socket) => {
         console.log(`[player-answer] Success. Player ${player.name} answered qIdx ${qIdx}. Total answers: ${Object.keys(player.answers).length}`);
 
         if (game.isUnitQuiz) {
-            broadcastPlayerUpdate(pin);
+            broadcastPlayerUpdate(pin, player.id);
         } else {
             const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
             io.to(game.hostId).emit('answers-count', answeredCount);
+        }
+    });
+    socket.on('player-sync-answers', async ({ pin, answers }: { pin: string, answers: Record<string, string | number> }) => {
+        const game = games[pin];
+        if (!game || game.status !== 'ACTIVE') return;
+
+        const playerId = (socket as any).studentId || socket.id;
+        const player = game.players.find(p => p.id === playerId);
+        if (!player) return;
+
+        let hasUpdates = false;
+
+        // Ensure partialScoreMap exists
+        if (!(player as any).partialScoreMap) (player as any).partialScoreMap = {};
+
+        for (const [qIdxStr, answer] of Object.entries(answers)) {
+            const qIdx = parseInt(qIdxStr);
+            if (isNaN(qIdx) || qIdx < 0 || qIdx >= game.quiz.questions.length) continue;
+
+            // If the server doesn't have this answer yet, process it
+            if (player.answers[qIdx] === undefined && answer !== undefined && answer !== null) {
+                const question = game.quiz.questions[qIdx];
+                let currentScore = 0;
+                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching'];
+
+                if (question.type === 'matching' || question.type === 'word-box') {
+                    currentScore = countCorrectParts(String(answer), question.acceptedAnswers || []);
+                } else if (textTypes.includes(question.type || '')) {
+                    if (checkAnswer(String(answer), question.acceptedAnswers || [])) {
+                        currentScore = 1;
+                    } else if (answer) {
+                        try {
+                            const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
+                            (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
+                            (player as any).aiFeedbackMap[qIdx] = aiResult.feedback;
+                            if (aiResult.isCorrect) currentScore = 1;
+                        } catch (err) {
+                            console.error('[player-sync-answers] AI check failed:', err);
+                        }
+                    }
+                } else {
+                    const ansIdx = Number(answer);
+                    if (ansIdx === question.correctIndex) {
+                        currentScore = 1;
+                    }
+                }
+
+                player.answers[qIdx] = answer;
+                player.score += currentScore;
+                (player as any).partialScoreMap[qIdx] = currentScore;
+                hasUpdates = true;
+            }
+        }
+
+        if (hasUpdates) {
+            console.log(`[player-sync-answers] Synced answers for ${player.name}. Total answers: ${Object.keys(player.answers).length}`);
+            if (game.isUnitQuiz) {
+                broadcastPlayerUpdate(pin, player.id);
+            } else {
+                const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
+                io.to(game.hostId).emit('answers-count', answeredCount);
+            }
         }
     });
 });
@@ -1988,24 +2151,29 @@ async function finishGame(pin: string) {
                     }
                 }
 
-                for (const player of game.players) {
-                    const subRes = await query('SELECT telegram_chat_id FROM student_telegram_subscriptions WHERE student_id = $1', [player.id]);
-                    for (const sub of subRes.rows) {
+                // Bulk Update for XP & Coins
+                bulkAwardRewards(game.players); // Executing async without blocking
+
+                // Send to students (async without blocking finishGame)
+                (async () => {
+                    for (const player of game.players) {
                         try {
-                            const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
-                            await bot.telegram.sendDocument(sub.telegram_chat_id, {
-                                source: pdfBuffer,
-                                filename: `Result_${sanitizedGroupName}_${Date.now()}.pdf`
-                            }, {
-                                caption: `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}\n👤 O'quvchi: ${player.name}`,
-                                parse_mode: 'HTML'
-                            });
+                            const subRes = await query('SELECT telegram_chat_id FROM student_telegram_subscriptions WHERE student_id = $1', [player.id]);
+                            for (const sub of subRes.rows) {
+                                const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
+                                await bot.telegram.sendDocument(sub.telegram_chat_id, {
+                                    source: pdfBuffer,
+                                    filename: `Result_${sanitizedGroupName}_${Date.now()}.pdf`
+                                }, {
+                                    caption: `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}\n👤 O'quvchi: ${player.name}`,
+                                    parse_mode: 'HTML'
+                                });
+                            }
                         } catch (e) {
                             console.error(`[finishGame] PDF send subscriber error for ${player.name}:`, e);
                         }
                     }
-                    await awardRewards(player.id, player.score);
-                }
+                })();
             }
         } catch (err) {
             console.error('[finishGame] Error:', err);

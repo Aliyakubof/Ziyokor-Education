@@ -120,6 +120,18 @@ export default function HostGame() {
             setUnitPlayers(players);
         });
 
+        socket.on('player-update-delta', (changedPlayers: any[]) => {
+            setUnitPlayers(prev => {
+                const newPlayers = [...prev];
+                changedPlayers.forEach(c => {
+                    const idx = newPlayers.findIndex(p => p.id === c.id);
+                    if (idx !== -1) newPlayers[idx] = { ...newPlayers[idx], ...c };
+                    else newPlayers.push(c);
+                });
+                return newPlayers;
+            });
+        });
+
         socket.on('question-new', (q) => {
             if (q.type === 'info-slide') setCurrentTopic(q.text);
             setQuestion(q);
@@ -141,6 +153,7 @@ export default function HostGame() {
             socket.off('game-started');
             socket.off('unit-game-started');
             socket.off('player-update');
+            socket.off('player-update-delta');
             socket.off('question-new');
             socket.off('answers-count');
             socket.off('game-over');
