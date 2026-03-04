@@ -132,6 +132,26 @@ const AdminPanel = () => {
         }
     };
 
+    const handleDeleteTeacher = async (teacherId: string) => {
+        if (!window.confirm("Rostdan ham bu o'qituvchini o'chirmoqchimisiz?")) return;
+
+        try {
+            const res = await apiFetch(`/api/admin/teachers/${teacherId}`, {
+                method: 'DELETE',
+            });
+            if (res.ok) {
+                fetchTeachers();
+                alert("O'qituvchi o'chirildi!");
+            } else {
+                const err = await res.json();
+                alert(`Xatolik: ${err.error || 'Server xatosi'}`);
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            alert('Server bilan bog\'lanishda xatolik!');
+        }
+    };
+
     const handleUpdateStudentPassword = async (studentId: string, newPassword: string) => {
         if (!newPassword) return;
         try {
@@ -283,7 +303,9 @@ const AdminPanel = () => {
                                             >
                                                 ✎
                                             </button>
-                                            <button className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-lg" title="O'chirish">
+                                            <button
+                                                onClick={() => handleDeleteTeacher(teacher.id)}
+                                                className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-lg" title="O'chirish">
                                                 <Trash2 size={18} />
                                             </button>
                                         </div>

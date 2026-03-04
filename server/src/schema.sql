@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS teachers (
 CREATE TABLE IF NOT EXISTS groups (
     id UUID PRIMARY KEY,
     name TEXT NOT NULL,
-    teacher_id UUID REFERENCES teachers(id) ON DELETE CASCADE
+    teacher_id UUID REFERENCES teachers(id) ON DELETE SET NULL
 );
 
 -- Students Table

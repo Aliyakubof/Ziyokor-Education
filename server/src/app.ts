@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 process.env.TZ = 'Asia/Tashkent';
 import express from 'express';
 import { createServer } from 'http';
@@ -276,6 +279,17 @@ app.put('/api/admin/teachers/:id', async (req, res) => {
     } catch (err) {
         console.error('Error updating teacher:', err);
         res.status(500).json({ error: 'Error updating teacher' });
+    }
+});
+
+app.delete('/api/admin/teachers/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM teachers WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err) {
+        console.error('Error deleting teacher:', err);
+        res.status(500).json({ error: 'Error deleting teacher' });
     }
 });
 
@@ -622,12 +636,20 @@ app.post('/api/groups', async (req, res) => {
 app.put('/api/groups/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, level } = req.body;
-        await query(
-            'UPDATE groups SET name = $1, level = $2 WHERE id = $3',
-            [name, level, id]
-        );
-        res.json({ success: true, id, name, level });
+        const { name, level, teacherId } = req.body;
+
+        if (teacherId) {
+            await query(
+                'UPDATE groups SET name = $1, level = $2, teacher_id = $3 WHERE id = $4',
+                [name, level, teacherId, id]
+            );
+        } else {
+            await query(
+                'UPDATE groups SET name = $1, level = $2 WHERE id = $3',
+                [name, level, id]
+            );
+        }
+        res.json({ success: true, id, name, level, teacherId });
     } catch (err) {
         console.error('Error updating group:', err);
         res.status(500).json({ error: 'Error updating group' });

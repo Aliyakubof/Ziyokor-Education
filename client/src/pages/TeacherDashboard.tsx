@@ -9,6 +9,7 @@ interface Group {
     id: string;
     name: string;
     teacher_name?: string;
+    teacher_id?: string;
     level?: string;
 }
 
@@ -572,15 +573,29 @@ const TeacherDashboard = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editGroupName, setEditGroupName] = useState('');
     const [editGroupLevel, setEditGroupLevel] = useState('');
+    const [editGroupTeacherId, setEditGroupTeacherId] = useState('');
+    const [allTeachers, setAllTeachers] = useState<any[]>([]);
 
     useEffect(() => {
         if (role === 'admin') {
             fetchAllGroups();
+            fetchAllTeachers();
         } else if (user?.id) {
             fetchGroups();
         }
         fetchUnitQuizzes();
     }, [user, role]);
+
+    // Fetch all teachers for admin
+    const fetchAllTeachers = async () => {
+        try {
+            const res = await apiFetch('/api/admin/teachers');
+            const data = await res.json();
+            setAllTeachers(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Error fetching all teachers:', err);
+        }
+    };
 
     // Fetch all groups for admin
     const fetchAllGroups = async () => {
@@ -650,6 +665,7 @@ const TeacherDashboard = () => {
         setSelectedGroup(group);
         setEditGroupName(group.name);
         setEditGroupLevel(group.level || 'Beginner');
+        setEditGroupTeacherId(group.teacher_id || '');
         setIsEditModalOpen(true);
     };
 
@@ -659,7 +675,11 @@ const TeacherDashboard = () => {
 
         const res = await apiFetch(`/api/groups/${selectedGroup.id}`, {
             method: 'PUT',
-            body: JSON.stringify({ name: editGroupName, level: editGroupLevel })
+            body: JSON.stringify({
+                name: editGroupName,
+                level: editGroupLevel,
+                teacherId: role === 'admin' ? editGroupTeacherId : undefined
+            })
         });
 
         if (res.ok) {
@@ -978,6 +998,25 @@ const TeacherDashboard = () => {
                                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />
                                 </div>
                             </div>
+
+                            {role === 'admin' && (
+                                <div>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">O'qituvchi</label>
+                                    <div className="relative">
+                                        <select
+                                            value={editGroupTeacherId}
+                                            onChange={(e) => setEditGroupTeacherId(e.target.value)}
+                                            className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="">O'qituvchini tanlang...</option>
+                                            {allTeachers.map(t => (
+                                                <option key={t.id} value={t.id}>{t.name} ({t.phone})</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="pt-4 flex gap-3">
                                 <button
