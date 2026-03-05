@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { games, generatePin, generateStudentId, generateParentId, studentSockets } from './store';
 import { query } from './db';
 import { schema } from './schema';
-import { Player } from './types';
+import { Player, Question } from './types';
 import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyReports } from './bot';
 import { generateQuizResultPDF } from './pdfGenerator';
 import { normalizeAnswer, checkAnswer, countCorrectParts } from './utils';
@@ -577,6 +577,81 @@ app.post('/api/student/quiz/submit', async (req, res) => {
         res.status(500).json({ error: 'Submission failed' });
     }
 });
+
+// --- Web Vocab Battle APIs ---
+app.get('/api/student/vocab-battle/generate', async (req, res) => {
+    try {
+        const { studentId, count = 15 } = req.query;
+        if (!studentId) return res.status(400).json({ error: 'Student ID missing' });
+
+        // Get student's group level
+        const studentRes = await query(`
+            SELECT g.level 
+            FROM students s 
+            JOIN groups g ON s.group_id = g.id 
+            WHERE s.id = $1
+        `, [studentId]);
+
+        if (studentRes.rowCount === 0) return res.status(404).json({ error: 'Student or group not found' });
+        const level = studentRes.rows[0].level;
+
+        // Fetch all questions for this level
+        const result = await query('SELECT questions FROM unit_quizzes WHERE level = $1', [level]);
+        const allQuestions: Question[] = result.rows.flatMap(r => r.questions);
+
+        // Filter valid logic to text-input only (vocabulary)
+        const vocabQuestions = allQuestions.filter(q => q.type === 'text-input' && q.acceptedAnswers && q.acceptedAnswers.length > 0);
+
+        if (vocabQuestions.length === 0) {
+            return res.status(404).json({ error: 'Bu daraja uchun Lug\'at savollari topilmadi.' });
+        }
+
+        const allAnswers = vocabQuestions.flatMap(q => q.acceptedAnswers || []);
+
+        const transformed = vocabQuestions.map(q => {
+            const correct = q.acceptedAnswers![0];
+            let wrongPool = allAnswers.filter(item => item && item !== correct);
+            if (new Set(wrongPool).size < 3) {
+                wrongPool.push('is', 'are', 'do', 'does', 'have', 'has', 'in', 'on', 'at', 'olma', 'kitob', 'ruchka', 'daftar', 'maktab');
+            }
+            wrongPool = Array.from(new Set(wrongPool)).sort(() => 0.5 - Math.random());
+            const options = [correct, ...wrongPool.slice(0, 3)].sort(() => 0.5 - Math.random());
+
+            return {
+                text: q.text,
+                options,
+                correctIndex: options.indexOf(correct)
+            };
+        });
+
+        // Pick requested `count` (15) random questions
+        const selected = transformed.sort(() => 0.5 - Math.random()).slice(0, Number(count));
+
+        res.json({ questions: selected });
+    } catch (err) {
+        console.error('Error generating vocab battle:', err);
+        res.status(500).json({ error: 'Failed to generate battle' });
+    }
+});
+
+app.post('/api/student/vocab-battle/submit', async (req, res) => {
+    try {
+        const { studentId, totalXp } = req.body;
+        if (!studentId || typeof totalXp !== 'number') {
+            return res.status(400).json({ error: 'Invalid data' });
+        }
+
+        const coinsEarned = Math.max(1, Math.round(totalXp * 0.05)); // 5% of XP as coins
+
+        await query('UPDATE students SET total_score = total_score + $1, coins = coins + $2 WHERE id = $3', [totalXp, coinsEarned, studentId]);
+
+        res.json({ success: true, xpEarned: totalXp, coinsEarned });
+    } catch (err) {
+        console.error('Error submitting vocab battle:', err);
+        res.status(500).json({ error: 'Failed to submit battle' });
+    }
+});
+// -----------------------------
 
 app.get('/api/unit-quizzes', async (req, res) => {
     try {
