@@ -68,6 +68,33 @@ export function setupTelegramGame(bot: Telegraf) {
         }
     });
 
+    bot.command('stop_game', async (ctx) => {
+        const chatId = ctx.chat.id.toString();
+        // Allow only in groups
+        if (ctx.chat.type === 'private') {
+            return ctx.reply("❌ Bu buyruq faqat guruhlarda ishlaydi!");
+        }
+
+        if (!(await gameSessions.has(chatId))) {
+            return ctx.reply("❌ Faol o'yin topilmadi.");
+        }
+
+        const state = (await gameSessions.get(chatId))!;
+        if (state.timer) clearTimeout(state.timer);
+
+        try {
+            if (state.status === 'JOINING' && state.players.length > 0) {
+                const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
+                for (const p of state.players) {
+                    await query('UPDATE students SET coins = coins + $1 WHERE id = $2', [entryFee, p.id]).catch(console.error);
+                }
+            }
+            await ctx.reply("⛔ O'yin muddatidan oldin to'xtatildi.", { parse_mode: 'HTML' });
+        } catch (e) { }
+
+        await gameSessions.delete(chatId);
+    });
+
     bot.action(/^tg_level_(.+)$/, async (ctx) => {
         const chatId = ctx.chat?.id.toString();
         const level = ctx.match[1];
@@ -162,7 +189,10 @@ export function setupTelegramGame(bot: Telegraf) {
             {
                 parse_mode: 'HTML',
                 reply_markup: {
-                    inline_keyboard: [[{ text: "✋ Qatnashish", callback_data: "tg_join" }]]
+                    inline_keyboard: [
+                        [{ text: "✋ Qatnashish", callback_data: "tg_join" }],
+                        [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
+                    ]
                 }
             }
         );
@@ -255,7 +285,10 @@ export function setupTelegramGame(bot: Telegraf) {
                 {
                     parse_mode: 'HTML',
                     reply_markup: {
-                        inline_keyboard: [[{ text: "✋ Qo'shilish", callback_data: "tg_join" }]]
+                        inline_keyboard: [
+                            [{ text: "✋ Qo'shilish", callback_data: "tg_join" }],
+                            [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
+                        ]
                     }
                 }
             );
@@ -265,6 +298,72 @@ export function setupTelegramGame(bot: Telegraf) {
             console.error('[tg_game] join error:', err);
             ctx.answerCbQuery("Xatolik yuz berdi");
         }
+    });
+
+    bot.action('tg_add_time', async (ctx) => {
+        const chatId = ctx.chat?.id.toString();
+        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("O'yin xatosi", { show_alert: true });
+
+        const state = (await gameSessions.get(chatId))!;
+        if (state.status !== 'JOINING') return ctx.answerCbQuery("Buni faqat kutish vaqtida qilish mumkin", { show_alert: true });
+
+        if (state.timer) clearTimeout(state.timer);
+        state.timer = setTimeout(() => {
+            startGamePlay(bot, chatId);
+        }, 30000);
+
+        ctx.answerCbQuery("Vaqt yana 30 soniyaga uzaytirildi!");
+
+        // Optional: Update message to denote more time without overriding the join list mostly
+        try {
+            const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
+            const playerNames = state.players.map((p: PlayerEntry) => {
+                const teamIcon = p.team === 'Red' ? '🔴 ' : p.team === 'Blue' ? '🔵 ' : '• ';
+                return `${teamIcon}${p.name}`;
+            }).join('\n');
+
+            await ctx.editMessageText(
+                `🎉 <b>${state.quizTitle}</b> o'yini ochilyapti!\n` +
+                `Format: ${state.gameMode === 'SOLO' ? '👤 Solo' : '👥 Team Battle'}\n\n` +
+                `⏳ Qatnashish vaqti uzaytirildi (+30s)...\n` +
+                `💰 Kirish to'lovi: ${entryFee} coin\n\n` +
+                `Qatnashuvchilar (${state.players.length}):\n${playerNames}`,
+                {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: "✋ Qo'shilish", callback_data: "tg_join" }],
+                            [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
+                        ]
+                    }
+                }
+            );
+        } catch (e) { } // ignore message not modified error
+    });
+
+    bot.action('tg_cancel_game', async (ctx) => {
+        const chatId = ctx.chat?.id.toString();
+        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("O'yin topilmadi", { show_alert: true });
+
+        const state = (await gameSessions.get(chatId))!;
+        if (state.status === 'FINISHED') return ctx.answerCbQuery();
+
+        if (state.timer) clearTimeout(state.timer);
+
+        try {
+            // Refund coins if cancelled during JOIN phase
+            if (state.status === 'JOINING' && state.players.length > 0) {
+                const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
+                for (const p of state.players) {
+                    await query('UPDATE students SET coins = coins + $1 WHERE id = $2', [entryFee, p.id]).catch(console.error);
+                }
+            }
+
+            await ctx.editMessageText("⛔ O'yin bekor qilindi.", { parse_mode: 'HTML' });
+        } catch (e) { }
+
+        await gameSessions.delete(chatId);
+        ctx.answerCbQuery("O'yin bekor qilindi.");
     });
 
     bot.action(/^tg_ans_(\d+)$/, async (ctx) => {
@@ -567,16 +666,35 @@ async function finishGame(bot: Telegraf, chatId: string) {
  * Specifically converts 'text-input' (vocabulary) into multiple choice by picking incorrect options from the same set.
  */
 function transformToTelegramStyle(questions: Question[]): Question[] {
-    const pool = questions.filter(q => q.type === 'text-input');
+    const validTypes = ['text-input', 'multiple-choice', 'true-false', 'fill-blank'];
+    const pool = questions.filter(q => validTypes.includes(q.type || 'multiple-choice'));
 
-    return pool.map((q, idx) => {
-        if (q.type === 'text-input' && q.acceptedAnswers && q.acceptedAnswers.length > 0) {
+    // Cache of all possible accepted answers to use as distractors for text-input / fill-blank
+    const allAnswers = pool.flatMap(q => q.acceptedAnswers || q.options || []);
+
+    return pool.map((q) => {
+        if (q.type === 'multiple-choice' && q.options && q.options.length > 0) {
+            return q;
+        }
+
+        if (q.type === 'true-false') {
+            return {
+                ...q,
+                type: 'multiple-choice',
+                options: ['True / Rost', 'False / Yolg\'on'],
+                correctIndex: q.correctIndex || 0
+            };
+        }
+
+        if ((q.type === 'text-input' || q.type === 'fill-blank') && q.acceptedAnswers && q.acceptedAnswers.length > 0) {
             const correct = q.acceptedAnswers[0];
 
-            // Get all possible wrong options from other English/Uzbek translations in the same quiz
-            let wrongPool = pool
-                .flatMap(other => other.acceptedAnswers || [])
-                .filter(item => item && item !== correct);
+            let wrongPool = allAnswers.filter(item => item && item !== correct);
+
+            // If not enough unique wrong options from the quiz, add some generic fillers
+            if (new Set(wrongPool).size < 3) {
+                wrongPool.push('is', 'are', 'do', 'does', 'have', 'has', 'in', 'on', 'at', 'olma', 'kitob', 'ruchka', 'daftar', 'maktab');
+            }
 
             // Unique and shuffle
             wrongPool = Array.from(new Set(wrongPool)).sort(() => 0.5 - Math.random());
@@ -586,14 +704,14 @@ function transformToTelegramStyle(questions: Question[]): Question[] {
 
             return {
                 ...q,
-                type: 'multiple-choice', // Cast to multiple-choice for Telegram UI
+                type: 'multiple-choice',
                 options,
                 correctIndex: options.indexOf(correct)
             } as Question;
         }
 
-        return q;
-    }).filter(q => q.type === 'multiple-choice');
+        return null;
+    }).filter((q): q is Question => q !== null && q.options !== undefined && q.options.length > 1);
 }
 
 /**
