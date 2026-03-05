@@ -740,7 +740,20 @@ export async function sendWeeklyReports() {
     }
 }
 
-export const launchBot = () => {
+export const launchBot = async () => {
+    try {
+        await bot.telegram.setMyCommands([
+            { command: 'start', description: 'Botni ishga tushirish (Shaxsiy profillar uchun)' },
+            { command: 'me', description: 'Profilim va tangalarim' },
+            { command: 'balance', description: 'Tanga balansimni ko\'rish' },
+            { command: 'start_game', description: 'Guruhda o\'yin boshlash (Faqat guruhlar uchun)' },
+            { command: 'stop_game', description: 'Guruhda boshlangan o\'yinni to\'xtatish' }
+        ]);
+        console.log('[Bot] Commands registered successfully');
+    } catch (cmdErr) {
+        console.error('[Bot] Commands registration failed:', cmdErr);
+    }
+
     bot.launch().then(() => {
         console.log('Telegram bot started');
     }).catch(err => {
