@@ -124,15 +124,8 @@ export default function BattleDetails() {
                     <ChevronLeft className="text-white" size={20} />
                 </motion.button>
 
-                <div className="flex flex-col items-center">
-                    <motion.div
-                        initial={{ y: -20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="bg-indigo-500/10 backdrop-blur-md px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl md:rounded-2xl border border-indigo-500/30 flex items-center gap-2 shadow-inner"
-                    >
-                        <Timer size={16} className="text-indigo-400 animate-pulse md:w-[18px]" />
-                        <span className="text-[11px] md:text-sm font-black tracking-widest text-indigo-100 italic">{timeLeft}</span>
-                    </motion.div>
+                <div className="flex flex-col items-center opacity-0 pointer-events-none">
+                    <div className="w-10 md:w-12" />
                 </div>
 
                 <div className="w-10 md:w-12" /> {/* Spacer */}
@@ -148,14 +141,20 @@ export default function BattleDetails() {
                         <Swords size={16} className="text-white animate-bounce md:w-[20px]" />
                         <span className="text-[10px] md:text-sm font-black uppercase tracking-[0.2em]">Haftalik Battle</span>
                     </motion.div>
-                    <motion.h1
+                    <motion.div
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="text-3xl md:text-6xl lg:text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/30"
+                        className="flex flex-col items-center gap-2 md:gap-4"
                     >
-                        GLORY ARENA
-                    </motion.h1>
+                        <div className="flex items-center gap-2 text-indigo-400/60 font-black uppercase tracking-[0.3em] text-[10px] md:text-xs">
+                            <Timer size={14} className="animate-pulse" />
+                            VAQT TUGASHIGA
+                        </div>
+                        <div className="text-4xl md:text-7xl lg:text-8xl font-black italic tracking-tighter tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20 drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                            {timeLeft}
+                        </div>
+                    </motion.div>
                 </div>
 
                 {/* Main Battle Card */}
