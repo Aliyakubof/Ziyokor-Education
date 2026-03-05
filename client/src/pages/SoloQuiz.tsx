@@ -23,7 +23,7 @@ export default function SoloQuiz() {
     const [streak, setStreak] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [isCorrectFeedback, setIsCorrectFeedback] = useState<boolean | null>(null);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const timerRef = useRef<any>(null);
 
     useEffect(() => {
         if (!isBattleMode && !selectedQuiz && !results) {
