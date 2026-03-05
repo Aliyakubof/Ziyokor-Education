@@ -384,8 +384,9 @@ export default function BattleDetails() {
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className="w-full md:w-auto bg-amber-500 text-slate-950 font-black px-6 py-3 md:px-10 md:py-4 rounded-xl md:rounded-2xl text-[10px] md:text-sm uppercase tracking-[0.2em] shadow-xl shadow-amber-500/20"
+                            className="w-full md:w-auto bg-amber-500 text-slate-950 font-black px-6 py-3 md:px-10 md:py-4 rounded-xl md:rounded-2xl text-[10px] md:text-sm uppercase tracking-[0.2em] shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2"
                         >
+                            <Award size={18} />
                             Batafsil
                         </motion.button>
                     </div>
