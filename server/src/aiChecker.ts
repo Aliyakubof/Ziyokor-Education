@@ -86,3 +86,77 @@ export async function checkAnswerWithAI(
         return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "Javobni tekshirishda xatolik yuz berdi." };
     }
 }
+
+export interface VocabQuestion {
+    text: string;
+    options: string[];
+    correctIndex: number;
+}
+
+export async function generateVocabBattleWithAI(
+    level: string,
+    candidates: any[],
+    count: number = 15
+): Promise<VocabQuestion[]> {
+    if (!apiKey) {
+        throw new Error("GEMINI_API_KEY is not set");
+    }
+
+    try {
+        const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+        const prompt = `
+            Vazifangiz: O'quvchilar uchun "Lug'at Battle" o'yini savollarini yaratish.
+            O'quvchi darajasi: ${level}
+            Talab qilinadigan savollar soni: ${count}
+            
+            Sizga bazadan olingan xomaki savollar (candidates) beriladi. Ulardan foydalanib:
+            1. Har bir so'zni tahlil qiling. Faqatgina vocabulary (so'z yoki ibora) bo'lsin, uzun gaplar bo'lmasin.
+            2. Tarjima "Cambridge Dictionary" va "Oxford" standartlariga mos, 100% aniq bo'lsin (Inglizcha -> O'zbekcha yo'nalishida).
+            3. Har bir savol uchun 3 ta mantiqan yaqin, lekin noto'g'ri (distractors) variantlar yarating.
+            4. Variantlar faqat o'zbek tilida bo'lsin.
+            5. Agar berilgan xomaki savollar kam bo'lsa yoki sifatsiz bo'lsa, o'zingiz darajaga mos yangi so'zlar qo'shing.
+
+            Berilgan xomaki savollar (ba'zilarida xatolar bo'lishi mumkin):
+            ${JSON.stringify(candidates.slice(0, 50))}
+
+            Natijani faqat quyidagi JSON formatida qaytaring:
+            {
+              "questions": [
+                {
+                  "text": "English word",
+                  "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+                  "correctIndex": number (0 to 3)
+                }
+              ]
+            }
+        `;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json"
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`API Error (${response.status}): ${errorBody}`);
+        }
+
+        const data: any = await response.json();
+        const text = data.candidates[0].content.parts[0].text;
+        const parsed = JSON.parse(text);
+
+        return parsed.questions || [];
+
+    } catch (err) {
+        console.error("AI Generation Error:", err);
+        throw err;
+    }
+}
