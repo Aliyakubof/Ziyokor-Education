@@ -13,7 +13,7 @@ bot.catch((err: any, ctx: any) => {
     console.error(`Bot error for ${ctx.updateType}:`, err);
 });
 
-const userStates: Record<string, 'awaiting_teacher_phone' | 'awaiting_student_id' | 'awaiting_parent_id' | 'awaiting_password'> = {};
+const userStates: Record<string, 'awaiting_teacher_phone' | 'awaiting_student_id' | 'awaiting_parent_id' | 'awaiting_password' | 'awaiting_broadcast'> = {};
 const tempLoginData: Record<string, { studentId: string, role: 'student' | 'parent', studentName: string }> = {};
 
 bot.start(async (ctx) => {
@@ -394,6 +394,14 @@ bot.on('contact', async (ctx) => {
     handleTeacherLogin(ctx, chatId, phone);
 });
 
+bot.hears('📢 Xabar Yuborish', async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    if (!chatId || !await isManager(chatId)) return;
+
+    userStates[chatId] = 'awaiting_broadcast';
+    ctx.reply('📝 O\'qituvchilarga yubormoqchi bo\'lgan xabaringizni yozing:');
+});
+
 bot.hears('🚪 Chiqish', handleLogout);
 
 bot.on('text', async (ctx) => {
@@ -437,6 +445,25 @@ bot.on('text', async (ctx) => {
         } catch (err) {
             console.error('[Bot] Password verification error:', err);
             ctx.reply('❌ Xatolik yuz berdi.');
+        }
+        return;
+    }
+
+    if (state === 'awaiting_broadcast' && await isManager(chatId)) {
+        try {
+            const teachers = await query('SELECT telegram_chat_id FROM teachers WHERE telegram_chat_id IS NOT NULL AND phone != $1', [MANAGER_PHONE]);
+            let count = 0;
+            for (const t of teachers.rows) {
+                try {
+                    await bot.telegram.sendMessage(t.telegram_chat_id, `📢 <b>MENEJERDAN XABAR:</b>\n\n${text}`, { parse_mode: 'HTML' });
+                    count++;
+                } catch (e) { }
+            }
+            ctx.reply(`✅ Xabar ${count} ta o'qituvchiga yuborildi.`);
+            delete userStates[chatId];
+        } catch (err) {
+            console.error('Broadcast error:', err);
+            ctx.reply('❌ Xabar yuborishda xatolik.');
         }
         return;
     }
@@ -504,7 +531,7 @@ async function handleManagerAutoLogin(ctx: any, chatId: string) {
                 reply_markup: {
                     keyboard: [
                         [{ text: "📊 Haftalik Hisobot" }, { text: "📉 Potentional fail" }],
-                        [{ text: "🚪 Chiqish" }]
+                        [{ text: "📢 Xabar Yuborish" }, { text: "🚪 Chiqish" }]
                     ],
                     resize_keyboard: true
                 }
