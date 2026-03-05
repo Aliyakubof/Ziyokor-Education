@@ -122,6 +122,14 @@ CREATE TABLE IF NOT EXISTS telegram_group_chats (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- System Settings Table
+CREATE TABLE IF NOT EXISTS system_settings (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_students_coins ON students(coins DESC);
 CREATE INDEX IF NOT EXISTS idx_students_streak ON students(streak_count DESC);
