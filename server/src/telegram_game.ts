@@ -666,27 +666,14 @@ async function finishGame(bot: Telegraf, chatId: string) {
  * Specifically converts 'text-input' (vocabulary) into multiple choice by picking incorrect options from the same set.
  */
 function transformToTelegramStyle(questions: Question[]): Question[] {
-    const validTypes = ['text-input', 'multiple-choice', 'true-false', 'fill-blank'];
+    const validTypes = ['text-input'];
     const pool = questions.filter(q => validTypes.includes(q.type || 'multiple-choice'));
 
-    // Cache of all possible accepted answers to use as distractors for text-input / fill-blank
-    const allAnswers = pool.flatMap(q => q.acceptedAnswers || q.options || []);
+    // Cache of all possible accepted answers to use as distractors for text-input
+    const allAnswers = pool.flatMap(q => q.acceptedAnswers || []);
 
     return pool.map((q) => {
-        if (q.type === 'multiple-choice' && q.options && q.options.length > 0) {
-            return q;
-        }
-
-        if (q.type === 'true-false') {
-            return {
-                ...q,
-                type: 'multiple-choice',
-                options: ['True / Rost', 'False / Yolg\'on'],
-                correctIndex: q.correctIndex || 0
-            };
-        }
-
-        if ((q.type === 'text-input' || q.type === 'fill-blank') && q.acceptedAnswers && q.acceptedAnswers.length > 0) {
+        if (q.type === 'text-input' && q.acceptedAnswers && q.acceptedAnswers.length > 0) {
             const correct = q.acceptedAnswers[0];
 
             let wrongPool = allAnswers.filter(item => item && item !== correct);
