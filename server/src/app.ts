@@ -600,20 +600,45 @@ app.get('/api/student/vocab-battle/generate', async (req, res) => {
         const allQuestions: Question[] = result.rows.flatMap(r => r.questions);
 
         // Filter valid logic to text-input only (vocabulary)
-        const vocabQuestions = allQuestions.filter(q => q.type === 'text-input' && q.acceptedAnswers && q.acceptedAnswers.length > 0);
+        // Stricter filtering: only short words/phrases to exclude full sentences
+        const vocabQuestions = allQuestions.filter(q =>
+            q.type === 'text-input' &&
+            q.acceptedAnswers &&
+            q.acceptedAnswers.length > 0 &&
+            q.text.length < 35 &&
+            q.text.trim().split(/\s+/).length <= 3
+        );
 
         if (vocabQuestions.length === 0) {
             return res.status(404).json({ error: 'Bu daraja uchun Lug\'at savollari topilmadi.' });
         }
 
-        const allAnswers = vocabQuestions.flatMap(q => q.acceptedAnswers || []);
+        // Build a translation map to identify all valid translations for each word
+        // This prevents picking a synonym of the correct answer as a distractor
+        const translationMap = new Map<string, Set<string>>();
+        vocabQuestions.forEach(q => {
+            const wordKey = q.text.toLowerCase().trim();
+            if (!translationMap.has(wordKey)) translationMap.set(wordKey, new Set());
+            q.acceptedAnswers?.forEach(a => translationMap.get(wordKey)!.add(a.toLowerCase().trim()));
+        });
+
+        const allAnswersPool = Array.from(new Set(vocabQuestions.flatMap(q => q.acceptedAnswers || []).map(a => a.trim())));
 
         const transformed = vocabQuestions.map(q => {
-            const correct = q.acceptedAnswers![0];
-            let wrongPool = allAnswers.filter(item => item && item !== correct);
+            const wordKey = q.text.toLowerCase().trim();
+            const correct = q.acceptedAnswers![0].trim();
+            const validTrans = translationMap.get(wordKey) || new Set();
+
+            // Filter wrongPool: MUST NOT be a valid translation for THIS word
+            let wrongPool = allAnswersPool.filter(ans => {
+                const a = ans.toLowerCase().trim();
+                return a !== correct.toLowerCase() && !validTrans.has(a);
+            });
+
             if (new Set(wrongPool).size < 3) {
                 wrongPool.push('is', 'are', 'do', 'does', 'have', 'has', 'in', 'on', 'at', 'olma', 'kitob', 'ruchka', 'daftar', 'maktab');
             }
+
             wrongPool = Array.from(new Set(wrongPool)).sort(() => 0.5 - Math.random());
             const options = [correct, ...wrongPool.slice(0, 3)].sort(() => 0.5 - Math.random());
 
@@ -624,8 +649,14 @@ app.get('/api/student/vocab-battle/generate', async (req, res) => {
             };
         });
 
-        // Pick requested `count` (15) random questions
-        const selected = transformed.sort(() => 0.5 - Math.random()).slice(0, Number(count));
+        // Ensure unique words in the final set if possible
+        const uniqueWordMap = new Map();
+        transformed.forEach(t => {
+            if (!uniqueWordMap.has(t.text.toLowerCase())) uniqueWordMap.set(t.text.toLowerCase(), t);
+        });
+
+        const finalPool = Array.from(uniqueWordMap.values());
+        const selected = finalPool.sort(() => 0.5 - Math.random()).slice(0, Number(count));
 
         res.json({ questions: selected });
     } catch (err) {
