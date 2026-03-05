@@ -19,6 +19,7 @@
     "@capacitor/ios": "^8.1.0",
     "browser-image-compression": "^2.0.2",
     "core-js": "^3.37.1",
+    "framer-motion": "^12.35.0",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.563.0",
