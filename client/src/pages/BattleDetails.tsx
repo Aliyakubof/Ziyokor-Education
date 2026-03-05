@@ -72,7 +72,7 @@ export default function BattleDetails() {
             <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-indigo-400 font-black tracking-widest uppercase text-xs"
+                className="text-indigo-400 font-black tracking-widest uppercase text-[10px] md:text-xs"
             >
                 Arena yuklanmoqda...
             </motion.p>
@@ -114,45 +114,45 @@ export default function BattleDetails() {
             </div>
 
             {/* Header Section */}
-            <div className="relative z-10 p-6 md:p-8 flex items-center justify-between pointer-events-auto">
+            <div className="relative z-20 p-4 md:p-8 flex items-center justify-between pointer-events-auto">
                 <motion.button
                     whileHover={{ scale: 1.1, x: -2 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => navigate(-1)}
-                    className="w-12 h-12 bg-white/5 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/10 shadow-xl"
+                    className="w-10 h-10 md:w-12 md:h-12 bg-white/5 backdrop-blur-xl rounded-xl md:rounded-2xl flex items-center justify-center border border-white/10 shadow-xl"
                 >
-                    <ChevronLeft className="text-white" />
+                    <ChevronLeft className="text-white" size={20} />
                 </motion.button>
 
                 <div className="flex flex-col items-center">
                     <motion.div
                         initial={{ y: -20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        className="bg-indigo-500/10 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-indigo-500/30 flex items-center gap-2 shadow-inner"
+                        className="bg-indigo-500/10 backdrop-blur-md px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl md:rounded-2xl border border-indigo-500/30 flex items-center gap-2 shadow-inner"
                     >
-                        <Timer size={18} className="text-indigo-400 animate-pulse" />
-                        <span className="text-sm font-black tracking-widest text-indigo-100 italic">{timeLeft}</span>
+                        <Timer size={16} className="text-indigo-400 animate-pulse md:w-[18px]" />
+                        <span className="text-[11px] md:text-sm font-black tracking-widest text-indigo-100 italic">{timeLeft}</span>
                     </motion.div>
                 </div>
 
-                <div className="w-12 h-12" /> {/* Spacer */}
+                <div className="w-10 md:w-12" /> {/* Spacer */}
             </div>
 
-            <main className="relative z-10 px-4 md:px-8 max-w-6xl mx-auto">
-                <div className="text-center mb-10">
+            <main className="relative z-10 px-4 md:px-8 lg:px-12 max-w-7xl mx-auto">
+                <div className="text-center mb-8 md:mb-12">
                     <motion.div
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="inline-flex items-center gap-3 bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-2.5 rounded-full shadow-[0_0_20px_rgba(225,29,72,0.4)] mb-4"
+                        className="inline-flex items-center gap-2 bg-gradient-to-r from-rose-600 to-rose-500 px-4 py-1.5 md:px-6 md:py-2.5 rounded-full shadow-[0_0_20px_rgba(225,29,72,0.4)] mb-3 md:mb-4"
                     >
-                        <Swords size={20} className="text-white animate-bounce" />
-                        <span className="text-sm font-black uppercase tracking-[0.2em]">Haftalik Battle</span>
+                        <Swords size={16} className="text-white animate-bounce md:w-[20px]" />
+                        <span className="text-[10px] md:text-sm font-black uppercase tracking-[0.2em]">Haftalik Battle</span>
                     </motion.div>
                     <motion.h1
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="text-4xl md:text-6xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/30"
+                        className="text-3xl md:text-6xl lg:text-7xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/30"
                     >
                         GLORY ARENA
                     </motion.h1>
@@ -164,172 +164,152 @@ export default function BattleDetails() {
                     initial={{ y: 50, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.6, type: "spring" }}
-                    className="relative group perspective-1000"
+                    className="relative group "
                 >
                     {/* Glow behind card */}
-                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-rose-600 rounded-[3rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-rose-600 rounded-[2rem] md:rounded-[3rem] blur opacity-10 group-hover:opacity-30 transition duration-1000"></div>
 
-                    <div className="relative bg-slate-900/60 backdrop-blur-3xl rounded-[3rem] p-8 md:p-12 border border-white/10 shadow-2xl overflow-hidden transform-gpu transition-all duration-500">
+                    <div className="relative bg-slate-900/60 backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 border border-white/10 shadow-2xl overflow-hidden">
                         {/* Shimmer Effect */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
 
-                        <div className="flex flex-col md:flex-row justify-between items-center gap-12 relative z-10">
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12 relative z-10">
                             {/* Team A */}
                             <motion.div
-                                whileHover={{ scale: 1.05, y: -5 }}
-                                className="flex-1 text-center"
+                                whileHover={{ scale: 1.05 }}
+                                className="w-full md:flex-1 text-center order-2 md:order-1"
                             >
-                                <div className="relative mb-6 inline-block">
-                                    <div className="absolute inset-0 bg-indigo-500 rounded-[2rem] blur-xl opacity-30 animate-pulse" />
-                                    <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-indigo-500 to-blue-700 rounded-[2.5rem] flex items-center justify-center shadow-2xl border-2 border-white/20 relative z-10 transform rotate-3">
-                                        <ShieldAlert size={48} className="text-white" />
+                                <div className="relative mb-4 md:mb-6 inline-block">
+                                    <div className="absolute inset-0 bg-indigo-500 rounded-[1.5rem] md:rounded-[2rem] blur-xl opacity-20" />
+                                    <div className="w-20 h-20 md:w-32 md:h-32 lg:w-40 lg:h-40 bg-gradient-to-br from-indigo-500 to-blue-700 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center shadow-2xl border-2 border-white/20 relative z-10 md:rotate-3">
+                                        <ShieldAlert className="text-white w-10 md:w-16 lg:w-20" size={40} />
                                     </div>
                                     <motion.div
-                                        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                                        animate={{ scale: [1, 1.2, 1] }}
                                         transition={{ duration: 2, repeat: Infinity }}
-                                        className="absolute -top-4 -left-4"
+                                        className="absolute -top-3 -left-3 md:-top-4 md:-left-4"
                                     >
-                                        <Zap size={24} className="text-indigo-400 fill-indigo-400" />
+                                        <Zap size={20} className="text-indigo-400 fill-indigo-400 md:w-[24px]" />
                                     </motion.div>
                                 </div>
-                                <h2 className="text-base md:text-xl font-black uppercase tracking-widest text-white/90 mb-2 truncate">{battle.group_a_name}</h2>
-                                <motion.span
-                                    className="text-4xl md:text-6xl font-black text-indigo-400 tabular-nums drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]"
-                                >
+                                <h2 className="text-xs md:text-xl font-black uppercase tracking-widest text-white/90 mb-1 md:mb-2 truncate px-4">{battle.group_a_name}</h2>
+                                <div className="text-3xl md:text-6xl font-black text-indigo-400 tabular-nums drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]">
                                     {battle.score_a.toLocaleString()}
-                                </motion.span>
+                                </div>
                             </motion.div>
 
                             {/* VS Divider */}
-                            <div className="flex flex-col items-center gap-2">
+                            <div className="flex flex-col items-center gap-1 md:gap-2 order-1 md:order-2">
                                 <motion.div
-                                    animate={{
-                                        scale: [1, 1.1, 1],
-                                        rotate: [0, 5, -5, 0]
-                                    }}
+                                    animate={{ scale: [1, 1.05, 1] }}
                                     transition={{ duration: 3, repeat: Infinity }}
-                                    className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-slate-950 flex items-center justify-center border-4 border-white/5 shadow-[0_0_40px_rgba(0,0,0,0.5)] relative"
+                                    className="w-16 h-16 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full bg-slate-950 flex items-center justify-center border-2 md:border-4 border-white/5 shadow-2xl relative"
                                 >
-                                    <span className="text-3xl md:text-4xl font-black italic bg-clip-text text-transparent bg-gradient-to-tr from-rose-500 to-indigo-500">VS</span>
-                                    <div className="absolute inset-0 rounded-full border border-white/10 animate-ping opacity-20" />
+                                    <span className="text-2xl md:text-4xl lg:text-5xl font-black italic bg-clip-text text-transparent bg-gradient-to-tr from-rose-500 to-indigo-500">VS</span>
+                                    <div className="absolute inset-0 rounded-full border border-white/10 animate-ping opacity-10" />
                                 </motion.div>
-                                <motion.div
-                                    animate={{ opacity: [0.3, 0.7, 0.3] }}
-                                    transition={{ duration: 1.5, repeat: Infinity }}
-                                    className="flex items-center gap-1 text-white/30 text-[10px] font-black tracking-widest uppercase"
-                                >
-                                    <Sparkles size={10} /> Live Power <Sparkles size={10} />
-                                </motion.div>
+                                <div className="flex items-center gap-1 text-white/30 text-[8px] md:text-[10px] font-black tracking-widest uppercase">
+                                    <Sparkles size={10} className="md:w-[12px]" /> LIVE ARENA <Sparkles size={10} className="md:w-[12px]" />
+                                </div>
                             </div>
 
                             {/* Team B */}
                             <motion.div
-                                whileHover={{ scale: 1.05, y: -5 }}
-                                className="flex-1 text-center"
+                                whileHover={{ scale: 1.05 }}
+                                className="w-full md:flex-1 text-center order-3"
                             >
-                                <div className="relative mb-6 inline-block">
-                                    <div className="absolute inset-0 bg-rose-500 rounded-[2rem] blur-xl opacity-30 animate-pulse" />
-                                    <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-rose-500 to-orange-600 rounded-[2.5rem] flex items-center justify-center shadow-2xl border-2 border-white/20 relative z-10 transform -rotate-3">
-                                        <Flame size={48} className="text-white" />
+                                <div className="relative mb-4 md:mb-6 inline-block">
+                                    <div className="absolute inset-0 bg-rose-500 rounded-[1.5rem] md:rounded-[2rem] blur-xl opacity-20" />
+                                    <div className="w-20 h-20 md:w-32 md:h-32 lg:w-40 lg:h-40 bg-gradient-to-br from-rose-500 to-orange-600 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center shadow-2xl border-2 border-white/20 relative z-10 md:-rotate-3">
+                                        <Flame className="text-white w-10 md:w-16 lg:w-20" size={40} />
                                     </div>
                                     <motion.div
-                                        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                                        animate={{ scale: [1, 1.2, 1] }}
                                         transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-                                        className="absolute -top-4 -right-4"
+                                        className="absolute -top-3 -right-3 md:-top-4 md:-right-4"
                                     >
-                                        <Target size={24} className="text-rose-400 fill-rose-400" />
+                                        <Target size={20} className="text-rose-400 fill-rose-400 md:w-[24px]" />
                                     </motion.div>
                                 </div>
-                                <h2 className="text-base md:text-xl font-black uppercase tracking-widest text-white/90 mb-2 truncate">{battle.group_b_name}</h2>
-                                <motion.span
-                                    className="text-4xl md:text-6xl font-black text-rose-400 tabular-nums drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]"
-                                >
+                                <h2 className="text-xs md:text-xl font-black uppercase tracking-widest text-white/90 mb-1 md:mb-2 truncate px-4">{battle.group_b_name}</h2>
+                                <div className="text-3xl md:text-6xl font-black text-rose-400 tabular-nums drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]">
                                     {battle.score_b.toLocaleString()}
-                                </motion.span>
+                                </div>
                             </motion.div>
                         </div>
 
                         {/* Power Meter */}
-                        <div className="mt-12 md:mt-16 relative">
-                            <div className="relative h-10 md:h-12 bg-slate-950/80 rounded-[1.5rem] p-1.5 flex border border-white/5 shadow-inner overflow-hidden">
+                        <div className="mt-10 md:mt-16 relative">
+                            <div className="relative h-8 md:h-12 bg-slate-950/80 rounded-xl md:rounded-[1.5rem] p-1 flex border border-white/5 shadow-inner overflow-hidden">
                                 <motion.div
                                     initial={{ width: 0 }}
                                     animate={{ width: `${percentA}%` }}
                                     transition={{ duration: 1.5, delay: 0.5, ease: "circOut" }}
-                                    className="h-full bg-gradient-to-r from-indigo-700 via-indigo-500 to-indigo-400 rounded-l-[1rem] relative overflow-hidden"
+                                    className="h-full bg-gradient-to-r from-indigo-700 via-indigo-500 to-indigo-400 rounded-l-lg md:rounded-l-[1rem] relative overflow-hidden"
                                 >
-                                    <div className="absolute inset-0 opacity-20 bg-[linear-gradient(45deg,rgba(255,255,255,0.3)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.3)_50%,rgba(255,255,255,0.3)_75%,transparent_75%,transparent)] bg-[length:30px_30px] animate-shimmer"></div>
+                                    <div className="absolute inset-0 opacity-20 bg-[linear-gradient(45deg,rgba(255,255,255,0.3)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.3)_50%,rgba(255,255,255,0.3)_75%,transparent_75%,transparent)] bg-[length:20px_20px] md:bg-[length:30px_30px] animate-shimmer"></div>
                                 </motion.div>
                                 <motion.div
                                     initial={{ width: 0 }}
                                     animate={{ width: `${percentB}%` }}
                                     transition={{ duration: 1.5, delay: 0.5, ease: "circOut" }}
-                                    className="h-full bg-gradient-to-l from-rose-700 via-rose-500 to-rose-400 rounded-r-[1rem] relative overflow-hidden"
+                                    className="h-full bg-gradient-to-l from-rose-700 via-rose-500 to-rose-400 rounded-r-lg md:rounded-r-[1rem] relative overflow-hidden"
                                 >
-                                    <div className="absolute inset-0 opacity-20 bg-[linear-gradient(-45deg,rgba(255,255,255,0.3)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.3)_50%,rgba(255,255,255,0.3)_75%,transparent_75%,transparent)] bg-[length:30px_30px] animate-shimmer"></div>
+                                    <div className="absolute inset-0 opacity-20 bg-[linear-gradient(-45deg,rgba(255,255,255,0.3)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.3)_50%,rgba(255,255,255,0.3)_75%,transparent_75%,transparent)] bg-[length:20px_20px] md:bg-[length:30px_30px] animate-shimmer"></div>
                                 </motion.div>
 
-                                {/* Energy Center Pulse */}
-                                <div className="absolute top-0 bottom-0 w-2 bg-white/40 left-[50%] -translate-x-1/2 blur-sm z-20"></div>
+                                <div className="absolute top-0 bottom-0 w-1 md:w-2 bg-white/40 left-[50%] -translate-x-1/2 blur-[2px] z-20"></div>
                             </div>
 
-                            <div className="flex justify-between items-center mt-4 px-2">
-                                <motion.div
-                                    animate={{ x: [-2, 2, -2] }}
-                                    transition={{ duration: 2, repeat: Infinity }}
-                                    className="flex items-center gap-2 text-indigo-400 font-black italic tracking-wider text-sm"
-                                >
-                                    <Flame size={20} className="fill-indigo-500/50" />
+                            <div className="flex justify-between items-center mt-3 md:mt-4 px-1">
+                                <div className="flex items-center gap-1.5 md:gap-2 text-indigo-400 font-black italic tracking-wider text-[10px] md:text-sm">
+                                    <Flame size={14} className="md:w-[20px] fill-indigo-500/50" />
                                     <span>{percentA}% POWER</span>
-                                </motion.div>
-                                <motion.div
-                                    animate={{ x: [2, -2, 2] }}
-                                    transition={{ duration: 2, repeat: Infinity }}
-                                    className="flex items-center gap-2 text-rose-400 font-black italic tracking-wider text-sm"
-                                >
+                                </div>
+                                <div className="flex items-center gap-1.5 md:gap-2 text-rose-400 font-black italic tracking-wider text-[10px] md:text-sm">
                                     <span>{percentB}% POWER</span>
-                                    <Flame size={20} className="fill-rose-500/50" />
-                                </motion.div>
+                                    <Flame size={14} className="md:w-[20px] fill-rose-500/50" />
+                                </div>
                             </div>
                         </div>
                     </div>
                 </motion.div>
 
                 {/* Contributors Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 mt-12 md:mt-20 relative">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-14 mt-12 md:mt-24 relative">
                     {/* Team A Contributors */}
-                    <div className="space-y-6">
+                    <div className="space-y-4 md:space-y-6">
                         <div className="flex items-center justify-between px-2">
-                            <h3 className="text-indigo-400 font-black text-xs md:text-sm uppercase tracking-[0.3em] flex items-center gap-2">
-                                <TrendingUp size={18} /> {battle.group_a_name} LEGENDS
+                            <h3 className="text-indigo-400 font-black text-[10px] md:text-sm uppercase tracking-[0.2em] flex items-center gap-2">
+                                <TrendingUp size={16} className="md:w-[18px]" /> {battle.group_a_name} LEGENDS
                             </h3>
-                            <span className="h-[2px] w-12 bg-indigo-500/30"></span>
+                            <span className="h-[1px] flex-1 ml-4 bg-indigo-500/20"></span>
                         </div>
-                        <div className="space-y-4">
+                        <div className="space-y-3 md:space-y-4">
                             <AnimatePresence>
                                 {battle.membersA.map((m: any, idx: number) => (
                                     <motion.div
                                         key={idx}
-                                        initial={{ x: -30, opacity: 0 }}
-                                        animate={{ x: 0, opacity: 1 }}
-                                        transition={{ delay: 0.1 * idx }}
-                                        whileHover={{ scale: 1.02, x: 5 }}
-                                        className="flex items-center justify-between bg-white/5 backdrop-blur-md p-4 rounded-3xl border border-white/10 group hover:border-indigo-500/40 hover:bg-indigo-500/10 transition-all duration-300 shadow-xl"
+                                        initial={{ x: -20, opacity: 0 }}
+                                        whileInView={{ x: 0, opacity: 1 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: 0.05 * idx }}
+                                        className="flex items-center justify-between bg-white/5 backdrop-blur-md p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] border border-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all shadow-lg"
                                     >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center font-black text-indigo-400 text-sm shadow-inner group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                        <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+                                            <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center font-black text-indigo-400 text-xs md:text-sm">
                                                 {idx + 1}
                                             </div>
-                                            <div>
-                                                <div className="text-sm md:text-base font-black text-white group-hover:text-indigo-200 transition-colors uppercase tracking-tight">{m.name}</div>
-                                                <div className="text-[10px] text-indigo-400/80 font-black uppercase flex items-center gap-1">
-                                                    <Zap size={10} className="fill-indigo-400" /> {m.coins} COINS
+                                            <div className="overflow-hidden">
+                                                <div className="text-xs md:text-base font-black text-white uppercase tracking-tight truncate">{m.name}</div>
+                                                <div className="text-[9px] md:text-[10px] text-indigo-400 font-bold uppercase truncate">
+                                                    {m.coins || 0} COINS
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-sm md:text-lg font-black text-indigo-400 tracking-tighter">+{m.weekly_battle_score}</div>
-                                            <div className="text-[9px] font-black text-slate-500 tracking-[0.2em] uppercase">Score</div>
+                                        <div className="text-right shrink-0 ml-2">
+                                            <div className="text-sm md:text-xl font-black text-indigo-400 tracking-tighter">+{m.weekly_battle_score}</div>
+                                            <div className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">XP</div>
                                         </div>
                                     </motion.div>
                                 ))}
@@ -338,38 +318,38 @@ export default function BattleDetails() {
                     </div>
 
                     {/* Team B Contributors */}
-                    <div className="space-y-6">
+                    <div className="space-y-4 md:space-y-6">
                         <div className="flex items-center justify-between px-2">
-                            <h3 className="text-rose-400 font-black text-xs md:text-sm uppercase tracking-[0.3em] flex items-center gap-2">
-                                <TrendingUp size={18} /> {battle.group_b_name} LEGENDS
+                            <h3 className="text-rose-400 font-black text-[10px] md:text-sm uppercase tracking-[0.2em] flex items-center gap-2">
+                                <TrendingUp size={16} className="md:w-[18px]" /> {battle.group_b_name} LEGENDS
                             </h3>
-                            <span className="h-[2px] w-12 bg-rose-500/30"></span>
+                            <span className="h-[1px] flex-1 ml-4 bg-rose-500/20"></span>
                         </div>
-                        <div className="space-y-4">
+                        <div className="space-y-3 md:space-y-4">
                             <AnimatePresence>
                                 {battle.membersB.map((m: any, idx: number) => (
                                     <motion.div
                                         key={idx}
-                                        initial={{ x: 30, opacity: 0 }}
-                                        animate={{ x: 0, opacity: 1 }}
-                                        transition={{ delay: 0.1 * idx }}
-                                        whileHover={{ scale: 1.02, x: -5 }}
-                                        className="flex items-center justify-between bg-white/5 backdrop-blur-md p-4 rounded-3xl border border-white/10 group hover:border-rose-500/40 hover:bg-rose-500/10 transition-all duration-300 shadow-xl"
+                                        initial={{ x: 20, opacity: 0 }}
+                                        whileInView={{ x: 0, opacity: 1 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: 0.05 * idx }}
+                                        className="flex items-center justify-between bg-white/5 backdrop-blur-md p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] border border-white/5 hover:border-rose-500/30 hover:bg-rose-500/5 transition-all shadow-lg"
                                     >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-2xl bg-rose-600/20 border border-rose-500/30 flex items-center justify-center font-black text-rose-400 text-sm shadow-inner group-hover:bg-rose-600 group-hover:text-white transition-all">
+                                        <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+                                            <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-xl bg-rose-600/20 border border-rose-500/30 flex items-center justify-center font-black text-rose-400 text-xs md:text-sm">
                                                 {idx + 1}
                                             </div>
-                                            <div>
-                                                <div className="text-sm md:text-base font-black text-white group-hover:text-rose-200 transition-colors uppercase tracking-tight">{m.name}</div>
-                                                <div className="text-[10px] text-rose-400/80 font-black uppercase flex items-center gap-1">
-                                                    <Zap size={10} className="fill-rose-400" /> {m.coins} COINS
+                                            <div className="overflow-hidden">
+                                                <div className="text-xs md:text-base font-black text-white uppercase tracking-tight truncate">{m.name}</div>
+                                                <div className="text-[9px] md:text-[10px] text-rose-400 font-bold uppercase truncate">
+                                                    {m.coins || 0} COINS
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-sm md:text-lg font-black text-rose-400 tracking-tighter">+{m.weekly_battle_score}</div>
-                                            <div className="text-[9px] font-black text-slate-500 tracking-[0.2em] uppercase">Score</div>
+                                        <div className="text-right shrink-0 ml-2">
+                                            <div className="text-sm md:text-xl font-black text-rose-400 tracking-tighter">+{m.weekly_battle_score}</div>
+                                            <div className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">XP</div>
                                         </div>
                                     </motion.div>
                                 ))}
@@ -378,37 +358,35 @@ export default function BattleDetails() {
                     </div>
                 </div>
 
-                {/* Ultimate Rewards Card */}
+                {/* Rewards Card */}
                 <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    whileInView={{ scale: 1, opacity: 1 }}
+                    initial={{ y: 30, opacity: 0 }}
+                    whileInView={{ y: 0, opacity: 1 }}
                     viewport={{ once: true }}
-                    className="mt-20 bg-gradient-to-tr from-amber-600/20 via-orange-500/10 to-transparent rounded-[3rem] p-8 md:p-12 border border-amber-500/30 relative overflow-hidden group mb-10"
+                    className="mt-16 md:mt-24 lg:mt-32 bg-gradient-to-tr from-amber-600/20 via-orange-500/10 to-transparent rounded-[2rem] md:rounded-[3.5rem] p-6 md:p-12 border border-amber-500/30 relative overflow-hidden group mb-10 shadow-2xl"
                 >
-                    <div className="absolute top-0 right-0 p-8 transform translate-x-1/4 -translate-y-1/4 opacity-10 group-hover:opacity-30 transition-opacity duration-1000 rotate-12">
+                    <div className="absolute top-0 right-0 p-4 md:p-8 transform translate-x-1/4 -translate-y-1/4 opacity-10 group-hover:opacity-20 transition-opacity duration-1000 rotate-12">
                         <Trophy size={200} className="text-amber-500" />
                     </div>
 
-                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 md:gap-12 text-center md:text-left">
-                        <motion.div
-                            whileHover={{ rotate: [0, 10, -10, 0] }}
-                            className="w-24 h-24 md:w-28 md:h-28 bg-amber-500/20 rounded-[2rem] flex items-center justify-center shadow-[0_0_50px_rgba(245,158,11,0.3)] border-2 border-amber-500/40"
-                        >
-                            <Trophy size={56} className="text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-                        </motion.div>
+                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 md:gap-12 text-center md:text-left">
+                        <div className="w-16 h-16 md:w-28 md:h-28 bg-amber-500/20 rounded-2xl md:rounded-[2.5rem] flex items-center justify-center border-2 border-amber-500/40 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+                            <Trophy size={32} className="text-amber-500 md:hidden" />
+                            <Trophy size={56} className="text-amber-500 hidden md:block" />
+                        </div>
                         <div className="flex-1">
-                            <h3 className="font-black text-2xl md:text-3xl text-amber-500 uppercase italic tracking-tighter mb-3 leading-tight">VICTORY REWARDS</h3>
-                            <p className="text-sm md:text-lg text-amber-100/80 font-medium leading-relaxed">
-                                G'olib guruhning barcha faol o'quvchilari <span className="text-white font-black underline decoration-amber-500">+500 COINS</span>,
-                                maxsus "CHAMPION" unvoni va profil uchun oltin hoshiyaga ega bo'ladilar!
+                            <h3 className="font-black text-xl md:text-3xl lg:text-4xl text-amber-500 uppercase italic tracking-tighter mb-2 md:mb-3">VICTORY REWARDS</h3>
+                            <p className="text-[11px] md:text-base lg:text-lg text-amber-100/90 font-medium leading-relaxed max-w-2xl">
+                                G'olib guruh talabalari <span className="text-white font-black">+500 COINS</span>,
+                                maxsus <span className="text-amber-400 font-black">"CHAMPION"</span> unvoni va profil uchun oltin ramkaga ega bo'ladilar!
                             </p>
                         </div>
                         <motion.button
-                            whileHover={{ scale: 1.1, backgroundColor: "rgba(245,158,11, 1)" }}
+                            whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className="bg-amber-500 text-slate-950 font-black px-8 py-4 rounded-2xl text-sm uppercase tracking-[0.2em] shadow-2xl shadow-amber-500/20"
+                            className="w-full md:w-auto bg-amber-500 text-slate-950 font-black px-6 py-3 md:px-10 md:py-4 rounded-xl md:rounded-2xl text-[10px] md:text-sm uppercase tracking-[0.2em] shadow-xl shadow-amber-500/20"
                         >
-                            <Award className="inline mr-2" /> Batafsil
+                            Batafsil
                         </motion.button>
                     </div>
                 </motion.div>
