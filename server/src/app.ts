@@ -12,6 +12,8 @@ import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import { createClient } from 'redis';
+import { createAdapter } from '@socket.io/redis-adapter';
 import { games, generatePin, generateStudentId, generateParentId, studentSockets } from './store';
 import { query } from './db';
 import { schema } from './schema';
@@ -64,6 +66,24 @@ const io = new Server(httpServer, {
         methods: ["GET", "POST", "PUT", "DELETE"]
     }
 });
+
+// Redis Adapter for PM2 Cluster scaling
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+const pubClient = createClient({ url: redisUrl });
+const subClient = pubClient.duplicate();
+
+pubClient.on('error', (err: any) => console.warn('[Redis] Pub Error:', err.message));
+subClient.on('error', (err: any) => console.warn('[Redis] Sub Error:', err.message));
+
+Promise.all([pubClient.connect(), subClient.connect()])
+    .then(() => {
+        io.adapter(createAdapter(pubClient, subClient));
+        console.log(`[Socket.io] Redis adapter connected to ${redisUrl}`);
+    })
+    .catch((err: any) => {
+        console.warn('[Socket.io] Fallback to in-memory adapter (Redis connection failed).');
+        console.warn('Reason:', err.message);
+    });
 
 const ADMIN_ID = '00000000-0000-0000-0000-000000000000';
 const MANAGER_ID = '00000000-0000-0000-0000-000000000001';
@@ -2588,8 +2608,18 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, async () => {
     await initDb();
-    launchBot();
-    startSelfPinger();
-    startWeeklySchedulers();
-    console.log(`Server running on port ${PORT}`);
+
+    // In PM2 Cluster mode, we only want these to run on one instance (ID 0)
+    // If not in PM2, NODE_APP_INSTANCE will be undefined.
+    const isPrimaryInstance = process.env.NODE_APP_INSTANCE === '0' || !process.env.NODE_APP_INSTANCE;
+
+    if (isPrimaryInstance) {
+        launchBot();
+        startCronJobs();
+        startSelfPinger();
+        startWeeklySchedulers();
+        console.log(`[Singleton] Background services started on instance ${process.env.NODE_APP_INSTANCE || 0}`);
+    }
+
+    console.log(`Server instance ${process.env.NODE_APP_INSTANCE || 0} running on port ${PORT}`);
 });
