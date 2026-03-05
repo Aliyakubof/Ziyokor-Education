@@ -807,10 +807,17 @@ app.get('/api/battles/:id/details', async (req, res) => {
 
         // 1. Battle info
         const battleRes = await query(`
-            SELECT b.*, g1.name as group_a_name, g2.name as group_b_name 
+            SELECT 
+                b.*, 
+                g1.name as group_a_name, 
+                g2.name as group_b_name,
+                t1.name as teacher_a_name,
+                t2.name as teacher_b_name
             FROM group_battles b
             JOIN groups g1 ON b.group_a_id = g1.id
             JOIN groups g2 ON b.group_b_id = g2.id
+            LEFT JOIN teachers t1 ON g1.teacher_id = t1.id
+            LEFT JOIN teachers t2 ON g2.teacher_id = t2.id
             WHERE b.id = $1
         `, [id]);
 

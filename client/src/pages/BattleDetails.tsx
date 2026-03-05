@@ -193,6 +193,11 @@ export default function BattleDetails() {
                                     </motion.div>
                                 </div>
                                 <h2 className="text-xs md:text-xl font-black uppercase tracking-widest text-white/90 mb-1 md:mb-2 truncate px-4">{battle.group_a_name}</h2>
+                                {battle.teacher_a_name && (
+                                    <div className="text-[10px] md:text-xs text-indigo-300/70 font-bold uppercase tracking-widest -mt-1 md:-mt-2 mb-2">
+                                        Ustoz: {battle.teacher_a_name}
+                                    </div>
+                                )}
                                 <div className="text-3xl md:text-6xl font-black text-indigo-400 tabular-nums drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]">
                                     {battle.score_a.toLocaleString()}
                                 </div>
@@ -232,6 +237,11 @@ export default function BattleDetails() {
                                     </motion.div>
                                 </div>
                                 <h2 className="text-xs md:text-xl font-black uppercase tracking-widest text-white/90 mb-1 md:mb-2 truncate px-4">{battle.group_b_name}</h2>
+                                {battle.teacher_b_name && (
+                                    <div className="text-[10px] md:text-xs text-rose-300/70 font-bold uppercase tracking-widest -mt-1 md:-mt-2 mb-2">
+                                        Ustoz: {battle.teacher_b_name}
+                                    </div>
+                                )}
                                 <div className="text-3xl md:text-6xl font-black text-rose-400 tabular-nums drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]">
                                     {battle.score_b.toLocaleString()}
                                 </div>
