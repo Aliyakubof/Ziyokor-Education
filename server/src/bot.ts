@@ -136,59 +136,6 @@ const handleLogout = async (ctx: any) => {
     }
 };
 
-bot.command('me', async (ctx) => {
-    const chatId = ctx.chat.id.toString();
-    console.log(`[Bot] /me checked by ${chatId}`);
-
-    try {
-        // Check if teacher
-        const teacherRes = await query('SELECT * FROM teachers WHERE telegram_chat_id = $1', [chatId]);
-        if ((teacherRes.rowCount || 0) > 0) {
-            return ctx.reply(`👨‍🏫 Siz O'qituvchisiz: ${teacherRes.rows[0].name}`);
-        }
-
-        // Check if student subscriber
-        const studentRes = await query(`
-            SELECT s.name, s.id 
-            FROM student_telegram_subscriptions sub
-            JOIN students s ON sub.student_id = s.id
-            WHERE sub.telegram_chat_id = $1
-        `, [chatId]);
-
-        if ((studentRes.rowCount || 0) > 0) {
-            const student = studentRes.rows[0];
-            // Fetch coins
-            const coinRes = await query('SELECT coins FROM students WHERE id = $1', [student.id]);
-            const coins = coinRes.rows[0]?.coins || 0;
-            return ctx.reply(`👨‍🎓 Siz o'quvchi: ${student.name} (${student.id})\n💰 Hisobingiz: ${coins} Ziyokor Coin`);
-        }
-
-        ctx.reply('👤 Siz hali tizimga ulanmagansiz. Ulanish uchun /start ni bosing.');
-    } catch (err) {
-        console.error('[Bot] /me error:', err);
-    }
-});
-
-bot.command('balance', async (ctx) => {
-    const chatId = ctx.chat.id.toString();
-    try {
-        const studentRes = await query(`
-            SELECT s.coins, s.name 
-            FROM student_telegram_subscriptions sub
-            JOIN students s ON sub.student_id = s.id
-            WHERE sub.telegram_chat_id = $1
-        `, [chatId]);
-
-        if ((studentRes.rowCount || 0) > 0) {
-            const s = studentRes.rows[0];
-            return ctx.reply(`💰 <b>${s.name}</b>, sizning hisobingizda <b>${s.coins}</b> coin bor.`, { parse_mode: 'HTML' });
-        }
-        ctx.reply('❌ Siz o\'quvchi sifatida ulanmagansiz.');
-    } catch (err) {
-        console.error('[Bot] /balance error:', err);
-    }
-});
-
 const MANAGER_PHONE = '998947212531';
 
 async function isManager(chatId: string) {
@@ -743,9 +690,7 @@ export async function sendWeeklyReports() {
 export const launchBot = async () => {
     try {
         await bot.telegram.setMyCommands([
-            { command: 'start', description: 'Botni ishga tushirish (Shaxsiy profillar uchun)' },
-            { command: 'me', description: 'Profilim va tangalarim' },
-            { command: 'balance', description: 'Tanga balansimni ko\'rish' },
+            { command: 'start', description: 'Botni ishga tushirish' },
             { command: 'start_game', description: 'Guruhda o\'yin boshlash (Faqat guruhlar uchun)' },
             { command: 'stop_game', description: 'Guruhda boshlangan o\'yinni to\'xtatish' }
         ]);
