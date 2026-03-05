@@ -613,24 +613,40 @@ app.get('/api/student/vocab-battle/generate', async (req, res) => {
             return res.status(404).json({ error: 'Bu daraja uchun Lug\'at savollari topilmadi.' });
         }
 
-        // Build a translation map to identify all valid translations for each word
-        // This prevents picking a synonym of the correct answer as a distractor
-        const translationMap = new Map<string, Set<string>>();
+        // Direction Awareness: Group into EN->UZ and UZ->EN
+        // English is mostly ASCII letters. Uzbek often has o', g', or non-ASCII characters.
+        const enToUz: any[] = [];
+        const uzToEn: any[] = [];
+
         vocabQuestions.forEach(q => {
-            const wordKey = q.text.toLowerCase().trim();
-            if (!translationMap.has(wordKey)) translationMap.set(wordKey, new Set());
-            q.acceptedAnswers?.forEach(a => translationMap.get(wordKey)!.add(a.toLowerCase().trim()));
+            const text = q.text.trim();
+            // Simple heuristic: if it contains Uzbek specific chars or non-ASCII, it's likely Uzbek
+            const isLikelyUzbek = /[o'o'g'g'O'O'G'G'ʻ]/.test(text) || /[^\x00-\x7F]/.test(text);
+            if (isLikelyUzbek) uzToEn.push(q);
+            else enToUz.push(q);
         });
 
-        const allAnswersPool = Array.from(new Set(vocabQuestions.flatMap(q => q.acceptedAnswers || []).map(a => a.trim())));
+        // Pick the direction with more content for this round
+        const selectedGroup = enToUz.length >= uzToEn.length ? enToUz : uzToEn;
 
-        const transformed = vocabQuestions.map(q => {
+        // Build a translation map to identify all valid translations for each word in this group
+        const translationMap = new Map<string, Set<string>>();
+        selectedGroup.forEach(q => {
+            const wordKey = q.text.toLowerCase().trim();
+            if (!translationMap.has(wordKey)) translationMap.set(wordKey, new Set());
+            q.acceptedAnswers?.forEach((a: string) => translationMap.get(wordKey)!.add(a.toLowerCase().trim()));
+        });
+
+        // The pool of distractors should ONLY come from the target language of our selected group
+        const targetAnswersPool = Array.from(new Set(selectedGroup.flatMap(q => q.acceptedAnswers || []).map((a: string) => a.trim())));
+
+        const transformed = selectedGroup.map(q => {
             const wordKey = q.text.toLowerCase().trim();
             const correct = q.acceptedAnswers![0].trim();
             const validTrans = translationMap.get(wordKey) || new Set();
 
-            // Filter wrongPool: MUST NOT be a valid translation for THIS word
-            let wrongPool = allAnswersPool.filter(ans => {
+            // Filter wrongPool: MUST be from the target language pool and NOT a valid translation for THIS word
+            let wrongPool = targetAnswersPool.filter((ans: string) => {
                 const a = ans.toLowerCase().trim();
                 return a !== correct.toLowerCase() && !validTrans.has(a);
             });
@@ -649,7 +665,7 @@ app.get('/api/student/vocab-battle/generate', async (req, res) => {
             };
         });
 
-        // Ensure unique words in the final set if possible
+        // Ensure unique words in the final set
         const uniqueWordMap = new Map();
         transformed.forEach(t => {
             if (!uniqueWordMap.has(t.text.toLowerCase())) uniqueWordMap.set(t.text.toLowerCase(), t);
