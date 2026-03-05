@@ -130,6 +130,9 @@ async function initDb() {
         // Parent ID Migration
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS parent_id TEXT UNIQUE;');
 
+        // Telegram Subscriber Role Migration
+        await query('ALTER TABLE student_telegram_subscriptions ADD COLUMN IF NOT EXISTS role TEXT;');
+
         // Backfill parent_id for existing students
         const studentsWithoutParentId = await query('SELECT id FROM students WHERE parent_id IS NULL');
         for (const row of studentsWithoutParentId.rows) {
@@ -1103,25 +1106,26 @@ quiz_title,
     }
 });
 
-// Shop Items (Hardcoded for now)
-const SHOP_ITEMS = [
-    { id: 'avatar_1', name: 'Cool Glasses', type: 'avatar', price: 100, url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' },
-    { id: 'avatar_2', name: 'Ninja Mask', type: 'avatar', price: 250, url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka' },
-    { id: 'avatar_3', name: 'Crown', type: 'avatar', price: 500, url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Buster' },
-    { id: 'avatar_unlock', name: 'Shaxsiy Avatar Yuklash', type: 'unlock', price: 500, color: '#3b82f6' },
-    { id: 'theme_dark', name: 'Dark Mode Pro', type: 'theme', price: 150, color: '#1a1a1a' },
-    { id: 'theme_gold', name: 'Gold Theme', type: 'theme', price: 1000, color: '#ffd700' }
-];
+// Shop Items (Database logic implemented)
 
-app.get('/api/shop/items', (req, res) => {
-    res.json(SHOP_ITEMS);
+app.get('/api/shop/items', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM shop_items WHERE is_active = TRUE ORDER BY price ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching shop items:', err);
+        res.status(500).json({ error: 'Do\'kon yuklanmadi' });
+    }
 });
 
 app.post('/api/student/purchase', async (req, res) => {
     try {
         const { studentId, itemId } = req.body;
-        const item = SHOP_ITEMS.find(i => i.id === itemId);
-        if (!item) return res.status(404).json({ error: 'Item not found' });
+
+        // Fetch item from DB
+        const itemRes = await query('SELECT * FROM shop_items WHERE id = $1 AND is_active = TRUE', [itemId]);
+        if (itemRes.rowCount === 0) return res.status(404).json({ error: 'Item not found' });
+        const item = itemRes.rows[0];
 
         const studentRes = await query('SELECT coins FROM students WHERE id = $1', [studentId]);
         if (studentRes.rowCount === 0) return res.status(404).json({ error: 'Student not found' });
@@ -1132,21 +1136,90 @@ app.post('/api/student/purchase', async (req, res) => {
         }
 
         // Deduct coins and log purchase
-        await query('UPDATE students SET coins = coins - $1 WHERE id = $2', [item.price, studentId]);
+        const newCoinsCount = student.coins - item.price;
+        await query('UPDATE students SET coins = $1 WHERE id = $2', [newCoinsCount, studentId]);
         await query(
             'INSERT INTO student_purchases (id, student_id, item_type, item_id) VALUES ($1, $2, $3, $4)',
             [uuidv4(), studentId, item.type, itemId]
         );
 
         // If it's an avatar, update student's avatar_url
-        if (item.type === 'avatar' && 'url' in item) {
+        if (item.type === 'avatar' && item.url) {
             await query('UPDATE students SET avatar_url = $1 WHERE id = $2', [item.url, studentId]);
         }
 
-        res.json({ success: true, newCoins: student.coins - item.price });
+        res.json({ success: true, newCoins: newCoinsCount });
     } catch (err) {
         console.error('Purchase error:', err);
         res.status(500).json({ error: 'Xarid amalga oshmadi' });
+    }
+});
+
+// Manager: Shop Items Management
+app.post('/api/manager/shop/items', async (req, res) => {
+    try {
+        const { name, type, price, url, color } = req.body;
+        const id = uuidv4();
+        await query(
+            'INSERT INTO shop_items (id, name, type, price, url, color) VALUES ($1, $2, $3, $4, $5, $6)',
+            [id, name, type, price, url || null, color || null]
+        );
+        res.json({ id, name, type, price, url, color, is_active: true });
+    } catch (err) {
+        console.error('Error creating shop item:', err);
+        res.status(500).json({ error: 'Xatolik yuz berdi' });
+    }
+});
+
+app.put('/api/manager/shop/items/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, type, price, url, color, is_active } = req.body;
+        await query(
+            'UPDATE shop_items SET name = $1, type = $2, price = $3, url = $4, color = $5, is_active = $6 WHERE id = $7',
+            [name, type, price, url || null, color || null, is_active !== undefined ? is_active : true, id]
+        );
+        res.json({ id, name, type, price, url, color, is_active });
+    } catch (err) {
+        console.error('Error updating shop item:', err);
+        res.status(500).json({ error: 'Xatolik yuz berdi' });
+    }
+});
+
+app.delete('/api/manager/shop/items/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM shop_items WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err) {
+        console.error('Error deleting shop item:', err);
+        res.status(500).json({ error: 'Xatolik yuz berdi' });
+    }
+});
+
+// Manager: System Settings Management
+app.get('/api/manager/settings', async (req, res) => {
+    try {
+        const result = await query('SELECT key, value, description, updated_at FROM system_settings ORDER BY key');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching settings:', err);
+        res.status(500).json({ error: 'Xatolik yuz berdi' });
+    }
+});
+
+app.put('/api/manager/settings/:key', async (req, res) => {
+    try {
+        const { key } = req.params;
+        const { value } = req.body;
+        await query(
+            'UPDATE system_settings SET value = $1, updated_at = NOW() WHERE key = $2',
+            [JSON.stringify(value), key]
+        );
+        res.json({ success: true, key, value });
+    } catch (err) {
+        console.error('Error updating setting:', err);
+        res.status(500).json({ error: 'Xatolik yuz berdi' });
     }
 });
 

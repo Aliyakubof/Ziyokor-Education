@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS unit_quizzes (
 CREATE TABLE IF NOT EXISTS student_telegram_subscriptions (
     student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
     telegram_chat_id TEXT NOT NULL,
+    role TEXT, -- 'student' or 'parent'
     PRIMARY KEY (student_id, telegram_chat_id)
 );
 
@@ -111,6 +112,13 @@ CREATE TABLE IF NOT EXISTS group_battles (
     status TEXT DEFAULT 'active', -- 'active', 'finished'
     winner_id UUID REFERENCES groups(id),
     mvp_id TEXT REFERENCES students(id),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Telegram Group Chats Table
+CREATE TABLE IF NOT EXISTS telegram_group_chats (
+    chat_id TEXT PRIMARY KEY,
+    title TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
 

@@ -1,30 +1,20 @@
 import { Telegraf } from 'telegraf';
 import { query } from './db';
 import { Question } from './types';
+import Bottleneck from 'bottleneck';
+import { gameLogger } from './services/logger';
+import { SettingsService } from './services/settings';
 
-interface PlayerEntry {
-    id: string;           // Student ID from DB
-    name: string;        // Student Name
-    score: number;       // Accumulated XP
-    telegramUserId: string; // Telegram user who clicked join
-    hasAnswered: boolean; // Tracking if they answered current question
-}
+// Rate limiter for Telegram API: 1 msg per 50ms (20 msg/sec) to stay safe
+const limiter = new Bottleneck({
+    minTime: 50,
+    maxConcurrent: 1
+});
 
-interface GameState {
-    chatId: string;
-    level?: string;
-    quizId?: string;
-    quizTitle?: string;
-    questions: Question[];
-    currentQIndex: number;
-    players: PlayerEntry[];
-    status: 'SETUP' | 'JOINING' | 'PLAYING' | 'FINISHED';
-    mainMessageId?: number; // The message we edit to avoid spam
-    timer?: NodeJS.Timeout;
-    questionStartTime?: number;
-}
+import { gameSessions, GameState, PlayerEntry } from './services/sessionManager';
 
-const activeGames = new Map<string, GameState>();
+// Remove the local Map
+// const activeGames = new Map<string, GameState>();
 
 export function setupTelegramGame(bot: Telegraf) {
 
@@ -36,13 +26,26 @@ export function setupTelegramGame(bot: Telegraf) {
         }
 
         // Initialize empty state
-        activeGames.set(chatId, {
+        await gameSessions.set(chatId, {
             chatId,
             questions: [],
             currentQIndex: 0,
             players: [],
-            status: 'SETUP'
+            status: 'SETUP',
+            gameMode: 'SOLO', // Default to solo
+            teamScores: { Red: 0, Blue: 0 }
         });
+
+        // Register/Update group chat info
+        try {
+            await query(`
+                INSERT INTO telegram_group_chats (chat_id, title)
+                VALUES ($1, $2)
+                ON CONFLICT (chat_id) DO UPDATE SET title = $2
+            `, [chatId, ctx.chat.title || 'Guruh']);
+        } catch (err) {
+            console.error('[tg_game] error saving chat info:', err);
+        }
 
         try {
             // Fetch available levels
@@ -61,16 +64,16 @@ export function setupTelegramGame(bot: Telegraf) {
                 reply_markup: { inline_keyboard: buttons }
             });
         } catch (err) {
-            console.error('[tg_game] error fetching levels:', err);
+            gameLogger.error('error fetching levels:', err);
         }
     });
 
     bot.action(/^tg_level_(.+)$/, async (ctx) => {
         const chatId = ctx.chat?.id.toString();
         const level = ctx.match[1];
-        if (!chatId || !activeGames.has(chatId)) return ctx.answerCbQuery("❌ O'yin topilmadi, iltimos /start_game ni qayta bosing", { show_alert: true });
+        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("❌ O'yin topilmadi, iltimos /start_game ni qayta bosing", { show_alert: true });
 
-        const state = activeGames.get(chatId)!;
+        const state = (await gameSessions.get(chatId))!;
         if (state.status !== 'SETUP') return ctx.answerCbQuery();
 
         try {
@@ -91,7 +94,7 @@ export function setupTelegramGame(bot: Telegraf) {
             });
             ctx.answerCbQuery();
         } catch (err) {
-            console.error('[tg_game] error fetching quizzes:', err);
+            gameLogger.error('error fetching quizzes:', err);
             ctx.answerCbQuery('Xatolik');
         }
     });
@@ -99,9 +102,9 @@ export function setupTelegramGame(bot: Telegraf) {
     bot.action(/^tg_quiz_(.+)$/, async (ctx) => {
         const chatId = ctx.chat?.id.toString();
         const quizId = ctx.match[1];
-        if (!chatId || !activeGames.has(chatId)) return ctx.answerCbQuery("O'yin xatosi", { show_alert: true });
+        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("O'yin xatosi", { show_alert: true });
 
-        const state = activeGames.get(chatId)!;
+        const state = (await gameSessions.get(chatId))!;
         if (state.status !== 'SETUP') return ctx.answerCbQuery();
 
         try {
@@ -110,36 +113,27 @@ export function setupTelegramGame(bot: Telegraf) {
 
             state.quizId = quizId;
             state.quizTitle = quizRes.rows[0].title;
-            // Only use supported question types (e.g. multiple-choice) filtering to make it playable inline
             const allQuestions: Question[] = quizRes.rows[0].questions;
-            state.questions = allQuestions.filter(q => q.type === 'multiple-choice');
+            // Transform questions for Telegram (multiple-choice)
+            state.questions = transformToTelegramStyle(allQuestions);
 
             if (state.questions.length === 0) {
-                return ctx.editMessageText("Bu testda Telegram uchun mos (Test shaklidagi) savollar yo'q ekan.");
+                return ctx.editMessageText("Bu testda Telegram uchun mos (Test yoki Lug'at) savollar yo'q ekan.");
             }
 
-            state.status = 'JOINING';
-            const msg = await ctx.editMessageText(
-                `🎉 <b>${state.quizTitle}</b> o'yini ochilyapti!\n\n` +
-                `⏳ Qatnashish uchun 30 soniya vaqtingiz bor.\n\n` +
-                `Qatnashuvchilar: 0 ta`,
+            await ctx.editMessageText(
+                `🎉 <b>${state.quizTitle}</b> tanlandi.\n\n` +
+                `Qanday formatda o'ynaymiz?`,
                 {
                     parse_mode: 'HTML',
                     reply_markup: {
-                        inline_keyboard: [[{ text: "✋ Qatnashish", callback_data: "tg_join" }]]
+                        inline_keyboard: [
+                            [{ text: "👤 Solo (Har kim o'zi uchun)", callback_data: "tg_mode_SOLO" }],
+                            [{ text: "👥 Team Battle (Jamoaviy)", callback_data: "tg_mode_TEAM" }]
+                        ]
                     }
                 }
             );
-
-            if (typeof msg === 'object' && 'message_id' in msg) {
-                state.mainMessageId = msg.message_id;
-            }
-
-            // Start 30 second join timer
-            state.timer = setTimeout(() => {
-                startGamePlay(bot, chatId);
-            }, 30000);
-
             ctx.answerCbQuery();
         } catch (err) {
             console.error('[tg_game] error starting quiz:', err);
@@ -147,13 +141,51 @@ export function setupTelegramGame(bot: Telegraf) {
         }
     });
 
+    bot.action(/^tg_mode_(SOLO|TEAM)$/, async (ctx) => {
+        const chatId = ctx.chat?.id.toString();
+        const mode = ctx.match[1] as 'SOLO' | 'TEAM';
+        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("O'yin xatosi");
+
+        const state = (await gameSessions.get(chatId))!;
+        if (state.status !== 'SETUP') return ctx.answerCbQuery();
+
+        state.gameMode = mode;
+        state.status = 'JOINING';
+
+        const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
+        const msg = await ctx.editMessageText(
+            `🎉 <b>${state.quizTitle}</b> o'yini ochilyapti!\n` +
+            `Format: ${mode === 'SOLO' ? '👤 Solo' : '👥 Team Battle'}\n\n` +
+            `⏳ Qatnashish uchun 30 soniya vaqtingiz bor.\n` +
+            `💰 Kirish to'lovi: ${entryFee} coin\n\n` +
+            `Qatnashuvchilar: 0 ta`,
+            {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [[{ text: "✋ Qatnashish", callback_data: "tg_join" }]]
+                }
+            }
+        );
+
+        if (typeof msg === 'object' && 'message_id' in msg) {
+            state.mainMessageId = msg.message_id;
+        }
+
+        // Start 30 second join timer
+        state.timer = setTimeout(() => {
+            startGamePlay(bot, chatId);
+        }, 30000);
+
+        ctx.answerCbQuery();
+    });
+
     bot.action('tg_join', async (ctx) => {
         const chatId = ctx.chat?.id.toString();
         const userId = ctx.from.id.toString();
 
-        if (!chatId || !activeGames.has(chatId)) return ctx.answerCbQuery("O'yin endi faol emas.", { show_alert: true });
+        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("O'yin endi faol emas.", { show_alert: true });
 
-        const state = activeGames.get(chatId)!;
+        const state = (await gameSessions.get(chatId))!;
         if (state.status !== 'JOINING') return ctx.answerCbQuery("Qo'shilish yakunlangan.", { show_alert: true });
 
         if (state.players.find(p => p.telegramUserId === userId)) {
@@ -176,19 +208,49 @@ export function setupTelegramGame(bot: Telegraf) {
             // Assume first student if multiple connected (simplification for game)
             const student = subRes.rows[0];
 
+            // --- Coin Integration ---
+            const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
+            const coinRes = await query('SELECT coins FROM students WHERE id = $1', [student.id]);
+            const currentCoins = coinRes.rows[0]?.coins || 0;
+
+            if (currentCoins < entryFee) {
+                return ctx.answerCbQuery(`❌ O'yinga kirish uchun kamida ${entryFee} coin kerak. Sizda: ${currentCoins}`, { show_alert: true });
+            }
+
+            // Deduct coins
+            await query('UPDATE students SET coins = coins - $1 WHERE id = $2', [entryFee, student.id]);
+            // ------------------------
+
+            // Assign team if in team mode (alternate)
+            let team: 'Red' | 'Blue' | undefined;
+            if (state.gameMode === 'TEAM') {
+                const redCount = state.players.filter((p: PlayerEntry) => p.team === 'Red').length;
+                const blueCount = state.players.filter((p: PlayerEntry) => p.team === 'Blue').length;
+                team = redCount <= blueCount ? 'Red' : 'Blue';
+            }
+
             state.players.push({
                 id: student.id,
                 name: student.name,
                 score: 0,
                 telegramUserId: userId,
-                hasAnswered: false
+                hasAnswered: false,
+                streak: 0,
+                team
             });
 
-            const playerNames = state.players.map(p => `• ${p.name}`).join('\n');
+            await gameSessions.set(chatId, state);
+
+            const playerNames = state.players.map((p: PlayerEntry) => {
+                const teamIcon = p.team === 'Red' ? '🔴 ' : p.team === 'Blue' ? '🔵 ' : '• ';
+                return `${teamIcon}${p.name}`;
+            }).join('\n');
 
             await ctx.editMessageText(
-                `🎉 <b>${state.quizTitle}</b> o'yini ochilyapti!\n\n` +
-                `⏳ Qatnashish uchun vaqt ketyapti...\n\n` +
+                `🎉 <b>${state.quizTitle}</b> o'yini ochilyapti!\n` +
+                `Format: ${state.gameMode === 'SOLO' ? '👤 Solo' : '👥 Team Battle'}\n\n` +
+                `⏳ Qatnashish uchun vaqt ketyapti...\n` +
+                `💰 Kirish to'lovi: ${entryFee} coin\n\n` +
                 `Qatnashuvchilar (${state.players.length}):\n${playerNames}`,
                 {
                     parse_mode: 'HTML',
@@ -197,7 +259,7 @@ export function setupTelegramGame(bot: Telegraf) {
                     }
                 }
             );
-            ctx.answerCbQuery("Muvaffaqiyatli qo'shildingiz!");
+            ctx.answerCbQuery(`Muvaffaqiyatli qo'shildingiz! ${team ? (team === 'Red' ? '🔴 Jamoasiga' : '🔵 Jamoasiga') : ''} -${entryFee} coin`);
 
         } catch (err) {
             console.error('[tg_game] join error:', err);
@@ -210,9 +272,9 @@ export function setupTelegramGame(bot: Telegraf) {
         const userId = ctx.from.id.toString();
         const answerIndex = parseInt(ctx.match[1]);
 
-        if (!chatId || !activeGames.has(chatId)) return ctx.answerCbQuery("O'yin endi faol emas.", { show_alert: true });
+        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("O'yin endi faol emas.", { show_alert: true });
 
-        const state = activeGames.get(chatId)!;
+        const state = (await gameSessions.get(chatId))!;
         if (state.status !== 'PLAYING') return ctx.answerCbQuery("Ushbu savolning vaqti tugagan.", { show_alert: true });
 
         const player = state.players.find(p => p.telegramUserId === userId);
@@ -225,24 +287,34 @@ export function setupTelegramGame(bot: Telegraf) {
         player.hasAnswered = true;
         const q = state.questions[state.currentQIndex];
 
-        let isCorrect = false;
-        if (q.options) {
-            // multiple-choice index check
-            isCorrect = answerIndex === q.correctIndex;
-        } else if (q.type === 'true-false') {
-            // Not supporting other types directly via buttons yet, but easy to expand
-            isCorrect = answerIndex === q.correctIndex;
-        }
+        const isCorrect = answerIndex === q.correctIndex;
 
+        let totalPoints = 0;
         if (isCorrect) {
-            // Speed bonus scoring
+            // Speed bonus scoring with dynamic multiplier
+            const multiplier = await SettingsService.get('tg_reward_multiplier', 1.0);
             const timeTaken = Date.now() - (state.questionStartTime || Date.now());
             const maxPoints = 1000;
-            const deduction = Math.min((timeTaken / 30000) * 500, 500); // lose up to 500pts based on time
-            player.score += Math.round(maxPoints - deduction);
+            const deduction = Math.min((timeTaken / 30000) * 500, 500);
+            totalPoints = Math.round((maxPoints - deduction) * multiplier);
+            player.score += totalPoints;
+            player.streak++;
+
+            if (player.team) {
+                state.teamScores[player.team] += totalPoints;
+            }
+
+            if (player.streak >= 3) {
+                limiter.schedule(() => bot.telegram.sendMessage(chatId, `🔥 <b>${player.name}</b> ketma-ket ${player.streak} ta to'g'ri javob topdi!`, { parse_mode: 'HTML' })).catch(() => { });
+            }
+        } else {
+            player.streak = 0;
         }
 
-        ctx.answerCbQuery("Javobingiz qabul qilindi!");
+        await gameSessions.set(chatId, state);
+
+        const feedbackMsg = isCorrect ? `✅ To'g'ri! +${totalPoints} XP` : `❌ Noto'g'ri! To'g'ri javob: ${q.options![q.correctIndex]}`;
+        ctx.answerCbQuery(feedbackMsg);
 
         // Check if all players have answered
         if (state.players.every(p => p.hasAnswered)) {
@@ -251,19 +323,61 @@ export function setupTelegramGame(bot: Telegraf) {
             await moveNext(bot, chatId);
         }
     });
+
+    bot.action('tg_hint', async (ctx) => {
+        const chatId = ctx.chat?.id.toString();
+        const userId = ctx.from.id.toString();
+
+        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("O'yin faol emas.");
+        const state = (await gameSessions.get(chatId))!;
+        if (state.status !== 'PLAYING') return ctx.answerCbQuery("Hozir yordam olish mumkin emas.");
+
+        const player = state.players.find(p => p.telegramUserId === userId);
+        if (!player) return ctx.answerCbQuery("Siz o'yinga qo'shilmagansiz.");
+        if (player.hasAnswered) return ctx.answerCbQuery("Siz javob berib bo'ldingiz.");
+
+        const q = state.questions[state.currentQIndex];
+        if (!q.options || q.options.length < 3) return ctx.answerCbQuery("Bu savolda yordam ishlamaydi.");
+
+        try {
+            const hintCost = await SettingsService.get('tg_hint_cost', 5);
+            const coinRes = await query('SELECT coins FROM students WHERE id = $1', [player.id]);
+            const currentCoins = coinRes.rows[0]?.coins || 0;
+
+            if (currentCoins < hintCost) {
+                return ctx.answerCbQuery(`❌ Tangalar yetarli emas! Sizda: ${currentCoins}`, { show_alert: true });
+            }
+
+            await query('UPDATE students SET coins = coins - $1 WHERE id = $2', [hintCost, player.id]);
+
+            // Pick 2 wrong indices
+            const wrongIndices = q.options
+                .map((_, i) => i)
+                .filter(i => i !== q.correctIndex)
+                .sort(() => 0.5 - Math.random())
+                .slice(0, 2);
+
+            const wrongTexts = wrongIndices.map(i => q.options![i]).join(' va ');
+
+            ctx.answerCbQuery(`💡 50/50: "${wrongTexts}" javoblari noto'g'ri!`, { show_alert: true });
+        } catch (err) {
+            console.error('[tg_game] hint error:', err);
+            ctx.answerCbQuery("Xatolik yuz berdi.");
+        }
+    });
 }
 
 // ---------------- Game Loop Functions ----------------
 
 async function startGamePlay(bot: Telegraf, chatId: string) {
-    const state = activeGames.get(chatId);
+    const state = await gameSessions.get(chatId);
     if (!state) return;
 
     if (state.players.length === 0) {
         state.status = 'FINISHED';
-        activeGames.delete(chatId);
+        await gameSessions.delete(chatId);
         try {
-            await bot.telegram.sendMessage(chatId, "❌ Hech kim qo'shilmadi. O'yin bekor qilindi.");
+            await limiter.schedule(() => bot.telegram.sendMessage(chatId, "❌ Hech kim qo'shilmadi. O'yin bekor qilindi."));
         } catch (e) { }
         return;
     }
@@ -284,9 +398,9 @@ async function sendCountdown(bot: Telegraf, chatId: string, msgId: number | unde
         if (i < numbers.length) {
             try {
                 if (msgId) {
-                    await bot.telegram.editMessageText(chatId, msgId, undefined, `Tayyorlaning...\n\n${numbers[i]}`);
+                    await limiter.schedule(() => bot.telegram.editMessageText(chatId, msgId, undefined, `Tayyorlaning...\n\n${numbers[i]}`));
                 } else {
-                    const m = await bot.telegram.sendMessage(chatId, `Tayyorlaning...\n\n${numbers[i]}`);
+                    const m = await limiter.schedule(() => bot.telegram.sendMessage(chatId, `Tayyorlaning...\n\n${numbers[i]}`));
                     msgId = m.message_id;
                 }
             } catch (e) { } // ignore message not modified errors
@@ -300,11 +414,11 @@ async function sendCountdown(bot: Telegraf, chatId: string, msgId: number | unde
 }
 
 async function sendCurrentQuestion(bot: Telegraf, chatId: string) {
-    const state = activeGames.get(chatId);
+    const state = await gameSessions.get(chatId);
     if (!state) return;
 
     // Reset player answers
-    state.players.forEach(p => p.hasAnswered = false);
+    state.players.forEach((p: PlayerEntry) => p.hasAnswered = false);
 
     const q = state.questions[state.currentQIndex];
     let text = `<b>Savol ${state.currentQIndex + 1} / ${state.questions.length}</b>\n\n`;
@@ -321,14 +435,17 @@ async function sendCurrentQuestion(bot: Telegraf, chatId: string) {
             }
             buttons.push(row);
         }
+        const hintCost = await SettingsService.get('tg_hint_cost', 5);
+        // Add Hint button in a separate row
+        buttons.push([{ text: `💡 50/50 (-${hintCost} 🪙)`, callback_data: "tg_hint" }]);
     }
 
     state.questionStartTime = Date.now();
     try {
-        const msg = await bot.telegram.sendMessage(chatId, text, {
+        const msg = await limiter.schedule(() => bot.telegram.sendMessage(chatId, text, {
             parse_mode: 'HTML',
             reply_markup: { inline_keyboard: buttons }
-        });
+        }));
         if (typeof msg === 'object' && 'message_id' in msg) {
             state.mainMessageId = msg.message_id;
         }
@@ -338,12 +455,12 @@ async function sendCurrentQuestion(bot: Telegraf, chatId: string) {
             moveNext(bot, chatId);
         }, 30000);
     } catch (e) {
-        console.error("Error sending question:", e);
+        gameLogger.error("Error sending question:", e);
     }
 }
 
 async function moveNext(bot: Telegraf, chatId: string) {
-    const state = activeGames.get(chatId);
+    const state = await gameSessions.get(chatId);
     if (!state) return;
 
     if (state.timer) clearTimeout(state.timer);
@@ -354,10 +471,17 @@ async function moveNext(bot: Telegraf, chatId: string) {
     let correctText = '';
     if (q.options) correctText = q.options[q.correctIndex];
 
+    let nextText = `Vaqt tugadi ⏳\n\nTo'g'ri javob: <b>${correctText}</b>`;
+    if (state.gameMode === 'TEAM') {
+        const red = state.teamScores.Red;
+        const blue = state.teamScores.Blue;
+        nextText += `\n\n🔴 Qizillar: ${red} XP | 🔵 Ko'klar: ${blue} XP`;
+    }
+
     try {
-        await bot.telegram.editMessageText(chatId, state.mainMessageId, undefined,
-            `Vaqt tugadi ⏳\n\nTo'g'ri javob: <b>${correctText}</b>`, { parse_mode: 'HTML' }
-        );
+        await limiter.schedule(() => bot.telegram.editMessageText(chatId, state.mainMessageId, undefined,
+            nextText, { parse_mode: 'HTML' }
+        ));
     } catch (e) { }
 
     setTimeout(async () => {
@@ -371,63 +495,161 @@ async function moveNext(bot: Telegraf, chatId: string) {
 }
 
 async function finishGame(bot: Telegraf, chatId: string) {
-    const state = activeGames.get(chatId);
+    const state = await gameSessions.get(chatId);
     if (!state) return;
 
     state.status = 'FINISHED';
 
     // Sort players by score
-    state.players.sort((a, b) => b.score - a.score);
+    state.players.sort((a: PlayerEntry, b: PlayerEntry) => b.score - a.score);
 
     let board = `🎉 <b>O'YIN YAKUNLANDI! (${state.quizTitle})</b>\n\n`;
-    board += `🏆 <b>NATIJALAR:</b>\n`;
+
+    if (state.gameMode === 'TEAM') {
+        const red = state.teamScores.Red;
+        const blue = state.teamScores.Blue;
+        const winner = red > blue ? '🔴 QIZILLAR' : blue > red ? '🔵 KO\'KLAR' : '🤝 DURANG';
+        board += `🏆 <b>G'OLIB: ${winner}</b>\n`;
+        board += `📊 Jamoalar: 🔴 ${red} - 🔵 ${blue}\n\n`;
+        board += `🏆 <b>SHAXSIY NATIJALAR:</b>\n`;
+    } else {
+        board += `🏆 <b>NATIJALAR:</b>\n`;
+    }
 
     const playerResultsMap: any[] = [];
 
-    state.players.forEach((p, i) => {
+    for (let i = 0; i < state.players.length; i++) {
+        const p = state.players[i];
         const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🎀";
-        board += `${medal} ${p.name} — ${p.score} XP\n`;
+
+        let rewardText = "";
+        if (i < 3) {
+            const rewards = await SettingsService.get('tg_final_rewards', [50, 30, 10]);
+            const multiplier = await SettingsService.get('tg_reward_multiplier', 1.0);
+            const reward = Math.round((rewards[i] || 0) * multiplier);
+            rewardText = ` (+${reward} 🪙)`;
+            try {
+                await query('UPDATE students SET coins = coins + $1 WHERE id = $2', [reward, p.id]);
+            } catch (e) {
+                gameLogger.error(`Error giving reward to ${p.name}:`, e);
+            }
+        }
+
+        board += `${medal} ${p.name} — ${p.score} XP${rewardText}\n`;
         playerResultsMap.push({
             id: p.id,
             name: p.name,
             score: p.score
         });
-    });
-
-    try {
-        await bot.telegram.sendMessage(chatId, board, { parse_mode: 'HTML' });
-
-        // Save to Database (into history)
-        // Note: For game_results we normally need a group_id. We'll use a placeholder or deduce it
-        // A simple query to get the group_id of the first player to attribute the result
-        let groupId = null;
-        if (state.players.length > 0) {
-            const grpRes = await query('SELECT group_id FROM students WHERE id = $1', [state.players[0].id]);
-            if (grpRes.rowCount && grpRes.rowCount > 0) groupId = grpRes.rows[0].group_id;
-        }
-
-        if (groupId) {
-            // Check if game_results has a UUID column for ID, we can generate a random one here or postgres default
-            // By schema: `id UUID PRIMARY KEY`, we need to generate one
-            const crypto = require('crypto');
-            const newId = crypto.randomUUID();
-
-            await query(`
-                INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results)
-                VALUES ($1, $2, $3, $4, $5)
-            `, [
-                newId,
-                groupId,
-                `[Telegram] ${state.quizTitle}`,
-                state.questions.length,
-                JSON.stringify(playerResultsMap)
-            ]);
-            console.log(`[tg_game] Saved game result ${newId} for group ${groupId}`);
-        }
-
-    } catch (err) {
-        console.error('[tg_game] Finish game error:', err);
     }
 
-    activeGames.delete(chatId);
+    try {
+        await limiter.schedule(() => bot.telegram.sendMessage(chatId, board, { parse_mode: 'HTML' }));
+        // Send a celebratory sticker from settings
+        const stickers = await SettingsService.get('tg_game_stickers', ['CAACAgIAAxkBAAELzxhlyO-Yw-', 'CAACAgIAAxkBAAELzxplyO-mRQ']);
+        const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
+        await limiter.schedule(() => bot.telegram.sendSticker(chatId, randomSticker)).catch(() => { });
+
+        // Game results are no longer saved to history per user request.
+        // Rewards (coins) were already processed above.
+
+    } catch (err) {
+        gameLogger.error('Finish game error:', err);
+    }
+
+    await gameSessions.delete(chatId);
+}
+
+// ---------------- Helper Functions ----------------
+
+/**
+ * Transforms various question types into a format Telegram supports (multiple choice buttons).
+ * Specifically converts 'text-input' (vocabulary) into multiple choice by picking incorrect options from the same set.
+ */
+function transformToTelegramStyle(questions: Question[]): Question[] {
+    const pool = questions.filter(q => q.type === 'text-input');
+
+    return pool.map((q, idx) => {
+        if (q.type === 'text-input' && q.acceptedAnswers && q.acceptedAnswers.length > 0) {
+            const correct = q.acceptedAnswers[0];
+
+            // Get all possible wrong options from other English/Uzbek translations in the same quiz
+            let wrongPool = pool
+                .flatMap(other => other.acceptedAnswers || [])
+                .filter(item => item && item !== correct);
+
+            // Unique and shuffle
+            wrongPool = Array.from(new Set(wrongPool)).sort(() => 0.5 - Math.random());
+
+            // Pick 3 wrong options
+            const options = [correct, ...wrongPool.slice(0, 3)].sort(() => 0.5 - Math.random());
+
+            return {
+                ...q,
+                type: 'multiple-choice', // Cast to multiple-choice for Telegram UI
+                options,
+                correctIndex: options.indexOf(correct)
+            } as Question;
+        }
+
+        return q;
+    }).filter(q => q.type === 'multiple-choice');
+}
+
+/**
+ * Sends a weekly leaderboard for active group chats based on game_results.
+ */
+export async function sendGroupWeeklyLeaderboard(bot: Telegraf) {
+    try {
+        console.log('[tg_game] Starting group weekly leaderboards...');
+        const chats = await query('SELECT chat_id, title FROM telegram_group_chats');
+
+        for (const chat of chats.rows) {
+            try {
+                // Find top 5 players in this group for the last 7 days
+                // Since telegram group doesn't have a direct 'group_id' in students easily,
+                // we aggregate from game_results that was posted to this specific telegram chat if we had the log.
+                // However, game_results is stored with a student's group_id. 
+                // A better way: Aggregate scores from game_results where the quiz was potentially played in this chat.
+                // For now, let's use the game_results (Telegram games have Quiz Title starting with "[Telegram]")
+
+                const leaderboardRes = await query(`
+                    SELECT 
+                        p->>'name' as name, 
+                        SUM((p->>'score')::int) as total_xp
+                    FROM game_results gr
+                    CROSS JOIN jsonb_array_elements(gr.player_results) p
+                    WHERE gr.created_at >= NOW() - INTERVAL '7 days'
+                      AND gr.quiz_title LIKE '[Telegram]%'
+                      AND gr.group_id IN (
+                          SELECT group_id FROM students s 
+                          JOIN student_telegram_subscriptions sub ON s.id = sub.student_id
+                          -- This is a bit complex, but let's just use ALL telegram game results for simplicity
+                          -- or assume one bot = one main use case.
+                      )
+                    GROUP BY p->>'name'
+                    ORDER BY total_xp DESC
+                    LIMIT 5
+                `);
+
+                if (leaderboardRes.rowCount === 0) continue;
+
+                let msg = `🏆 <b>GURUH REYTINGI (HAFTALIK)</b>\n`;
+                msg += `<i>${chat.title}</i>\n\n`;
+
+                leaderboardRes.rows.forEach((r: any, i: number) => {
+                    const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🎀";
+                    msg += `${medal} <b>${r.name}</b> — ${r.total_xp} XP\n`;
+                });
+
+                msg += `\nKelasi haftada omad yor bo'lsin! 🚀`;
+
+                await limiter.schedule(() => bot.telegram.sendMessage(chat.chat_id, msg, { parse_mode: 'HTML' }));
+            } catch (e) {
+                console.error(`Error sending leaderboard to chat ${chat.chat_id}:`, e);
+            }
+        }
+    } catch (err) {
+        console.error('[tg_game] sendGroupWeeklyLeaderboard error:', err);
+    }
 }

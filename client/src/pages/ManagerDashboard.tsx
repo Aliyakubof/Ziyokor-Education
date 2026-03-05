@@ -7,6 +7,9 @@ import logo from '../assets/logo.jpeg';
 import ManagerTeacherGroups from '../components/manager/ManagerTeacherGroups';
 import ManagerGroupResults from '../components/manager/ManagerGroupResults';
 import ManagerGroupContactsModal from '../components/manager/ManagerGroupContactsModal';
+import ManagerShop from '../components/manager/ManagerShop';
+import ManagerVocabulary from '../components/manager/ManagerVocabulary';
+import ManagerSettings from '../components/manager/ManagerSettings';
 
 interface Teacher {
     id: string;
@@ -31,6 +34,7 @@ const ManagerDashboard: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     // View state management
+    const [activeTab, setActiveTab] = useState<'teachers' | 'shop' | 'vocabulary' | 'settings'>('teachers');
     const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
     const [selectedGroupForResults, setSelectedGroupForResults] = useState<Group | null>(null);
     const [selectedGroupForContacts, setSelectedGroupForContacts] = useState<Group | null>(null);
@@ -67,6 +71,8 @@ const ManagerDashboard: React.FC = () => {
             setSelectedGroupForResults(null);
         } else if (selectedTeacher) {
             setSelectedTeacher(null);
+        } else if (activeTab !== 'teachers') {
+            setActiveTab('teachers');
         } else {
             navigate('/');
         }
@@ -81,6 +87,10 @@ const ManagerDashboard: React.FC = () => {
                 />
             );
         }
+
+        if (activeTab === 'shop') return <ManagerShop />;
+        if (activeTab === 'vocabulary') return <ManagerVocabulary />;
+        if (activeTab === 'settings') return <ManagerSettings />;
 
         if (selectedTeacher) {
             return (
@@ -170,9 +180,32 @@ const ManagerDashboard: React.FC = () => {
                         <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
                             Menejer Paneli
                         </h1>
-                        <p className="text-indigo-600 font-bold text-sm uppercase tracking-widest flex items-center gap-2">
-                            <BarChart3 size={16} /> O'quv jarayonlari nazorati
-                        </p>
+                        <nav className="flex items-center gap-1 mt-2">
+                            <button
+                                onClick={() => { setActiveTab('teachers'); setSelectedTeacher(null); }}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'teachers' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                            >
+                                O'qituvchilar
+                            </button>
+                            <button
+                                onClick={() => { setActiveTab('shop'); setSelectedTeacher(null); }}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'shop' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                            >
+                                Do'kon
+                            </button>
+                            <button
+                                onClick={() => { setActiveTab('vocabulary'); setSelectedTeacher(null); }}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'vocabulary' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                            >
+                                Lug'atlar
+                            </button>
+                            <button
+                                onClick={() => { setActiveTab('settings'); setSelectedTeacher(null); }}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'settings' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                            >
+                                Sozlamalar
+                            </button>
+                        </nav>
                     </div>
                 </div>
 

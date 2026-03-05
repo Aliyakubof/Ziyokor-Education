@@ -37,9 +37,16 @@ export function startCronJobs() {
         // 3. Clean old contact logs (Call history to parents)
         await runCleanup('contact_logs', 'contacted_at');
 
-        console.log('[Auto-Cleanup] Finished scheduled database cleanup job.');
+    });
+
+    // Weekly Group Leaderboard: Every Sunday at 20:00
+    cron.schedule('0 20 * * 0', async () => {
+        console.log('[Cron] Sending weekly group leaderboards...');
+        const { bot } = require('./bot');
+        const { sendGroupWeeklyLeaderboard } = require('./telegram_game');
+        await sendGroupWeeklyLeaderboard(bot);
     }, {
-        timezone: "Asia/Tashkent" // Match server timezone
+        timezone: "Asia/Tashkent"
     });
 
     console.log('[Auto-Cleanup] Cron jobs initialized successfully.');

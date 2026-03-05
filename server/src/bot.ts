@@ -1,4 +1,5 @@
 import { Telegraf } from 'telegraf';
+import bcrypt from 'bcrypt';
 import { query } from './db';
 import { setupTelegramGame } from './telegram_game';
 
@@ -12,7 +13,8 @@ bot.catch((err: any, ctx: any) => {
     console.error(`Bot error for ${ctx.updateType}:`, err);
 });
 
-const userStates: Record<string, 'awaiting_teacher_phone' | 'awaiting_student_id' | 'awaiting_parent_id'> = {};
+const userStates: Record<string, 'awaiting_teacher_phone' | 'awaiting_student_id' | 'awaiting_parent_id' | 'awaiting_password'> = {};
+const tempLoginData: Record<string, { studentId: string, role: 'student' | 'parent', studentName: string }> = {};
 
 bot.start(async (ctx) => {
     try {
@@ -110,6 +112,7 @@ const handleLogout = async (ctx: any) => {
 
     // Clear state
     delete userStates[chatId];
+    delete tempLoginData[chatId];
 
     try {
         // 1. Remove from Teachers
@@ -153,13 +156,36 @@ bot.command('me', async (ctx) => {
         `, [chatId]);
 
         if ((studentRes.rowCount || 0) > 0) {
-            const names = studentRes.rows.map((r: any) => `${r.name} (${r.id})`).join(', ');
-            return ctx.reply(`👨‍🎓 Siz quyidagi o'quvchilarga ulangansiz:\n${names}`);
+            const student = studentRes.rows[0];
+            // Fetch coins
+            const coinRes = await query('SELECT coins FROM students WHERE id = $1', [student.id]);
+            const coins = coinRes.rows[0]?.coins || 0;
+            return ctx.reply(`👨‍🎓 Siz o'quvchi: ${student.name} (${student.id})\n💰 Hisobingiz: ${coins} Ziyokor Coin`);
         }
 
         ctx.reply('👤 Siz hali tizimga ulanmagansiz. Ulanish uchun /start ni bosing.');
     } catch (err) {
         console.error('[Bot] /me error:', err);
+    }
+});
+
+bot.command('balance', async (ctx) => {
+    const chatId = ctx.chat.id.toString();
+    try {
+        const studentRes = await query(`
+            SELECT s.coins, s.name 
+            FROM student_telegram_subscriptions sub
+            JOIN students s ON sub.student_id = s.id
+            WHERE sub.telegram_chat_id = $1
+        `, [chatId]);
+
+        if ((studentRes.rowCount || 0) > 0) {
+            const s = studentRes.rows[0];
+            return ctx.reply(`💰 <b>${s.name}</b>, sizning hisobingizda <b>${s.coins}</b> coin bor.`, { parse_mode: 'HTML' });
+        }
+        ctx.reply('❌ Siz o\'quvchi sifatida ulanmagansiz.');
+    } catch (err) {
+        console.error('[Bot] /balance error:', err);
     }
 });
 
@@ -382,7 +408,36 @@ bot.on('text', async (ctx) => {
         } else {
             await handleStudentLogin(ctx, chatId, text);
         }
-        delete userStates[chatId];
+        return;
+    }
+
+    if (state === 'awaiting_password') {
+        const data = tempLoginData[chatId];
+        if (!data) {
+            delete userStates[chatId];
+            return ctx.reply('❌ Sessiya muddati tugadi. Iltimos, ID kodni qayta yuboring.');
+        }
+
+        try {
+            const studentRes = await query('SELECT password FROM students WHERE id = $1', [data.studentId]);
+            const hashedPassword = studentRes.rows[0]?.password;
+
+            if (!hashedPassword) {
+                return ctx.reply('❌ Parol topilmadi. O\'qituvchi bilan bog\'laning.');
+            }
+
+            const match = await bcrypt.compare(text, hashedPassword);
+            if (match || text === hashedPassword) { // Fallback for unhashed passwords
+                await addSubscription(ctx, chatId, { id: data.studentId, name: data.studentName }, false);
+                delete userStates[chatId];
+                delete tempLoginData[chatId];
+            } else {
+                ctx.reply('❌ Parol noto\'g\'ri. Iltimos, qaytadan urinib ko\'ring:');
+            }
+        } catch (err) {
+            console.error('[Bot] Password verification error:', err);
+            ctx.reply('❌ Xatolik yuz berdi.');
+        }
         return;
     }
 
@@ -476,8 +531,30 @@ async function handleStudentLogin(ctx: any, chatId: string, studentId: string) {
         }
         const student = studentRes.rows[0];
 
-        // Subscription check and add
-        await addSubscription(ctx, chatId, student);
+        // Check if student already linked (limit 1)
+        const subRes = await query(
+            'SELECT * FROM student_telegram_subscriptions WHERE student_id = $1 AND role = $2',
+            [studentId, 'student']
+        );
+
+        if (subRes.rowCount && subRes.rowCount > 0) {
+            // Check if it's the same user
+            if (subRes.rows[0].telegram_chat_id === chatId) {
+                return ctx.reply(`ℹ️ Siz allaqachon o'quvchi sifatida ulandingiz: ${student.name}`, {
+                    reply_markup: {
+                        keyboard: [[{ text: "🚪 Chiqish" }]],
+                        resize_keyboard: true
+                    }
+                });
+            }
+            return ctx.reply('❌ Ushbu o\'quvchi profiliga allaqachon boshqa telegram hisobi ulangan (Limit: 1).');
+        }
+
+        // Ask for password
+        userStates[chatId] = 'awaiting_password';
+        tempLoginData[chatId] = { studentId: student.id, role: 'student', studentName: student.name };
+        ctx.reply(`🔓 <b>${student.name}</b>, profilingizni ulash uchun ilovaga (zeducation.uz) kiradigan parolingizni yuboring:`, { parse_mode: 'HTML' });
+
     } catch (err) {
         console.error('[Bot] Student login error:', err);
         ctx.reply('❌ Tizimda xatolik yuz berdi.');
@@ -496,6 +573,30 @@ async function handleParentLogin(ctx: any, chatId: string, parentId: string) {
         }
         const student = studentRes.rows[0];
 
+        // Check parent limit (2)
+        const subRes = await query(
+            'SELECT COUNT(*) FROM student_telegram_subscriptions WHERE student_id = $1 AND role = $2',
+            [student.id, 'parent']
+        );
+        const count = parseInt(subRes.rows[0].count);
+
+        if (count >= 2) {
+            // Check if I am one of them
+            const mySub = await query(
+                'SELECT * FROM student_telegram_subscriptions WHERE student_id = $1 AND telegram_chat_id = $2 AND role = $3',
+                [student.id, chatId, 'parent']
+            );
+            if (mySub.rowCount && mySub.rowCount > 0) {
+                return ctx.reply(`ℹ️ Siz allaqachon ota-ona sifatida ulandingiz: ${student.name}`, {
+                    reply_markup: {
+                        keyboard: [[{ text: "🚪 Chiqish" }]],
+                        resize_keyboard: true
+                    }
+                });
+            }
+            return ctx.reply('❌ Ushbu o\'quvchi profiliga allaqachon 2 ta ota-ona hisobi ulangan. Limit tugagan.');
+        }
+
         await addSubscription(ctx, chatId, student, true);
     } catch (err) {
         console.error('[Bot] Parent login error:', err);
@@ -505,14 +606,9 @@ async function handleParentLogin(ctx: any, chatId: string, parentId: string) {
 
 async function addSubscription(ctx: any, chatId: string, student: any, isParent = false) {
     const studentId = student.id;
-    // 2. Check subscription count (limit 3 per student)
-    const subRes = await query(
-        'SELECT COUNT(*) FROM student_telegram_subscriptions WHERE student_id = $1',
-        [studentId]
-    );
-    const count = parseInt(subRes.rows[0].count);
+    const role = isParent ? 'parent' : 'student';
 
-    // 3. Check if already subscribed
+    // Check if already subscribed with any role
     const checkMySub = await query(
         'SELECT * FROM student_telegram_subscriptions WHERE student_id = $1 AND telegram_chat_id = $2',
         [studentId, chatId]
@@ -527,14 +623,10 @@ async function addSubscription(ctx: any, chatId: string, student: any, isParent 
         });
     }
 
-    if (count >= 3) {
-        return ctx.reply('❌ Bu o\'quvchi profiliga allaqachon 3 ta telegram hisob ulangan. Limit tugagan.');
-    }
-
-    // 4. Add subscription
+    // Add subscription with role
     await query(
-        'INSERT INTO student_telegram_subscriptions (student_id, telegram_chat_id) VALUES ($1, $2)',
-        [studentId, chatId]
+        'INSERT INTO student_telegram_subscriptions (student_id, telegram_chat_id, role) VALUES ($1, $2, $3)',
+        [studentId, chatId, role]
     );
 
     ctx.reply(`✅ Muvaffaqiyatli! Siz ${isParent ? "ota-ona sifatida" : "o'quvchi sifatida"} ulandingiz: ${student.name}\nBarcha natijalar shu yerga yuboriladi.`, {
