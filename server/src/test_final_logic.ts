@@ -45,10 +45,10 @@ async function testFinal() {
     };
 
     try {
-        const pdfBuffer = await generateQuizResultPDF(mockQuiz, [mockPlayer], 'Test Group');
+        const pdfBuffer = await generateQuizResultPDF(mockQuiz, [mockPlayer], 'Test Group', 'Test Teacher');
         fs.writeFileSync('test_final_check.pdf', pdfBuffer);
         console.log('✅ PDF successfully generated: test_final_check.pdf');
-        
+
         if (aiResult.isCorrect) {
             console.log('✅ SUCCESS: Gemini correctly identified the answer and PDF should now respect this.');
         } else {

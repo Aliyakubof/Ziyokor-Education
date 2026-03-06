@@ -33,7 +33,7 @@ const mockPlayers: Player[] = [
 async function runTest() {
     console.log('Generating PDF with Cyrillic characters...');
     try {
-        const buffer = await generateQuizResultPDF(mockQuiz, mockPlayers, 'Guruh 1 (Группа 1)');
+        const buffer = await generateQuizResultPDF(mockQuiz, mockPlayers, 'Guruh 1 (Группа 1)', 'Test Teacher');
         const outputPath = path.join(__dirname, 'test_result_cyrillic.pdf');
         fs.writeFileSync(outputPath, buffer);
         console.log(`PDF generated successfully at: ${outputPath}`);
