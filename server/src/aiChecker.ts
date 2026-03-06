@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv';
-dotenv.config();
-
-const apiKey = process.env.GEMINI_API_KEY || "";
+import path from 'path';
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 export interface AICheckResult {
     isCorrect: boolean;
@@ -10,81 +9,101 @@ export interface AICheckResult {
     feedback: string;
 }
 
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const getGenAI = () => {
+    const apiKey = process.env.GEMINI_API_KEY || "";
+    return new GoogleGenerativeAI(apiKey);
+};
+
 export async function checkAnswerWithAI(
     question: string,
     studentAnswer: string,
     questionType: string
 ): Promise<AICheckResult> {
+    const apiKey = process.env.GEMINI_API_KEY || "";
     if (!apiKey) {
         console.error("GEMINI_API_KEY is not set");
         return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "AI checking is currently unavailable." };
     }
 
-    try {
-        const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-        const prompt = `
-            Siz tajribali, adolatli va til qoidalariga e'tiborli ustozsiz.
-            Vazifangiz: Berilgan savolga o'quvchi tomonidan yozilgan javobni tekshirish.
+    while (attempt < MAX_RETRIES) {
+        attempt++;
+        try {
+            const genAI = getGenAI();
+            const modelName = process.env.GEMINI_MODEL || "gemma-3-1b-it";
+            const model = genAI.getGenerativeModel({ model: modelName });
 
-            Baho berish mezonlari:
-            1. Faktologik aniqlik (Mantiq): O'quvchining javobi savolga mantiqan va ilmiy tarafdan to'g'ri javob beryaptimi (orqadagi ma'no to'g'ri bo'lishi muhim)?
-            2. Grammatika va imlo: Javob imlo va grammatik qoidalarga mos (juda ko'p xatolarsiz) tushunarli yozilganmi?
+            const prompt = `
+                Siz tajribali, adolatli va til qoidalariga e'tiborli ustozsiz.
+                Vazifangiz: Berilgan savolga o'quvchi tomonidan yozilgan javobni tekshirish.
 
-            Savol: "${question}"
-            O'quvchining javobi: "${studentAnswer}"
-            Savol turi: "${questionType}"
+                Baho berish mezonlari:
+                1. Faktologik aniqlik (Mantiq): O'quvchining javobi savolga mantiqan va ilmiy tarafdan to'g'ri javob beryaptimi (orqadagi ma'no to'g'ri bo'lishi muhim)?
+                2. Grammatika va imlo: Javob imlo va grammatik qoidalarga mos (juda ko'p xatolarsiz) tushunarli yozilganmi?
 
-            Natijani faqat quyidagi qat'iy JSON formatida qaytaring:
-            {
-              "isCorrect": boolean,
-              "grammarScore": number,
-              "contentScore": number,
-              "feedback": "string"
+                Savol: "${question}"
+                O'quvchining javobi: "${studentAnswer}"
+                Savol turi: "${questionType}"
+
+                Natijani faqat quyidagi qat'iy JSON formatida qaytaring:
+                {
+                  "isCorrect": boolean,
+                  "grammarScore": number,
+                  "contentScore": number,
+                  "feedback": "string"
+                }
+            `;
+
+            console.log(`[AI Check] Request for: "${studentAnswer.substring(0, 30)}..." (Attempt ${attempt})`);
+
+            // AI call with a manual timeout via Promise.race
+            const aiPromise = model.generateContent(prompt);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("AI_TIMEOUT")), 15000)
+            );
+
+            const result = await Promise.race([aiPromise, timeoutPromise]) as any;
+            const response = await result.response;
+            let text = response.text();
+
+            console.log(`[AI Check] Raw response: ${text}`);
+
+            // Clean up text if AI wrapped it in markdown
+            text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+            if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                console.log(`[AI Check] Parsed Result: ${parsed.isCorrect ? 'Correct' : 'Incorrect'}`);
+                return {
+                    isCorrect: !!parsed.isCorrect,
+                    grammarScore: Number(parsed.grammarScore) || 0,
+                    contentScore: Number(parsed.contentScore) || 0,
+                    feedback: String(parsed.feedback || "")
+                };
             }
-        `;
+            throw new Error("Invalid AI response format");
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`API Error (${response.status}): ${errorBody}`);
+        } catch (err: any) {
+            console.error(`[AI Check] Attempt ${attempt} failed:`, err.message);
+            if (attempt === MAX_RETRIES) {
+                return {
+                    isCorrect: false,
+                    contentScore: 0,
+                    grammarScore: 0,
+                    feedback: "Javobni tekshirishda xatolik yuz berdi. Iltimos keyinroq urinib ko'ring."
+                };
+            }
+            // Wait before retry (exponential backoff)
+            await new Promise(r => setTimeout(r, 1000 * attempt));
         }
-
-        const data: any = await response.json();
-
-        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-            throw new Error("Invalid AI response: No candidates found");
-        }
-
-        let text = data.candidates[0].content.parts[0].text;
-
-        // Manual JSON extraction as backup/default
-        text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            return {
-                isCorrect: !!parsed.isCorrect,
-                grammarScore: Number(parsed.grammarScore) || 0,
-                contentScore: Number(parsed.contentScore) || 0,
-                feedback: String(parsed.feedback || "")
-            };
-        }
-
-        throw new Error("Invalid AI response format: " + text);
-
-    } catch (err) {
-        console.error("AI Checker Error:", err);
-        return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "Javobni tekshirishda xatolik yuz berdi." };
     }
+
+    return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "Javobni tekshirishda xatolik." };
 }
 
 export interface VocabQuestion {
@@ -98,12 +117,14 @@ export async function generateVocabBattleWithAI(
     candidates: any[],
     count: number = 15
 ): Promise<VocabQuestion[]> {
+    const apiKey = process.env.GEMINI_API_KEY || "";
     if (!apiKey) {
         throw new Error("GEMINI_API_KEY is not set");
     }
 
     try {
-        const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+        const genAI = getGenAI();
+        const modelName = process.env.GEMINI_MODEL || "gemma-3-1b-it";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
         const prompt = `

@@ -37,6 +37,28 @@ export function startCronJobs() {
         // 3. Clean old contact logs (Call history to parents)
         await runCleanup('contact_logs', 'contacted_at');
 
+        // 4. Clean old PDF result files (Server storage)
+        const path = require('path');
+        const fs = require('fs');
+        const resultsDir = path.join(__dirname, '..', 'storage', 'results');
+        if (fs.existsSync(resultsDir)) {
+            const files = fs.readdirSync(resultsDir);
+            const now = Date.now();
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+            files.forEach((file: string) => {
+                const filePath = path.join(resultsDir, file);
+                try {
+                    const stats = fs.statSync(filePath);
+                    if (now - stats.mtimeMs > sevenDaysMs) {
+                        fs.unlinkSync(filePath);
+                        console.log(`[Auto-Cleanup] Deleted old PDF: ${file}`);
+                    }
+                } catch (err) {
+                    console.error(`[Auto-Cleanup Error] Failed to delete ${file}:`, err);
+                }
+            });
+        }
     });
 
     // Weekly Group Leaderboard: Every Sunday at 20:00

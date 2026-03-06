@@ -134,4 +134,10 @@ CREATE TABLE IF NOT EXISTS system_settings (
 CREATE INDEX IF NOT EXISTS idx_students_coins ON students(coins DESC);
 CREATE INDEX IF NOT EXISTS idx_students_streak ON students(streak_count DESC);
 CREATE INDEX IF NOT EXISTS idx_students_group ON students(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_battles_active ON group_battles(status) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_group_battles_groups ON group_battles(group_a_id, group_b_id);
+CREATE INDEX IF NOT EXISTS idx_game_results_group ON game_results(group_id);
+CREATE INDEX IF NOT EXISTS idx_game_results_created ON game_results(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_students_last_activity ON students(last_activity_at DESC);
+CREATE INDEX IF NOT EXISTS idx_game_results_player_gin ON game_results USING GIN (player_results);
 `;

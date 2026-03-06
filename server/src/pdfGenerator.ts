@@ -5,7 +5,8 @@ import { checkAnswer } from './utils';
 export const generateQuizResultPDF = (
     quiz: Quiz | UnitQuiz,
     players: Player[],
-    groupName: string
+    groupName: string,
+    teacherName: string
 ): Promise<Buffer> => {
     return new Promise((resolve, reject) => {
         const doc = new PDFDocument({ margin: 50 });
@@ -21,13 +22,27 @@ export const generateQuizResultPDF = (
             reject(err);
         });
 
-        // Header
-        doc.fontSize(24).font('Helvetica-Bold').text('Ziyokor Education', { align: 'center' });
-        doc.fontSize(16).font('Helvetica').text('Quiz natijalari', { align: 'center' });
+        const path = require('path');
+        const fs = require('fs');
+        const regularFontPath = path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf');
+        const boldFontPath = path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf');
+
+        const hasRegular = fs.existsSync(regularFontPath);
+        const hasBold = fs.existsSync(boldFontPath);
+
+        if (hasRegular) doc.registerFont('CustomRegular', regularFontPath);
+        if (hasBold) doc.registerFont('CustomBold', boldFontPath);
+
+        const fontRegular = hasRegular ? 'CustomRegular' : 'Helvetica';
+        const fontBold = hasBold ? 'CustomBold' : 'Helvetica-Bold';
+
+        doc.fontSize(24).font(fontBold).text('Ziyokor Education', { align: 'center' });
+        doc.fontSize(16).font(fontRegular).text('Quiz natijalari', { align: 'center' });
         doc.moveDown();
 
         doc.fontSize(12);
         doc.text(`Test: ${quiz.title}`, { align: 'left' });
+        doc.text(`O'qituvchi: ${teacherName}`, { align: 'left' });
         doc.text(`Guruh: ${groupName}`, { align: 'left' });
         doc.text(`Sana: ${new Date().toLocaleString()}`, { align: 'left' });
         doc.moveDown();
@@ -38,13 +53,13 @@ export const generateQuizResultPDF = (
         const col2 = 100;
         const col3 = 450;
 
-        doc.font('Helvetica-Bold');
+        doc.font(fontBold);
         doc.text('#', col1, tableTop);
         doc.text('O\'quvchi Ismi', col2, tableTop);
         doc.text('Ball', col3, tableTop);
 
         doc.moveTo(col1, tableTop + 15).lineTo(550, tableTop + 15).stroke();
-        doc.font('Helvetica');
+        doc.font(fontRegular);
 
         // Table Body
         let y = tableTop + 25;
@@ -54,6 +69,7 @@ export const generateQuizResultPDF = (
             if (y > 700) {
                 doc.addPage();
                 y = 50;
+                doc.font(fontRegular);
             }
 
             // Calculate correct count accurately (excluding info-slides)
@@ -91,11 +107,12 @@ export const generateQuizResultPDF = (
         // Detailed Breakdown Section
         players.forEach((player) => {
             doc.addPage();
+            doc.font(fontRegular);
 
             // Player Detail Header
-            doc.fontSize(18).font('Helvetica-Bold').text('Batafsil natijalar:', { align: 'left' });
+            doc.fontSize(18).font('CustomBold').text('Batafsil natijalar:', { align: 'left' });
             doc.fontSize(14).fillColor('#4f46e5').text(player.name);
-            doc.fillColor('black').fontSize(12).font('Helvetica').text(`Umumiy ball: ${player.score}`);
+            doc.fillColor('black').fontSize(12).font('CustomRegular').text(`Umumiy ball: ${player.score}`);
             doc.moveDown();
 
             let actualQIdx = 1;
@@ -118,9 +135,8 @@ export const generateQuizResultPDF = (
                     }
                 }
 
-                // Sanitize string to prevent PDF stream corruption from emojis/Cyrillic in standard Helvetica font
-                studentDisplayAnswer = studentDisplayAnswer.replace(/[^\x00-\xFF]/g, '?');
-
+                // Removed char replacement that caused '?' issues
+                // studentDisplayAnswer = studentDisplayAnswer.replace(/[^\x00-\xFF]/g, '?');
 
                 // 2. Determine if the answer is correct
                 if (player.partialScoreMap && player.partialScoreMap[qIdx] !== undefined) {
@@ -139,10 +155,13 @@ export const generateQuizResultPDF = (
                 }
 
                 // Check for page overflow
-                if (doc.y > 650) doc.addPage();
+                if (doc.y > 650) {
+                    doc.addPage();
+                    doc.font('CustomRegular');
+                }
 
-                doc.fontSize(11).font('Helvetica-Bold').text(`${actualQIdx}. ${q.text}`);
-                doc.fontSize(10).font('Helvetica');
+                doc.fontSize(11).font(fontBold).text(`${actualQIdx}. ${q.text}`);
+                doc.fontSize(10).font(fontRegular);
 
                 doc.fillColor(isCorrect ? '#059669' : '#dc2626')
                     .text(`Sizning javobingiz: ${studentDisplayAnswer} ${isCorrect ? ' (TO\'G\'RI)' : ' (NOTO\'G\'RI)'}`);

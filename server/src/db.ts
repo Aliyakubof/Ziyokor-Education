@@ -16,8 +16,8 @@ const isLocalhost = finalConnectionString.includes('localhost') || finalConnecti
 export const pool = new Pool({
     connectionString: finalConnectionString,
     ssl: isLocalhost ? false : { rejectUnauthorized: false },
-    max: 10,
-    idleTimeoutMillis: 30000
+    max: 50,
+    idleTimeoutMillis: 10000
 });
 
 pool.on('connect', (client) => {

@@ -10,7 +10,7 @@ interface QuestionDraft {
     options: string[];
     correctIndex: number;
     timeLimit: number;
-    type: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching';
+    type: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching' | 'vocabulary';
     acceptedAnswers: string[];
 }
 
@@ -70,7 +70,7 @@ export default function CreateQuiz() {
 
     const [qInfo, setQInfo] = useState('');
     const [qText, setQText] = useState('');
-    const [qType, setQType] = useState<'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching'>('multiple-choice');
+    const [qType, setQType] = useState<'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching' | 'vocabulary'>('multiple-choice');
     const [opts, setOpts] = useState(['', '', '', '']);
     const [correctIdx, setCorrectIdx] = useState(0);
     const [acceptedAnswers, setAcceptedAnswers] = useState('');
@@ -671,6 +671,17 @@ export default function CreateQuiz() {
                                             >
                                                 <List size={20} className="rotate-90" />
                                             </button>
+                                            <button
+                                                onClick={() => setQType('vocabulary')}
+                                                className={`p-2 rounded-lg transition-all ${qType === 'vocabulary' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                                title="Vocabulary (Boxed Letters)"
+                                            >
+                                                <div className="flex gap-0.5">
+                                                    <div className="w-1.5 h-3 border border-current rounded-sm"></div>
+                                                    <div className="w-1.5 h-3 border border-current rounded-sm"></div>
+                                                    <div className="w-1.5 h-3 border border-current rounded-sm"></div>
+                                                </div>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -744,7 +755,7 @@ export default function CreateQuiz() {
                                             </div>
                                         )}
 
-                                        {['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(qType) && (
+                                        {['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'vocabulary'].includes(qType) && (
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">
                                                     {qType === 'fill-blank' ? "Correct Answer (missing word)" :

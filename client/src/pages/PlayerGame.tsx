@@ -11,7 +11,7 @@ interface QuestionData {
     questionIndex: number;
     totalQuestions: number;
     correctIndex: number;
-    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching';
+    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching' | 'vocabulary';
     acceptedAnswers?: string[];
 }
 
@@ -100,7 +100,9 @@ export default function PlayerGame() {
                 // Sync answers back to the server so the Host's dashboard progress is correct
                 const pinFromStore = localStorage.getItem('kahoot-pin');
                 if (pinFromStore) {
-                    socket.emit('player-sync-answers', { pin: pinFromStore, answers: savedAnswers });
+                    socket.emit('player-sync-answers', { pin: pinFromStore, answers: savedAnswers }, (ack: { success: boolean }) => {
+                        console.log('[Sync] Initial answers sync completed:', ack.success);
+                    });
                 }
             }
         });
@@ -153,16 +155,39 @@ export default function PlayerGame() {
         };
     }, [isUnitMode]);
 
+    const [syncStatus, setSyncStatus] = useState<Record<number, 'SAVING' | 'SAVED' | 'ERROR'>>({});
+
     const saveUnitAnswer = (val: number | string) => {
         const newAnswers = { ...unitAnswers, [currentUnitIndex]: val };
         setUnitAnswers(newAnswers);
         // Persist to localStorage so answers survive tab switches / refreshes
         localStorage.setItem('unit-answers', JSON.stringify(newAnswers));
 
+        // UI Feedback
+        setSyncStatus(prev => ({ ...prev, [currentUnitIndex]: 'SAVING' }));
+
         // Sync with server immediately for real-time progress for host
         const pin = localStorage.getItem('kahoot-pin');
         if (pin) {
-            socket.emit('player-answer', { pin, answer: val, questionIndex: currentUnitIndex });
+            socket.emit('player-answer',
+                { pin, answer: val, questionIndex: currentUnitIndex },
+                (ack: { success: boolean }) => {
+                    if (ack && ack.success) {
+                        setSyncStatus(prev => ({ ...prev, [currentUnitIndex]: 'SAVED' }));
+                    } else {
+                        setSyncStatus(prev => ({ ...prev, [currentUnitIndex]: 'ERROR' }));
+                    }
+                }
+            );
+            // Safety timeout in case callback never fires (e.g. legacy server or network drop)
+            setTimeout(() => {
+                setSyncStatus(prev => {
+                    if (prev[currentUnitIndex] === 'SAVING') {
+                        return { ...prev, [currentUnitIndex]: 'ERROR' };
+                    }
+                    return prev;
+                });
+            }, 5000);
         }
     };
 
@@ -487,6 +512,79 @@ export default function PlayerGame() {
             );
         }
 
+        if (question.type === 'vocabulary') {
+            const isCorrect = isReview && playerAns === (correctInfo?.acceptedAnswers?.[0] || '');
+            const targetWord = (question.acceptedAnswers?.[0] || '').replace(/[^a-zA-Z0-9]/g, '');
+            const currentVal = (isReview ? playerAns : textAnswer) || '';
+
+            return (
+                <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200">
+                        <div className="text-center space-y-6">
+                            <h2 className="text-3xl md:text-5xl font-black text-slate-800 leading-tight">
+                                {question.text}
+                            </h2>
+                            <p className="text-slate-400 font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2">
+                                <Info size={16} /> Enter the word letter by letter
+                            </p>
+                        </div>
+
+                        <div className="mt-12 flex flex-wrap justify-center gap-2 md:gap-3">
+                            {Array.from({ length: targetWord.length }).map((_, i) => (
+                                <input
+                                    key={i}
+                                    id={`voc-box-${i}`}
+                                    type="text"
+                                    maxLength={1}
+                                    value={currentVal[i] || ''}
+                                    readOnly={isReview}
+                                    autoFocus={!isReview && i === 0}
+                                    autoComplete="off"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Backspace' && !currentVal[i] && i > 0) {
+                                            const prevBox = document.getElementById(`voc-box-${i - 1}`) as HTMLInputElement;
+                                            prevBox?.focus();
+                                        }
+                                    }}
+                                    onChange={(e) => {
+                                        const char = e.target.value.slice(-1).toLowerCase();
+                                        if (char && !/[a-z0-9]/i.test(char)) return; // Only alphanumeric
+
+                                        const newChars = currentVal.split('');
+                                        while (newChars.length < targetWord.length) newChars.push('');
+                                        newChars[i] = char;
+                                        const finalVal = newChars.join('').slice(0, targetWord.length);
+
+                                        setTextAnswer(finalVal);
+                                        if (!isReview && isUnitMode) saveUnitAnswer(finalVal);
+
+                                        if (char && i < targetWord.length - 1) {
+                                            const nextBox = document.getElementById(`voc-box-${i + 1}`) as HTMLInputElement;
+                                            nextBox?.focus();
+                                        }
+                                    }}
+                                    className={`
+                                        w-12 h-16 md:w-16 md:h-20 text-2xl md:text-4xl font-black text-center rounded-2xl border-2 transition-all outline-none uppercase
+                                        ${isReview
+                                            ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-red-50 border-red-500 text-red-600')
+                                            : (currentVal[i] ? 'bg-indigo-50 border-indigo-500 text-indigo-600 shadow-lg shadow-indigo-500/10' : 'bg-slate-50 border-slate-200 focus:border-indigo-400 focus:bg-white text-slate-400')
+                                        }
+                                    `}
+                                />
+                            ))}
+                        </div>
+
+                        {isReview && !isCorrect && (
+                            <div className="mt-8 p-6 rounded-3xl bg-emerald-50 border border-emerald-100 flex flex-col items-center">
+                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">To'g'ri javob</span>
+                                <span className="text-2xl font-black text-emerald-600 uppercase tracking-tight">{question.acceptedAnswers?.[0]}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
         if (question.type === 'word-box') {
             return <WordBoxView
                 question={question}
@@ -625,6 +723,12 @@ export default function PlayerGame() {
                                 : `${question?.questionIndex} / ${question?.totalQuestions}`}
                         </div>
                     </div>
+                    {isUnitMode && syncStatus[currentUnitIndex] && (
+                        <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-500
+                            ${syncStatus[currentUnitIndex] === 'SAVED' ? 'bg-emerald-50 text-emerald-500' : 'bg-orange-50 text-orange-400 animate-pulse'}`}>
+                            {syncStatus[currentUnitIndex] === 'SAVED' ? '✓ Saqlandi' : '... Saqlanmoqda'}
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 px-6 text-center">

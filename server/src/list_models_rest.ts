@@ -1,37 +1,38 @@
-
 import * as dotenv from 'dotenv';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import path from 'path';
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const key = process.env.GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(key);
+const apiKey = process.env.GEMINI_API_KEY || "";
 
-async function listAllModels() {
-    console.log("Listing models for key:", key.substring(0, 10) + "...");
-    try {
-        // The listModels call is part of the genAI client
-        // Note: listModels returns an async iterator or array depending on version
-        // In @google/generative-ai, it's models.listModels()
-        const result = await genAI.getGenerativeModel({ model: "gemini-pro" }); // placeholder
-        // Actually, the SDK has a separate way to list models, or we can use the REST API
-        // since the SDK might hide details.
+async function listModels() {
+    console.log('Fetching model list via REST...');
+    if (!apiKey) {
+        console.error('API Key is missing');
+        return;
+    }
 
-        console.log("Fetching model list via REST for transparency...");
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-        const data: any = await response.json();
+    // Try both v1 and v1beta
+    const versions = ['v1', 'v1beta'];
 
-        if (data.models) {
-            console.log("Available Models:");
-            data.models.forEach((m: any) => {
-                console.log(`- ${m.name} (Supports: ${m.supportedGenerationMethods.join(", ")})`);
-            });
-        } else {
-            console.log("No models found in response:", JSON.stringify(data, null, 2));
+    for (const v of versions) {
+        const url = `https://generativelanguage.googleapis.com/${v}/models?key=${apiKey}`;
+        console.log(`\nTrying version: ${v}`);
+
+        try {
+            const response = await fetch(url);
+            const data: any = await response.json();
+
+            if (response.ok) {
+                console.log(`[SUCCESS] Models for ${v}:`, (data.models || []).map((m: any) => m.name).join(', '));
+            } else {
+                console.log(`[ERROR] ${v}: ${response.status} ${response.statusText}`);
+                console.log('Error info:', JSON.stringify(data, null, 2));
+            }
+        } catch (err: any) {
+            console.error(`[FETCH FAIL] ${v}:`, err.message);
         }
-    } catch (err: any) {
-        console.error("Error listing models:", err.message);
     }
 }
 
-listAllModels();
+listModels();

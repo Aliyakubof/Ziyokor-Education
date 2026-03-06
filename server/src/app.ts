@@ -23,8 +23,16 @@ import { generateQuizResultPDF } from './pdfGenerator';
 import { normalizeAnswer, checkAnswer, countCorrectParts } from './utils';
 import { checkAnswerWithAI } from './aiChecker';
 import { startCronJobs } from './cron';
+import { Worker } from 'worker_threads';
+import path from 'path';
+import fs from 'fs';
 
 const app = express();
+const RESULTS_DIR = path.join(__dirname, '..', 'storage', 'results');
+if (!fs.existsSync(RESULTS_DIR)) {
+    fs.mkdirSync(RESULTS_DIR, { recursive: true });
+}
+
 const allowedOrigins = [
     process.env.FRONTEND_URL,
     'https://zeducation.uz',
@@ -1793,7 +1801,7 @@ function broadcastPlayerUpdate(pin: string, playerId?: string) {
         // If already scheduled, do nothing
         if (updateThrottles[pin]) return;
 
-        // Schedule an update in 2 seconds
+        // Schedule an update in 1 second (Faster feedback)
         updateThrottles[pin] = setTimeout(() => {
             const currentGame = games[pin];
             if (currentGame) {
@@ -1813,7 +1821,7 @@ function broadcastPlayerUpdate(pin: string, playerId?: string) {
                 pendingPlayerUpdates[pin].clear();
             }
             updateThrottles[pin] = null;
-        }, 2000);
+        }, 1000);
     } else {
         io.to(game.hostId).emit('player-update', scrubPlayers(game));
     }
@@ -2223,7 +2231,7 @@ io.on('connection', (socket) => {
     });
 
     // Player/Student: Submit Answer
-    socket.on('player-answer', async ({ pin, answer, questionIndex }: { pin: string, answer: string | number, questionIndex?: number }) => {
+    socket.on('player-answer', async ({ pin, answer, questionIndex }: { pin: string, answer: string | number, questionIndex?: number }, callback?: (res: { success: boolean, error?: string }) => void) => {
         const game = games[pin];
         if (!game || game.status !== 'ACTIVE') return;
 
@@ -2243,27 +2251,13 @@ io.on('connection', (socket) => {
 
         let currentScore = 0;
         const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching'];
+        const isTextInput = textTypes.slice(0, 4).includes(question.type || '');
 
         if (question.type === 'matching' || question.type === 'word-box') {
             currentScore = countCorrectParts(String(answer), question.acceptedAnswers || []);
         } else if (textTypes.includes(question.type || '')) {
             if (checkAnswer(String(answer), question.acceptedAnswers || [])) {
                 currentScore = 1;
-            } else if (answer) {
-                // Fallback to AI checking if the simple check fails
-                try {
-                    const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
-
-                    // Store feedback regardless of correctness so students see it in the PDF
-                    (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
-                    (player as any).aiFeedbackMap[qIdx] = aiResult.feedback;
-
-                    if (aiResult.isCorrect) {
-                        currentScore = 1;
-                    }
-                } catch (err) {
-                    console.error('[player-answer] AI check failed:', err);
-                }
             }
         } else {
             const ansIdx = Number(answer);
@@ -2276,16 +2270,44 @@ io.on('connection', (socket) => {
         player.score = player.score - prevPartialScore + currentScore;
         (player as any).partialScoreMap[qIdx] = currentScore;
 
-        console.log(`[player-answer] Success. Player ${player.name} answered qIdx ${qIdx}. Total answers: ${Object.keys(player.answers).length}`);
+        // Immediate acknowledgment for the student
+        if (callback) callback({ success: true });
 
+        // Optimistic Status Update: Notify host IMMEDIATELY that progress changed
         if (game.isUnitQuiz) {
             broadcastPlayerUpdate(pin, player.id);
-        } else {
+        }
+
+        // Background AI check (Async, don't block the initial broadcast or acknowledgement)
+        if (isTextInput && currentScore === 0 && answer) {
+            (async () => {
+                try {
+                    const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
+                    (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
+                    (player as any).aiFeedbackMap[qIdx] = aiResult.feedback;
+
+                    if (aiResult.isCorrect) {
+                        // If it improved score, update and broadcast again
+                        player.score = player.score - (player as any).partialScoreMap[qIdx] + 1;
+                        (player as any).partialScoreMap[qIdx] = 1;
+                        broadcastPlayerUpdate(pin, player.id);
+                    }
+                } catch (aiErr) {
+                    console.error('[player-answer] Background AI check failed:', aiErr);
+                }
+            })();
+        }
+
+        console.log(`[player-answer] Success. Player ${player.name} answered qIdx ${qIdx}. Total answers: ${Object.keys(player.answers).length}`);
+
+        if (!game.isUnitQuiz) {
             const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
             io.to(game.hostId).emit('answers-count', answeredCount);
         }
+
+        if (callback) callback({ success: true });
     });
-    socket.on('player-sync-answers', async ({ pin, answers }: { pin: string, answers: Record<string, string | number> }) => {
+    socket.on('player-sync-answers', async ({ pin, answers }: { pin: string, answers: Record<string, string | number> }, callback?: (res: { success: boolean, error?: string }) => void) => {
         const game = games[pin];
         if (!game || game.status !== 'ACTIVE') return;
 
@@ -2314,14 +2336,21 @@ io.on('connection', (socket) => {
                     if (checkAnswer(String(answer), question.acceptedAnswers || [])) {
                         currentScore = 1;
                     } else if (answer) {
-                        try {
-                            const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
-                            (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
-                            (player as any).aiFeedbackMap[qIdx] = aiResult.feedback;
-                            if (aiResult.isCorrect) currentScore = 1;
-                        } catch (err) {
-                            console.error('[player-sync-answers] AI check failed:', err);
-                        }
+                        // Background AI check
+                        (async () => {
+                            try {
+                                const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
+                                (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
+                                (player as any).aiFeedbackMap[qIdx] = aiResult.feedback;
+                                if (aiResult.isCorrect) {
+                                    player.score += 1;
+                                    (player as any).partialScoreMap[qIdx] = 1;
+                                    broadcastPlayerUpdate(pin, player.id);
+                                }
+                            } catch (err) {
+                                console.error('[player-sync-answers] Background AI check failed:', err);
+                            }
+                        })();
                     }
                 } else {
                     const ansIdx = Number(answer);
@@ -2346,8 +2375,38 @@ io.on('connection', (socket) => {
                 io.to(game.hostId).emit('answers-count', answeredCount);
             }
         }
+        if (callback) callback({ success: true });
     });
 });
+
+// Helper for offloading PDF generation to a Worker Thread
+function generatePDFInWorker(quiz: any, players: any, groupName: string, teacherName: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+        try {
+            const isTS = __filename.endsWith('.ts');
+            const workerScript = path.join(__dirname, 'worker', isTS ? 'pdfWorker.ts' : 'pdfWorker.js');
+
+            // For ts-node support in worker threads, we might need a loader
+            // but for now let's try direct loading if tsc is used.
+            const worker = new Worker(workerScript, {
+                workerData: { quiz, players, groupName, teacherName },
+                // Enable ts-node loader if we are in TS mode
+                execArgv: isTS ? ['--loader', 'ts-node/esm'] : []
+            });
+
+            worker.on('message', (msg) => {
+                if (msg.success) resolve(msg.pdfBuffer);
+                else reject(new Error(msg.error));
+            });
+            worker.on('error', reject);
+            worker.on('exit', (code) => {
+                if (code !== 0) reject(new Error(`Worker stopped with exit code ${code}`));
+            });
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
 
 async function finishGame(pin: string) {
     const game = games[pin];
@@ -2395,8 +2454,28 @@ async function finishGame(pin: string) {
             const groupRes = await query('SELECT name, teacher_id FROM groups WHERE id = $1', [game.groupId]);
             if (groupRes.rowCount && groupRes.rowCount > 0) {
                 const group = groupRes.rows[0];
-                const teacherRes = await query('SELECT telegram_chat_id FROM teachers WHERE id = $1', [group.teacher_id]);
-                const pdfBuffer = await generateQuizResultPDF(game.quiz, game.players, group.name);
+                const teacherRes = await query('SELECT name, telegram_chat_id FROM teachers WHERE id = $1', [group.teacher_id]);
+                const teacherName = teacherRes.rowCount && teacherRes.rowCount > 0 ? teacherRes.rows[0].name : 'Noma\'lum';
+
+                // Phase 2 & 4 Optimization: Offload PDF to Worker Thread
+                let pdfBuffer: Buffer;
+                try {
+                    pdfBuffer = await generatePDFInWorker(game.quiz, game.players, group.name, teacherName);
+                } catch (workerErr) {
+                    console.error('[finishGame] Worker PDF failed, falling back to main thread:', workerErr);
+                    pdfBuffer = await generateQuizResultPDF(game.quiz, game.players, group.name, teacherName);
+                }
+
+                // Phase 4: Save PDF to server storage
+                try {
+                    const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
+                    const filename = `Result_${sanitizedGroupName}_${Date.now()}.pdf`;
+                    const filePath = path.join(RESULTS_DIR, filename);
+                    fs.writeFileSync(filePath, pdfBuffer);
+                    console.log(`[finishGame] PDF saved to server storage: ${filePath}`);
+                } catch (saveErr) {
+                    console.error('[finishGame] Failed to save PDF to storage:', saveErr);
+                }
 
                 if (teacherRes.rowCount && teacherRes.rowCount > 0 && teacherRes.rows[0].telegram_chat_id) {
                     try {

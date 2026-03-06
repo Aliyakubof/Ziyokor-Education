@@ -16,9 +16,9 @@ async function listModels() {
         // In @google/generative-ai, we might need to use the REST API or another way.
 
         const modelsToTest = [
-            "gemini-2.5-flash",
+            "gemma-3-1b-it",
             "gemini-2.5-flash-lite",
-            "gemma-3-1b-it"
+            "gemini-2.5-flash"
         ];
         for (const modelName of modelsToTest) {
             console.log(`\nTesting model: ${modelName}`);
@@ -27,7 +27,7 @@ async function listModels() {
                 const result = await model.generateContent("Hi");
                 const response = await result.response;
                 console.log(`${modelName} Success:`, response.text());
-                break; // Stop if one works
+                // No break, let's test all of them
             } catch (err: any) {
                 console.log(`${modelName} Failed:`, err.message || err);
             }
