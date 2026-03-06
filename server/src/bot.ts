@@ -641,6 +641,53 @@ export async function notifyStudentSubscribers(studentId: string, message: strin
 }
 
 /**
+ * Battle Alert: Notify teacher groups about close battles or lead changes.
+ */
+export async function sendBattleAlert(battleId: string) {
+    try {
+        const battleRes = await query(`
+            SELECT 
+                b.id, b.score_a, b.score_b, b.group_a_id, b.group_b_id,
+                g1.name as group_a_name, g2.name as group_b_name,
+                t1.telegram_chat_id as chat_a, t2.telegram_chat_id as chat_b
+            FROM group_battles b
+            JOIN groups g1 ON b.group_a_id = g1.id
+            JOIN groups g2 ON b.group_b_id = g2.id
+            LEFT JOIN teachers t1 ON g1.teacher_id = t1.id
+            LEFT JOIN teachers t2 ON g2.teacher_id = t2.id
+            WHERE b.id = $1 AND b.status = 'active'
+        `, [battleId]);
+        if (!battleRes.rowCount || battleRes.rowCount === 0) return;
+
+        const b = battleRes.rows[0];
+        const total = b.score_a + b.score_b;
+        if (total < 200) return; // Not worth alerting yet
+
+        const gap = Math.abs(b.score_a - b.score_b);
+        const gapPct = total > 0 ? (gap / total) * 100 : 0;
+
+        // Only alert if it's a close race (within 10%)
+        if (gapPct > 10) return;
+
+        const leader = b.score_a >= b.score_b ? b.group_a_name : b.group_b_name;
+        const trailer = b.score_a >= b.score_b ? b.group_b_name : b.group_a_name;
+        const msg = `⚡ <b>Battle yangilanmoqda!</b>\n\n🏆 <b>${leader}</b> ozgina oldinda!\n🔥 <b>${trailer}</b> quvib yetmoqda!\n\nHar bir savol natijasi hisobga olinadi! 💪\n<i>Jarang + ${b.score_a.toLocaleString()} vs ${b.score_b.toLocaleString()} XP</i>`;
+
+        const chatIds = [b.chat_a, b.chat_b].filter(Boolean);
+        for (const chatId of chatIds) {
+            try {
+                await bot.telegram.sendMessage(chatId, msg, { parse_mode: 'HTML' });
+            } catch (e) {
+                // Ignore send errors for individual chats
+            }
+        }
+        console.log(`[Bot] Battle alert sent for battle ${battleId} (gap: ${gapPct.toFixed(1)}%)`);
+    } catch (err) {
+        console.error('[Bot] sendBattleAlert error:', err);
+    }
+}
+
+/**
  * Weekly Reports: Top 3 & Inactive Students
  */
 export async function sendWeeklyReports() {

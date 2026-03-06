@@ -14,11 +14,11 @@ import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { createClient } from 'redis';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { games, generatePin, generateStudentId, generateParentId, studentSockets } from './store';
+import { store, generatePin, generateStudentId, generateParentId } from './store';
 import { query } from './db';
 import { schema } from './schema';
 import { Player, Question } from './types';
-import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyReports } from './bot';
+import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyReports, sendBattleAlert } from './bot';
 import { generateQuizResultPDF } from './pdfGenerator';
 import { normalizeAnswer, checkAnswer, countCorrectParts } from './utils';
 import { checkAnswerWithAI } from './aiChecker';
@@ -903,6 +903,33 @@ app.get('/api/battles/current/:groupId', async (req, res) => {
     }
 });
 
+// Group Battle Rankings (for Leaderboard Battle tab)
+app.get('/api/battles/leaderboard', async (req, res) => {
+    try {
+        const result = await query(`
+            SELECT 
+                b.id, b.score_a, b.score_b, b.status, b.week_start,
+                g1.name as group_a_name, g1.level as level,
+                g2.name as group_b_name,
+                t1.name as teacher_a_name,
+                t2.name as teacher_b_name,
+                ABS(b.score_a - b.score_b) as gap
+            FROM group_battles b
+            JOIN groups g1 ON b.group_a_id = g1.id
+            JOIN groups g2 ON b.group_b_id = g2.id
+            LEFT JOIN teachers t1 ON g1.teacher_id = t1.id
+            LEFT JOIN teachers t2 ON g2.teacher_id = t2.id
+            WHERE b.status = 'active'
+            ORDER BY (b.score_a + b.score_b) DESC
+            LIMIT 20
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Battle leaderboard error:', err);
+        res.status(500).json({ error: 'Error fetching battle leaderboard' });
+    }
+});
+
 app.delete('/api/groups/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -1753,6 +1780,8 @@ async function bulkAwardRewards(players: { id: string, score: number }[]) {
                 const scoreB = battleUpdates.get(battle.group_b_id) || 0;
                 if (scoreA > 0) await query('UPDATE group_battles SET score_a = score_a + $1 WHERE id = $2', [scoreA, battle.id]);
                 if (scoreB > 0) await query('UPDATE group_battles SET score_b = score_b + $1 WHERE id = $2', [scoreB, battle.id]);
+                // Proactively alert teacher Telegram groups if the battle is close
+                sendBattleAlert(battle.id).catch(() => { }); // non-blocking
             }
         }
         console.log(`[Bulk Rewards] Successfully awarded ${validPlayers.length} players simultaneously.`);
@@ -1783,8 +1812,8 @@ function scrubPlayers(game: any) {
 const updateThrottles: Record<string, NodeJS.Timeout | null> = {};
 const pendingPlayerUpdates: Record<string, Set<string>> = {};
 
-function broadcastPlayerUpdate(pin: string, playerId?: string) {
-    const game = games[pin];
+async function broadcastPlayerUpdate(pin: string, playerId?: string) {
+    const game = await store.getGame(pin);
     if (!game || !game.hostId || game.hostId === 'system') return;
 
     if (game.isUnitQuiz) {
@@ -1802,8 +1831,8 @@ function broadcastPlayerUpdate(pin: string, playerId?: string) {
         if (updateThrottles[pin]) return;
 
         // Schedule an update in 1 second (Faster feedback)
-        updateThrottles[pin] = setTimeout(() => {
-            const currentGame = games[pin];
+        updateThrottles[pin] = setTimeout(async () => {
+            const currentGame = await store.getGame(pin);
             if (currentGame) {
                 const updates = pendingPlayerUpdates[pin];
                 const cleanPlayers = scrubPlayers(currentGame);
@@ -1839,15 +1868,16 @@ io.on('connection', (socket) => {
                 return;
             }
             const quiz = result.rows[0];
-            const pin = generatePin();
-            games[pin] = {
+            const pin = await generatePin();
+            const game = {
                 pin,
                 quiz,
                 hostId: socket.id,
                 players: [],
-                status: 'LOBBY',
+                status: 'LOBBY' as 'LOBBY',
                 currentQuestionIndex: -1
             };
+            await store.setGame(pin, game);
             socket.join(pin);
             socket.emit('game-created', pin);
             console.log(`Game created: ${pin}`);
@@ -1865,17 +1895,18 @@ io.on('connection', (socket) => {
                 return;
             }
             const quiz = result.rows[0];
-            const pin = generatePin();
-            games[pin] = {
+            const pin = await generatePin();
+            const game = {
                 pin,
                 quiz,
                 hostId: socket.id,
                 players: [],
-                status: 'LOBBY',
+                status: 'LOBBY' as 'LOBBY',
                 currentQuestionIndex: -1,
                 isUnitQuiz: true,
                 groupId
             };
+            await store.setGame(pin, game);
             socket.join(pin);
             socket.emit('game-created', pin);
             console.log(`Unit Game created: ${pin} for group ${groupId}`);
@@ -1885,21 +1916,24 @@ io.on('connection', (socket) => {
     });
 
     // Helper: Mark player offline on disconnect
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
         const pin = (socket as any).pin;
-        if (pin && games[pin]) {
-            const game = games[pin];
-            const player = game.players.find(p => p.id === socket.id || p.id === (socket as any).studentId);
-            if (player) {
-                player.status = 'Offline';
-                broadcastPlayerUpdate(pin, player.id);
+        if (pin) {
+            const game = await store.getGame(pin);
+            if (game) {
+                const player = game.players.find((p: any) => p.id === socket.id || p.id === (socket as any).studentId);
+                if (player) {
+                    player.status = 'Offline';
+                    await store.setGame(pin, game);
+                    await broadcastPlayerUpdate(pin, player.id);
+                }
             }
         }
     });
 
     // Player: Join Game (Normal)
-    socket.on('player-join', ({ pin, name }: { pin: string, name: string }) => {
-        const game = games[pin];
+    socket.on('player-join', async ({ pin, name }: { pin: string, name: string }) => {
+        const game = await store.getGame(pin);
         if (!game) {
             socket.emit('error', 'Game not found');
             return;
@@ -1917,6 +1951,7 @@ io.on('connection', (socket) => {
             status: 'Online'
         };
         game.players.push(player);
+        await store.setGame(pin, game);
         socket.join(pin);
         (socket as any).pin = pin;
 
@@ -1927,7 +1962,7 @@ io.on('connection', (socket) => {
     // Student: Join Unit Game (via 7-digit ID)
     socket.on('student-join', async ({ pin, studentId }: { pin: string, studentId: string }) => {
         try {
-            const game = games[pin];
+            const game = await store.getGame(pin);
             if (!game) {
                 socket.emit('error', 'Game not found');
                 return;
@@ -1947,9 +1982,9 @@ io.on('connection', (socket) => {
 
             (socket as any).studentId = studentId;
             (socket as any).pin = pin;
-            studentSockets[studentId] = socket.id;
+            await store.setSocket(studentId, socket.id);
 
-            let player = game.players.find(p => p.id === studentId);
+            let player = game.players.find((p: any) => p.id === studentId);
             if (player) {
                 if (player.status !== 'Cheating') {
                     player.status = 'Online';
@@ -1965,11 +2000,12 @@ io.on('connection', (socket) => {
                 game.players.push(player);
             }
 
+            await store.setGame(pin, game);
             socket.join(pin);
             socket.emit('joined', { name: student.name, pin });
 
             if (game.hostId && game.hostId !== 'system') {
-                broadcastPlayerUpdate(pin);
+                await broadcastPlayerUpdate(pin);
             }
 
             if (game.status === 'ACTIVE') {
@@ -1994,11 +2030,11 @@ io.on('connection', (socket) => {
     });
 
     // Student: Status Update (Anti-Cheat)
-    socket.on('student-status-update', ({ pin, studentId, status }: { pin: string, studentId: string, status: 'Online' | 'Offline' | 'Cheating' }) => {
-        const game = games[pin];
+    socket.on('student-status-update', async ({ pin, studentId, status }: { pin: string, studentId: string, status: 'Online' | 'Offline' | 'Cheating' }) => {
+        const game = await store.getGame(pin);
         if (!game) return;
 
-        const player = game.players.find(p => p.id === studentId || p.id === socket.id);
+        const player = game.players.find((p: any) => p.id === studentId || p.id === socket.id);
         if (player) {
             if (status === 'Cheating') {
                 player.isCheater = true;
@@ -2006,13 +2042,14 @@ io.on('connection', (socket) => {
             }
             if (player.status === 'Cheating' && status === 'Online') return;
             player.status = status;
-            broadcastPlayerUpdate(pin, player.id);
+            await store.setGame(pin, game);
+            await broadcastPlayerUpdate(pin, player.id);
         }
     });
 
     // Host: Start Game
-    socket.on('host-start-game', ({ pin, timeLimit }: { pin: string, timeLimit: number }) => {
-        const game = games[pin];
+    socket.on('host-start-game', async ({ pin, timeLimit }: { pin: string, timeLimit: number }) => {
+        const game = await store.getGame(pin);
         if (!game || game.hostId !== socket.id) return;
 
         game.status = 'ACTIVE';
@@ -2030,10 +2067,11 @@ io.on('connection', (socket) => {
         const endTime = Date.now() + durationMinutes * 60 * 1000;
         game.endTime = endTime;
 
+        await store.setGame(pin, game);
         io.to(pin).emit('game-started', { endTime, title: game.quiz.title });
 
         if (game.isUnitQuiz) {
-            const questionsForStudents = game.quiz.questions.map((q, idx) => ({
+            const questionsForStudents = (game.quiz.questions as any[]).map((q, idx) => ({
                 info: q.info,
                 text: q.text,
                 options: q.options,
@@ -2044,36 +2082,39 @@ io.on('connection', (socket) => {
             }));
             io.to(pin).emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
         } else {
-            sendQuestion(pin);
+            await sendQuestion(pin);
         }
     });
 
     // Host: Next Question
-    socket.on('host-next-question', (pin: string) => {
-        const game = games[pin];
+    socket.on('host-next-question', async (pin: string) => {
+        const game = await store.getGame(pin);
         if (!game || game.hostId !== socket.id) return;
 
         game.currentQuestionIndex++;
         if (game.currentQuestionIndex >= game.quiz.questions.length) {
-            finishGame(pin);
+            await store.setGame(pin, game);
+            await finishGame(pin);
         } else {
-            sendQuestion(pin);
+            await store.setGame(pin, game);
+            await sendQuestion(pin);
         }
     });
 
     // Host: End Game Early
-    socket.on('host-end-game', (pin: string) => {
-        const game = games[pin];
+    socket.on('host-end-game', async (pin: string) => {
+        const game = await store.getGame(pin);
         if (!game || game.hostId !== socket.id) return;
-        finishGame(pin);
+        await finishGame(pin);
     });
 
     // Host: Get Game Status
-    socket.on('host-get-status', (pin: string) => {
-        const game = games[pin];
+    socket.on('host-get-status', async (pin: string) => {
+        const game = await store.getGame(pin);
         if (!game) return;
 
         game.hostId = socket.id;
+        await store.setGame(pin, game);
         socket.join(pin);
 
         if (game.status === 'ACTIVE') {
@@ -2099,13 +2140,13 @@ io.on('connection', (socket) => {
                     totalQuestions: game.quiz.questions.length
                 });
             }
-            broadcastPlayerUpdate(pin);
+            await broadcastPlayerUpdate(pin);
         }
     });
 
     // Player: Get Game Status
-    socket.on('player-get-status', ({ pin, studentId }: { pin: string, studentId?: string }) => {
-        const game = games[pin];
+    socket.on('player-get-status', async ({ pin, studentId }: { pin: string, studentId?: string }) => {
+        const game = await store.getGame(pin);
         if (!game) return;
 
         socket.join(pin);
@@ -2113,12 +2154,13 @@ io.on('connection', (socket) => {
 
         if (studentId) {
             (socket as any).studentId = studentId;
-            const player = game.players.find(p => p.id === studentId);
+            const player = game.players.find((p: any) => p.id === studentId);
             if (player) {
                 if (player.status !== 'Cheating') {
                     player.status = 'Online';
                 }
-                broadcastPlayerUpdate(game.pin, player.id);
+                await store.setGame(pin, game);
+                await broadcastPlayerUpdate(game.pin, player.id);
             }
         }
 
@@ -2147,15 +2189,16 @@ io.on('connection', (socket) => {
     });
 
     // Student: Finalize Unit Quiz
-    socket.on('unit-player-finish', ({ pin }: { pin: string }) => {
-        const game = games[pin];
+    socket.on('unit-player-finish', async ({ pin }: { pin: string }) => {
+        const game = await store.getGame(pin);
         if (!game || !game.isUnitQuiz || game.status !== 'ACTIVE') return;
 
         const playerId = (socket as any).studentId || socket.id;
-        const player = game.players.find(p => p.id === playerId);
+        const player = game.players.find((p: any) => p.id === playerId);
         if (!player) return;
 
         (player as any).isFinished = true;
+        await store.setGame(pin, game);
 
         const correctAnswers = (game.quiz.questions as any[]).map(q => ({
             type: q.type,
@@ -2163,21 +2206,21 @@ io.on('connection', (socket) => {
             acceptedAnswers: q.acceptedAnswers
         }));
 
-        broadcastPlayerUpdate(pin, player.id);
+        await broadcastPlayerUpdate(pin, player.id);
         const aiFeedbackMap = (player as any).aiFeedbackMap || {};
         socket.emit('unit-finished', { score: player.score, correctAnswers, aiFeedbackMap });
     });
 
     // Student: Register socket (for Duel Lobby presence)
-    socket.on('student-register', ({ studentId }: { studentId: string }) => {
+    socket.on('student-register', async ({ studentId }: { studentId: string }) => {
         (socket as any).studentId = studentId;
-        studentSockets[studentId] = socket.id;
+        await store.setSocket(studentId, socket.id);
         console.log(`[Register] Student ${studentId} registered with socket ${socket.id}`);
     });
 
     // Duel: Invitation
     socket.on('duel-invite', async ({ targetStudentId, studentName }: { targetStudentId: string, studentName: string }) => {
-        const targetSocketId = studentSockets[targetStudentId];
+        const targetSocketId = await store.getSocket(targetStudentId);
         if (targetSocketId) {
             io.to(targetSocketId).emit('duel-invited', { fromId: (socket as any).studentId, fromName: studentName });
             console.log(`[Duel] Invitation from ${studentName} to ${targetStudentId}`);
@@ -2187,7 +2230,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('duel-accept', async ({ fromId }: { fromId: string }) => {
-        const fromSocketId = studentSockets[fromId];
+        const fromSocketId = await store.getSocket(fromId);
         const studentId = (socket as any).studentId;
         if (!fromSocketId || !studentId) return;
 
@@ -2208,20 +2251,21 @@ io.on('connection', (socket) => {
                 [duelId, fromId, studentId, quizId, 'active']
             );
 
-            const pin = generatePin();
+            const pin = await generatePin();
             const fullQuiz = (await query('SELECT * FROM unit_quizzes WHERE id = $1', [quizId])).rows[0];
 
-            games[pin] = {
+            const game = {
                 pin,
                 quiz: fullQuiz,
                 hostId: 'system',
                 players: [],
-                status: 'ACTIVE',
+                status: 'ACTIVE' as 'ACTIVE',
                 currentQuestionIndex: 0,
                 isUnitQuiz: true,
                 isDuel: true,
                 duelId
             };
+            await store.setGame(pin, game);
 
             io.to(socket.id).emit('duel-started', { pin, duelId });
             io.to(fromSocketId).emit('duel-started', { pin, duelId });
@@ -2232,11 +2276,11 @@ io.on('connection', (socket) => {
 
     // Player/Student: Submit Answer
     socket.on('player-answer', async ({ pin, answer, questionIndex }: { pin: string, answer: string | number, questionIndex?: number }, callback?: (res: { success: boolean, error?: string }) => void) => {
-        const game = games[pin];
+        const game = await store.getGame(pin);
         if (!game || game.status !== 'ACTIVE') return;
 
         const playerId = (socket as any).studentId || socket.id;
-        const player = game.players.find(p => p.id === playerId);
+        const player = game.players.find((p: any) => p.id === playerId);
         if (!player) return;
 
         const qIdx = game.isUnitQuiz && questionIndex !== undefined ? questionIndex : game.currentQuestionIndex;
@@ -2270,12 +2314,14 @@ io.on('connection', (socket) => {
         player.score = player.score - prevPartialScore + currentScore;
         (player as any).partialScoreMap[qIdx] = currentScore;
 
+        await store.setGame(pin, game);
+
         // Immediate acknowledgment for the student
         if (callback) callback({ success: true });
 
         // Optimistic Status Update: Notify host IMMEDIATELY that progress changed
         if (game.isUnitQuiz) {
-            broadcastPlayerUpdate(pin, player.id);
+            await broadcastPlayerUpdate(pin, player.id);
         }
 
         // Background AI check (Async, don't block the initial broadcast or acknowledgement)
@@ -2283,15 +2329,26 @@ io.on('connection', (socket) => {
             (async () => {
                 try {
                     const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
-                    (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
-                    (player as any).aiFeedbackMap[qIdx] = aiResult.feedback;
+                    // Fetch fresh game state as it might have changed
+                    const freshGame = await store.getGame(pin);
+                    if (!freshGame) return;
+                    const freshPlayer = freshGame.players.find((p: any) => p.id === playerId);
+                    if (!freshPlayer) return;
+
+                    (freshPlayer as any).aiFeedbackMap = (freshPlayer as any).aiFeedbackMap || {};
+                    (freshPlayer as any).aiFeedbackMap[qIdx] = aiResult.feedback;
 
                     if (aiResult.isCorrect) {
                         // If it improved score, update and broadcast again
-                        player.score = player.score - (player as any).partialScoreMap[qIdx] + 1;
-                        (player as any).partialScoreMap[qIdx] = 1;
-                        broadcastPlayerUpdate(pin, player.id);
+                        if (!(freshPlayer as any).partialScoreMap) (freshPlayer as any).partialScoreMap = {};
+                        const currentPartial = (freshPlayer as any).partialScoreMap[qIdx] || 0;
+                        if (currentPartial === 0) {
+                            freshPlayer.score = freshPlayer.score + 1;
+                            (freshPlayer as any).partialScoreMap[qIdx] = 1;
+                        }
                     }
+                    await store.setGame(pin, freshGame);
+                    await broadcastPlayerUpdate(pin, freshPlayer.id);
                 } catch (aiErr) {
                     console.error('[player-answer] Background AI check failed:', aiErr);
                 }
@@ -2304,15 +2361,13 @@ io.on('connection', (socket) => {
             const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
             io.to(game.hostId).emit('answers-count', answeredCount);
         }
-
-        if (callback) callback({ success: true });
     });
     socket.on('player-sync-answers', async ({ pin, answers }: { pin: string, answers: Record<string, string | number> }, callback?: (res: { success: boolean, error?: string }) => void) => {
-        const game = games[pin];
+        const game = await store.getGame(pin);
         if (!game || game.status !== 'ACTIVE') return;
 
         const playerId = (socket as any).studentId || socket.id;
-        const player = game.players.find(p => p.id === playerId);
+        const player = game.players.find((p: any) => p.id === playerId);
         if (!player) return;
 
         let hasUpdates = false;
@@ -2340,13 +2395,24 @@ io.on('connection', (socket) => {
                         (async () => {
                             try {
                                 const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
-                                (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
-                                (player as any).aiFeedbackMap[qIdx] = aiResult.feedback;
+
+                                const freshGame = await store.getGame(pin);
+                                if (!freshGame) return;
+                                const freshPlayer = freshGame.players.find((p: any) => p.id === playerId);
+                                if (!freshPlayer) return;
+
+                                (freshPlayer as any).aiFeedbackMap = (freshPlayer as any).aiFeedbackMap || {};
+                                (freshPlayer as any).aiFeedbackMap[qIdx] = aiResult.feedback;
                                 if (aiResult.isCorrect) {
-                                    player.score += 1;
-                                    (player as any).partialScoreMap[qIdx] = 1;
-                                    broadcastPlayerUpdate(pin, player.id);
+                                    if (!(freshPlayer as any).partialScoreMap) (freshPlayer as any).partialScoreMap = {};
+                                    const currentPartial = (freshPlayer as any).partialScoreMap[qIdx] || 0;
+                                    if (currentPartial === 0) {
+                                        freshPlayer.score += 1;
+                                        (freshPlayer as any).partialScoreMap[qIdx] = 1;
+                                    }
                                 }
+                                await store.setGame(pin, freshGame);
+                                await broadcastPlayerUpdate(pin, freshPlayer.id);
                             } catch (err) {
                                 console.error('[player-sync-answers] Background AI check failed:', err);
                             }
@@ -2360,7 +2426,7 @@ io.on('connection', (socket) => {
                 }
 
                 player.answers[qIdx] = answer;
-                player.score += currentScore;
+                player.score = (player.score || 0) + currentScore;
                 (player as any).partialScoreMap[qIdx] = currentScore;
                 hasUpdates = true;
             }
@@ -2368,13 +2434,15 @@ io.on('connection', (socket) => {
 
         if (hasUpdates) {
             console.log(`[player-sync-answers] Synced answers for ${player.name}. Total answers: ${Object.keys(player.answers).length}`);
+            await store.setGame(pin, game);
             if (game.isUnitQuiz) {
-                broadcastPlayerUpdate(pin, player.id);
+                await broadcastPlayerUpdate(pin, player.id);
             } else {
                 const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
                 io.to(game.hostId).emit('answers-count', answeredCount);
             }
         }
+
         if (callback) callback({ success: true });
     });
 });
@@ -2409,10 +2477,11 @@ function generatePDFInWorker(quiz: any, players: any, groupName: string, teacher
 }
 
 async function finishGame(pin: string) {
-    const game = games[pin];
+    const game = await store.getGame(pin);
     if (!game) return;
 
     game.status = 'FINISHED';
+    await store.setGame(pin, game);
     const leaderboard = [...game.players].sort((a, b) => b.score - a.score);
     io.to(pin).emit('game-over', leaderboard);
 
@@ -2424,13 +2493,13 @@ async function finishGame(pin: string) {
         }));
 
         // Send individual results to all players still in the room
-        game.players.forEach(p => {
-            const playerSocketId = studentSockets[p.id];
+        for (const p of game.players) {
+            const playerSocketId = await store.getSocket(p.id);
             if (playerSocketId) {
                 const aiFeedbackMap = (p as any).aiFeedbackMap || {};
                 io.to(playerSocketId).emit('unit-finished', { score: p.score, correctAnswers, aiFeedbackMap });
             }
-        });
+        }
     }
 
     if (game.isDuel && game.duelId) {
@@ -2543,8 +2612,10 @@ async function finishGame(pin: string) {
     }
 }
 
-function sendQuestion(pin: string) {
-    const game = games[pin];
+async function sendQuestion(pin: string) {
+    const game = await store.getGame(pin);
+    if (!game) return;
+
     const question = game.quiz.questions[game.currentQuestionIndex];
     const timeLimit = game.timePerQuestion || question.timeLimit || 20;
 

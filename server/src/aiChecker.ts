@@ -24,7 +24,12 @@ export async function checkAnswerWithAI(
     const apiKey = process.env.GEMINI_API_KEY || "";
     if (!apiKey) {
         console.error("GEMINI_API_KEY is not set");
-        return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "AI checking is currently unavailable." };
+        return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "AI tekshiruv vaqtincha mavjud emas." };
+    }
+
+    // Fail-fast for empty answers
+    if (!studentAnswer || studentAnswer.trim().length < 2) {
+        return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "Javob bo'sh yoki juda qisqa." };
     }
 
     const MAX_RETRIES = 3;
@@ -37,30 +42,24 @@ export async function checkAnswerWithAI(
             const modelName = process.env.GEMINI_MODEL || "gemma-3-1b-it";
             const model = genAI.getGenerativeModel({ model: modelName });
 
-            const prompt = `
-                Siz tajribali, adolatli va til qoidalariga e'tiborli ustozsiz.
-                Vazifangiz: Berilgan savolga o'quvchi tomonidan yozilgan javobni tekshirish.
+            const prompt = `Siz tajribali o'zbek tili va ingliz tili o'qituvchisisiz. Berilgan savolga o'quvchi javobini baholang.
 
-                Baho berish mezonlari:
-                1. Faktologik aniqlik (Mantiq): O'quvchining javobi savolga mantiqan va ilmiy tarafdan to'g'ri javob beryaptimi (orqadagi ma'no to'g'ri bo'lishi muhim)?
-                2. Grammatika va imlo: Javob imlo va grammatik qoidalarga mos (juda ko'p xatolarsiz) tushunarli yozilganmi?
+MUHIM QOIDALAR:
+1. Javobning MA'NO va MAZMUNI asosiy mezon. Imlo xatolari yoki grammatik kamchiliklar YAGONA sabab bo'lib, javobni noto'g'ri deb hisoblash mumkin emas.
+2. Javob o'zbek, rus yoki ingliz tilida bo'lishi mumkin - bu normaldur.
+3. Agar javob savolning asosiy ma'nosiga mos kelsa va tushunish mumkin bo'lsa, u TO'G'RI.
+4. Faqat savol bilan mutlaqo bog'liq bo'lmagan yoki noto'g'ri ma'noli javobni noto'g'ri deb belgilang.
+5. To'liq emas, lekin to'g'ri yo'naltirilgan javobga contentScore 50-80 bering.
 
-                Savol: "${question}"
-                O'quvchining javobi: "${studentAnswer}"
-                Savol turi: "${questionType}"
+Savol turi: "${questionType}"
+Savol: "${question}"
+O'quvchi javobi: "${studentAnswer}"
 
-                Natijani faqat quyidagi qat'iy JSON formatida qaytaring:
-                {
-                  "isCorrect": boolean,
-                  "grammarScore": number,
-                  "contentScore": number,
-                  "feedback": "string"
-                }
-            `;
+Faqat quyidagi JSON formatida javob bering (boshqa hech narsa yozmang):
+{"isCorrect": boolean, "grammarScore": number (0-100), "contentScore": number (0-100), "feedback": "O'zbekcha qisqa izoh"}`;
 
             console.log(`[AI Check] Request for: "${studentAnswer.substring(0, 30)}..." (Attempt ${attempt})`);
 
-            // AI call with a manual timeout via Promise.race
             const aiPromise = model.generateContent(prompt);
             const timeoutPromise = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error("AI_TIMEOUT")), 15000)
@@ -72,17 +71,16 @@ export async function checkAnswerWithAI(
 
             console.log(`[AI Check] Raw response: ${text}`);
 
-            // Clean up text if AI wrapped it in markdown
             text = text.replace(/```json/g, "").replace(/```/g, "").trim();
             const jsonMatch = text.match(/\{[\s\S]*\}/);
 
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
-                console.log(`[AI Check] Parsed Result: ${parsed.isCorrect ? 'Correct' : 'Incorrect'}`);
+                console.log(`[AI Check] Parsed Result: ${parsed.isCorrect ? 'Correct' : 'Incorrect'} (content: ${parsed.contentScore})`);
                 return {
                     isCorrect: !!parsed.isCorrect,
-                    grammarScore: Number(parsed.grammarScore) || 0,
-                    contentScore: Number(parsed.contentScore) || 0,
+                    grammarScore: Math.min(100, Math.max(0, Number(parsed.grammarScore) || 0)),
+                    contentScore: Math.min(100, Math.max(0, Number(parsed.contentScore) || 0)),
                     feedback: String(parsed.feedback || "")
                 };
             }
@@ -98,13 +96,13 @@ export async function checkAnswerWithAI(
                     feedback: "Javobni tekshirishda xatolik yuz berdi. Iltimos keyinroq urinib ko'ring."
                 };
             }
-            // Wait before retry (exponential backoff)
             await new Promise(r => setTimeout(r, 1000 * attempt));
         }
     }
 
     return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "Javobni tekshirishda xatolik." };
 }
+
 
 export interface VocabQuestion {
     text: string;
