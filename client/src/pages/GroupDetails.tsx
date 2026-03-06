@@ -57,6 +57,14 @@ const GroupDetails = () => {
     const [targetGroups, setTargetGroups] = useState<any[]>([]);
     const [targetGroupId, setTargetGroupId] = useState('');
 
+    // Edit Student State
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editPhone, setEditPhone] = useState('');
+    const [editParentName, setEditParentName] = useState('');
+    const [editParentPhone, setEditParentPhone] = useState('');
+
     useEffect(() => {
         if (groupId) {
             fetchStudents();
@@ -164,6 +172,46 @@ const GroupDetails = () => {
             }
         } catch (err) {
             console.error('Error moving student:', err);
+        }
+    };
+
+    const openEditModal = (student: Student) => {
+        setEditingStudent(student);
+        setEditName(student.name);
+        setEditPhone(student.phone || '');
+        setEditParentName(student.parent_name || '');
+        setEditParentPhone(student.parent_phone || '');
+        setIsEditModalOpen(true);
+    };
+
+    const handleEditStudent = async () => {
+        if (!editingStudent) return;
+        if (!editName || !editPhone || !editParentName || !editParentPhone) {
+            alert("Iltimos, barcha maydonlarni to'ldiring!");
+            return;
+        }
+
+        try {
+            const res = await apiFetch(`/api/students/${editingStudent.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: editName,
+                    phone: editPhone,
+                    parent_name: editParentName,
+                    parent_phone: editParentPhone
+                })
+            });
+
+            if (res.ok) {
+                setIsEditModalOpen(false);
+                fetchStudents();
+                alert("O'quvchi ma'lumotlari yangilandi!");
+            } else {
+                alert("Xatolik yuz berdi");
+            }
+        } catch (err) {
+            console.error('Error editing student:', err);
         }
     };
 
@@ -399,7 +447,7 @@ const GroupDetails = () => {
                                                         <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">O'quvchi</th>
                                                         <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Bog'lanish</th>
                                                         <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Holat / Tarix</th>
-                                                        {role === 'admin' && <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Amallar</th>}
+                                                        <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Amallar</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
@@ -471,24 +519,33 @@ const GroupDetails = () => {
                                                                     )}
                                                                 </div>
                                                             </td>
-                                                            {role === 'admin' && (
-                                                                <td className="p-4 text-right">
-                                                                    <div className="flex justify-end gap-2">
+                                                            <td className="p-4 text-right">
+                                                                <div className="flex justify-end gap-2">
+                                                                    <button
+                                                                        onClick={() => openEditModal(student)}
+                                                                        className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+                                                                        title="Tahrirlash"
+                                                                    >
+                                                                        <FileText size={16} />
+                                                                    </button>
+                                                                    {role === 'admin' && (
                                                                         <button
                                                                             onClick={() => openMoveModal(student)}
                                                                             className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
                                                                         >
                                                                             <Send size={16} />
                                                                         </button>
+                                                                    )}
+                                                                    {role === 'admin' && (
                                                                         <button
                                                                             onClick={() => handleDeleteStudent(student.id)}
                                                                             className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
                                                                         >
                                                                             <Trash2 size={16} />
                                                                         </button>
-                                                                    </div>
-                                                                </td>
-                                                            )}
+                                                                    )}
+                                                                </div>
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -510,6 +567,13 @@ const GroupDetails = () => {
                                                                 className="p-2 bg-white text-slate-400 rounded-lg border border-slate-100 shadow-sm"
                                                             >
                                                                 <Clock size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => openEditModal(student)}
+                                                                className="p-2 text-indigo-500 bg-white border border-indigo-100 rounded-lg shadow-sm"
+                                                                title="Tahrirlash"
+                                                            >
+                                                                <FileText size={16} />
                                                             </button>
                                                             {role === 'admin' && (
                                                                 <>
@@ -954,7 +1018,84 @@ const GroupDetails = () => {
                     </div>
                 )
             }
-        </div >
+            {/* Edit Student Modal */}
+            {
+                isEditModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-slate-800">O'quvchini tahrirlash</h3>
+                                <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-sm font-bold text-slate-700 block mb-1">F.I.SH</label>
+                                    <input
+                                        type="text"
+                                        value={editName}
+                                        onChange={(e) => setEditName(e.target.value)}
+                                        placeholder="Ism Familiya Sharifi"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-bold text-slate-700 block mb-1">O'quvchi Raqami</label>
+                                    <input
+                                        type="tel"
+                                        value={editPhone}
+                                        onChange={(e) => setEditPhone(e.target.value)}
+                                        placeholder="+9989..."
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                    />
+                                </div>
+
+                                <hr className="border-slate-100 my-2" />
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Ota-ona ma'lumotlari</p>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-1">
+                                        <label className="text-sm font-bold text-slate-700 block mb-1">Kimligi</label>
+                                        <select
+                                            value={editParentName}
+                                            onChange={(e) => setEditParentName(e.target.value)}
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                        >
+                                            <option value="">Tanlang</option>
+                                            <option value="Otasi">Otasi</option>
+                                            <option value="Onasi">Onasi</option>
+                                            <option value="Buvisi">Buvisi</option>
+                                            <option value="Bobosi">Bobosi</option>
+                                            <option value="Akasi">Akasi</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="text-sm font-bold text-slate-700 block mb-1">Raqami</label>
+                                        <input
+                                            type="tel"
+                                            value={editParentPhone}
+                                            onChange={(e) => setEditParentPhone(e.target.value)}
+                                            placeholder="+9989..."
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleEditStudent}
+                                    className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-500/20"
+                                >
+                                    Saqlash
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </div>
     );
 };
 

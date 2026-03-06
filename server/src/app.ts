@@ -1027,6 +1027,27 @@ app.put('/api/students/:id/move', async (req, res) => {
     }
 });
 
+app.put('/api/students/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, phone, parent_name, parent_phone } = req.body;
+
+        const result = await query(
+            'UPDATE students SET name = $1, phone = $2, parent_name = $3, parent_phone = $4 WHERE id = $5 RETURNING *',
+            [name, phone, parent_name, parent_phone, id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error updating student:', err);
+        res.status(500).json({ error: 'Error updating student' });
+    }
+});
+
 // Student: Check ID & Login
 app.post('/api/student/check-id', async (req, res) => {
     try {
