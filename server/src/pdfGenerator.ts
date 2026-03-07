@@ -24,8 +24,13 @@ export const generateQuizResultPDF = (
 
         const path = require('path');
         const fs = require('fs');
-        const regularFontPath = path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf');
-        const boldFontPath = path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf');
+        const regularFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf'))
+            ? path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf')
+            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Regular.ttf');
+
+        const boldFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf'))
+            ? path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf')
+            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Bold.ttf');
 
         const hasRegular = fs.existsSync(regularFontPath);
         const hasBold = fs.existsSync(boldFontPath);
@@ -110,9 +115,9 @@ export const generateQuizResultPDF = (
             doc.font(fontRegular);
 
             // Player Detail Header
-            doc.fontSize(18).font('CustomBold').text('Batafsil natijalar:', { align: 'left' });
+            doc.fontSize(18).font(fontBold).text('Batafsil natijalar:', { align: 'left' });
             doc.fontSize(14).fillColor('#4f46e5').text(player.name);
-            doc.fillColor('black').fontSize(12).font('CustomRegular').text(`Umumiy ball: ${player.score}`);
+            doc.fillColor('black').fontSize(12).font(fontRegular).text(`Umumiy ball: ${player.score}`);
             doc.moveDown();
 
             let actualQIdx = 1;
@@ -157,7 +162,7 @@ export const generateQuizResultPDF = (
                 // Check for page overflow
                 if (doc.y > 650) {
                     doc.addPage();
-                    doc.font('CustomRegular');
+                    doc.font(fontRegular);
                 }
 
                 doc.fontSize(11).font(fontBold).text(`${actualQIdx}. ${q.text}`);

@@ -21,7 +21,7 @@ import { Player, Question } from './types';
 import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyReports, sendBattleAlert } from './bot';
 import { generateQuizResultPDF } from './pdfGenerator';
 import { normalizeAnswer, checkAnswer, countCorrectParts } from './utils';
-import { checkAnswerWithAI } from './aiChecker';
+import { checkAnswerWithAI, checkAnswersWithAIBatch } from './aiChecker';
 import { startCronJobs } from './cron';
 import { Worker } from 'worker_threads';
 import path from 'path';
@@ -95,6 +95,31 @@ Promise.all([pubClient.connect(), subClient.connect()])
 
 const ADMIN_ID = '00000000-0000-0000-0000-000000000000';
 const MANAGER_ID = '00000000-0000-0000-0000-000000000001';
+
+// Simple role-based auth middleware using request headers
+// Client sends: { 'x-user-role': 'admin', 'x-user-phone': '...' }
+function requireRole(...roles: string[]) {
+    return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+        const role = req.headers['x-user-role'] as string;
+        const phone = String(req.headers['x-user-phone'] || '').replace(/\D/g, '');
+
+        if (!role || !roles.includes(role)) {
+            return res.status(403).json({ error: 'Ruxsat yo\'q (Insufficient permissions)' });
+        }
+
+        // Verify caller is actually admin or manager by comparing phone
+        if (role === 'admin') {
+            const adminPhone = (process.env.ADMIN_PHONE || '998901234567').replace(/\D/g, '');
+            if (phone !== adminPhone) return res.status(403).json({ error: 'Ruxsat yo\'q' });
+        }
+        if (role === 'manager') {
+            const managerPhone = (process.env.MANAGER_PHONE || '998947212531').replace(/\D/g, '');
+            if (phone !== managerPhone) return res.status(403).json({ error: 'Ruxsat yo\'q' });
+        }
+
+        next();
+    };
+}
 
 // Database Initialization
 async function initDb() {
@@ -199,9 +224,12 @@ async function ensureAdminExists() {
     try {
         const res = await query('SELECT * FROM teachers WHERE id = $1', [ADMIN_ID]);
         if (res.rowCount === 0) {
+            const adminPhone = process.env.ADMIN_PHONE || '998901234567';
+            const adminPassword = process.env.ADMIN_PASSWORD || '4567';
+            const hashedPassword = await bcrypt.hash(adminPassword, 10);
             await query(
                 'INSERT INTO teachers (id, name, phone, password) VALUES ($1, $2, $3, $4)',
-                [ADMIN_ID, 'Admin', '998901234567', '4567']
+                [ADMIN_ID, 'Admin', adminPhone, hashedPassword]
             );
             console.log('Admin teacher record created');
         }
@@ -214,9 +242,12 @@ async function ensureManagerExists() {
     try {
         const res = await query('SELECT * FROM teachers WHERE id = $1', [MANAGER_ID]);
         if (res.rowCount === 0) {
+            const managerPhone = process.env.MANAGER_PHONE || '998947212531';
+            const managerPassword = process.env.MANAGER_PASSWORD || '2531';
+            const hashedPassword = await bcrypt.hash(managerPassword, 10);
             await query(
                 'INSERT INTO teachers (id, name, phone, password) VALUES ($1, $2, $3, $4)',
-                [MANAGER_ID, 'Menejer', '998947212531', '2531']
+                [MANAGER_ID, 'Menejer', managerPhone, hashedPassword]
             );
             console.log('Manager record created in teachers table');
         }
@@ -245,24 +276,29 @@ app.post('/api/login', async (req, res) => {
     const { phone: rawPhone, password } = req.body;
     const phone = String(rawPhone || '').replace(/\D/g, '');
 
-    // Hardcoded Admin
-    if (phone === '998901234567' && password === '4567') {
+    const adminPhone = (process.env.ADMIN_PHONE || '998901234567').replace(/\D/g, '');
+    const adminPassword = process.env.ADMIN_PASSWORD || '';
+    const managerPhone = (process.env.MANAGER_PHONE || '998947212531').replace(/\D/g, '');
+    const managerPassword = process.env.MANAGER_PASSWORD || '';
+
+    // Admin Login (from env)
+    if (phone === adminPhone && password === adminPassword) {
         return res.json({
-            user: { id: ADMIN_ID, name: 'Admin', phone: '998901234567' },
+            user: { id: ADMIN_ID, name: 'Admin', phone: adminPhone },
             role: 'admin'
         });
     }
 
-    // Hardcoded Manager
-    if (phone === '998947212531' && password === '2531') {
+    // Manager Login (from env)
+    if (phone === managerPhone && password === managerPassword) {
         return res.json({
             token: 'mock-manager-token',
-            user: { id: MANAGER_ID, name: 'Menejer', phone: '998947212531' },
+            user: { id: MANAGER_ID, name: 'Menejer', phone: managerPhone },
             role: 'manager'
         });
     }
 
-    // Teacher Login from Database
+    // Teacher Login from Database (bcrypt only)
     try {
         const result = await query(
             'SELECT id, name, phone, password FROM teachers WHERE REPLACE(phone, \'+\', \'\') = $1',
@@ -271,11 +307,10 @@ app.post('/api/login', async (req, res) => {
 
         if (result.rowCount && result.rowCount > 0) {
             const teacher = result.rows[0];
-            const match = await bcrypt.compare(password, teacher.password);
+            // Only bcrypt comparison — no plaintext fallback (security fix)
+            const match = await bcrypt.compare(password, teacher.password).catch(() => false);
 
-            // Allow fallback if it's not hashed yet (before migration) or if perfectly matched
-            if (match || password === teacher.password) {
-                // Return teacher payload without password
+            if (match) {
                 const { password: _, ...teacherPayload } = teacher;
                 return res.json({
                     user: teacherPayload,
@@ -292,7 +327,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Admin: Teachers
-app.post('/api/admin/teachers', async (req, res) => {
+app.post('/api/admin/teachers', requireRole('admin'), async (req, res) => {
     try {
         const { name, phone, password } = req.body;
         // Use provided password or fallback to last 4 digits of phone
@@ -310,7 +345,7 @@ app.post('/api/admin/teachers', async (req, res) => {
     }
 });
 
-app.put('/api/admin/teachers/:id', async (req, res) => {
+app.put('/api/admin/teachers/:id', requireRole('admin'), async (req, res) => {
     try {
         const { name, phone, password } = req.body;
         const { id } = req.params;
@@ -332,7 +367,7 @@ app.put('/api/admin/teachers/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/admin/teachers/:id', async (req, res) => {
+app.delete('/api/admin/teachers/:id', requireRole('admin'), async (req, res) => {
     try {
         const { id } = req.params;
         await query('DELETE FROM teachers WHERE id = $1', [id]);
@@ -344,7 +379,7 @@ app.delete('/api/admin/teachers/:id', async (req, res) => {
 });
 
 // Manager Dashboard API Endpoints
-app.get('/api/manager/teachers', async (req, res) => {
+app.get('/api/manager/teachers', requireRole('admin', 'manager'), async (req, res) => {
     try {
         console.log('Manager teachers request received');
         const result = await query(`
@@ -494,55 +529,46 @@ app.get('/api/student/quizzes', async (req, res) => {
 
 app.post('/api/student/quiz/submit', async (req, res) => {
     try {
-        const { studentId, quizId, answers } = req.body; // answers is { [qIdx]: val }
+        const { studentId, quizId, answers } = req.body;
 
         const quizRes = await query('SELECT * FROM unit_quizzes WHERE id = $1', [quizId]);
         if (quizRes.rowCount === 0) return res.status(404).json({ error: 'Quiz not found' });
         const quiz = quizRes.rows[0];
         const questions = quiz.questions;
 
-        let score = 0;
-        const results = [];
+        let immediateScore = 0;
+        const results: any[] = [];
+        const aiCheckPending: { qIdx: number, text: string, studentAnswer: string, type: string }[] = [];
 
         for (let i = 0; i < questions.length; i++) {
             const q = questions[i];
-            const studentAns = answers[i];
-            const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite']; // word-box removed from strict textTypes
+            const studentAns = String(answers[i] || "");
+            const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite'];
 
             let isCorrect = false;
-            let aiResult = null;
             let currentScore = 0;
+            let isPending = false;
 
             if (q.type === 'matching' || q.type === 'word-box') {
                 const partsCorrect = countCorrectParts(studentAns, q.acceptedAnswers || []);
                 const totalParts = q.acceptedAnswers ? q.acceptedAnswers.length : 1;
-
-                // For partial scoring UI (1 pt per correct part instead of 100 for all)
                 currentScore = partsCorrect;
-                score += currentScore;
-
-                if (partsCorrect === totalParts && totalParts > 0) {
-                    isCorrect = true;
-                }
+                immediateScore += currentScore;
+                if (partsCorrect === totalParts && totalParts > 0) isCorrect = true;
             } else if (textTypes.includes(q.type)) {
-                if (checkAnswer(studentAns || "", q.acceptedAnswers || [])) {
+                if (checkAnswer(studentAns, q.acceptedAnswers || [])) {
                     isCorrect = true;
                     currentScore = 1;
-                    score += 1;
-                } else if (!isCorrect && studentAns) {
-                    // Try AI checking for potentially complex answers
-                    aiResult = await checkAnswerWithAI(q.text, studentAns, q.type);
-                    if (aiResult.isCorrect) {
-                        isCorrect = true;
-                        currentScore = 1;
-                        score += 1;
-                    }
+                    immediateScore += 1;
+                } else if (studentAns) {
+                    isPending = true;
+                    aiCheckPending.push({ qIdx: i, text: q.text, studentAnswer: studentAns, type: q.type });
                 }
             } else {
                 if (Number(studentAns) === q.correctIndex) {
                     isCorrect = true;
                     currentScore = 1;
-                    score += 1;
+                    immediateScore += 1;
                 }
             }
 
@@ -550,46 +576,13 @@ app.post('/api/student/quiz/submit', async (req, res) => {
                 question: q.text,
                 studentAnswer: studentAns,
                 isCorrect,
-                correctAnswer: q.type === 'multiple-choice' ? q.options[q.correctIndex] : q.acceptedAnswers?.[0],
-                feedback: aiResult?.feedback || (isCorrect ? "Barakalla! To'g'ri." : "Afsuski, noto'g'ri.")
+                score: currentScore,
+                feedback: isPending ? "AI tekshirmoqda..." : (isCorrect ? "Barakalla! To'g'ri." : "Afsuski, noto'g'ri."),
+                pending: isPending
             });
         }
 
-        // Award rewards
-        await awardRewards(studentId, score);
-
-        // Notify Teacher about Solo Quiz Result
-        try {
-            const teacherRes = await query(`
-                SELECT t.telegram_chat_id, s.name as student_name, g.name as group_name
-                FROM students s
-                JOIN groups g ON s.group_id = g.id
-                JOIN teachers t ON g.teacher_id = t.id
-                WHERE s.id = $1
-            `, [studentId]);
-
-            if (teacherRes.rows[0]?.telegram_chat_id) {
-                const { telegram_chat_id, student_name, group_name } = teacherRes.rows[0];
-
-                // Calculate max possible score:
-                let maxScore = 0;
-                questions.forEach((question: any) => {
-                    if (question.type === 'matching' || question.type === 'word-box') {
-                        maxScore += question.acceptedAnswers ? question.acceptedAnswers.length : 1;
-                    } else {
-                        maxScore += 1;
-                    }
-                });
-
-                const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-                const status = percentage > 59 ? "(O'tdi ✅)" : "(O'tmadi ❌)";
-                await notifyTeacher(telegram_chat_id, `🎯 <b>Mashq tugatildi!(Solo Mode) </b>\n👤 O'quvchi: ${student_name}\n🏫 Guruh: ${group_name}\n📝 Test: ${quiz.title}\n📊 Natija: ${score} / ${maxScore} ball (${percentage}%) ${status}`);
-            }
-        } catch (e) {
-            console.error('Error notifying teacher about solo quiz:', e);
-        }
-
-        // Send back true percentage calculation to frontend
+        // Calculate max possible score
         let maxScore = 0;
         questions.forEach((question: any) => {
             if (question.type === 'matching' || question.type === 'word-box') {
@@ -598,13 +591,102 @@ app.post('/api/student/quiz/submit', async (req, res) => {
                 maxScore += 1;
             }
         });
-        const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-        res.json({ score, results, percentage });
+
+        // Award immediate rewards
+        await awardRewards(studentId, immediateScore);
+
+        // Background processing for AI checks
+        if (aiCheckPending.length > 0) {
+            // FIRE AND FORGET (Background task)
+            (async () => {
+                let aiScore = 0;
+                try {
+                    const aiResults = await checkAnswersWithAIBatch(aiCheckPending);
+                    aiCheckPending.forEach((item, idx) => {
+                        const aiRes = aiResults[idx];
+                        if (aiRes && aiRes.isCorrect) {
+                            aiScore += 1;
+                            results[item.qIdx].isCorrect = true;
+                            results[item.qIdx].score = 1;
+                            results[item.qIdx].feedback = aiRes.feedback;
+                            results[item.qIdx].pending = false;
+                        } else if (aiRes) {
+                            results[item.qIdx].feedback = aiRes.feedback;
+                            results[item.qIdx].pending = false;
+                        }
+                    });
+
+                    if (aiScore > 0) {
+                        await awardRewards(studentId, aiScore);
+                    }
+                } catch (err) {
+                    console.error('[Background AI Check] Solo submission failed:', err);
+                } finally {
+                    // Notify Teacher with final results (even if AI failed)
+                    const finalScore = immediateScore + aiScore;
+                    await notifyTeacherOfSoloResult(studentId, quiz.title, finalScore, maxScore);
+                }
+            })().catch(e => console.error('[Background Solo Task] Error:', e));
+
+            // Return immediate results to student without score details
+            res.json({ results: results.map(r => ({ ...r, score: 0, isCorrect: false })), pending: true, hidden: true });
+        } else {
+            // NO AI checks needed: finish immediately
+            await notifyTeacherOfSoloResult(studentId, quiz.title, immediateScore, maxScore);
+            res.json({ results: results.map(r => ({ ...r, score: 0, isCorrect: false })), pending: false, hidden: true });
+        }
+
     } catch (err) {
-        console.error('Solo Quiz Submission Error:', err);
-        res.status(500).json({ error: 'Submission failed' });
+        console.error('Solo quiz submission error:', err);
+        res.status(500).json({ error: 'Server xatosi' });
     }
 });
+
+/**
+ * Helper to notify teacher about solo quiz results
+ */
+async function notifyTeacherOfSoloResult(studentId: string, quizTitle: string, score: number, maxScore: number) {
+    try {
+        const teacherRes = await query(`
+            SELECT t.telegram_chat_id, s.name as student_name, g.name as group_name
+            FROM students s
+            JOIN groups g ON s.group_id = g.id
+            JOIN teachers t ON g.teacher_id = t.id
+            WHERE s.id = $1
+        `, [studentId]);
+
+        if (teacherRes.rows[0]?.telegram_chat_id) {
+            const { telegram_chat_id, student_name, group_name } = teacherRes.rows[0];
+            const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+            const status = percentage > 59 ? "(O'tdi ✅)" : "(O'tmadi ❌)";
+            await notifyTeacher(telegram_chat_id, `🎯 <b>Mashq tugatildi (Solo Mode):</b>\n\n👤 O'quvchi: ${student_name}\n🏫 Guruh: ${group_name}\n📝 Test: ${quizTitle}\n📊 Natija: ${score} / ${maxScore} (${percentage}%) ${status}`);
+        }
+    } catch (e) {
+        console.error('Error notifying teacher of solo result:', e);
+    }
+}
+
+/**
+ * Helper to notify teacher about vocab battle results
+ */
+async function notifyTeacherOfVocabBattleResult(studentId: string, xp: number, coins: number) {
+    try {
+        const teacherRes = await query(`
+            SELECT t.telegram_chat_id, s.name as student_name, g.name as group_name
+            FROM students s
+            JOIN groups g ON s.group_id = g.id
+            JOIN teachers t ON g.teacher_id = t.id
+            WHERE s.id = $1
+        `, [studentId]);
+
+        if (teacherRes.rows[0]?.telegram_chat_id) {
+            const { telegram_chat_id, student_name, group_name } = teacherRes.rows[0];
+            await notifyTeacher(telegram_chat_id, `⚔️ <b>Lug'at Battle tugatildi:</b>\n\n👤 O'quvchi: ${student_name}\n🏫 Guruh: ${group_name}\n📈 XP: ${xp}\n💰 Tangalar: ${coins}`);
+        }
+    } catch (e) {
+        console.error('Error notifying teacher of vocab battle result:', e);
+    }
+}
 
 // --- Web Vocab Battle APIs ---
 app.get('/api/student/vocab-battle/generate', async (req, res) => {
@@ -712,7 +794,11 @@ app.post('/api/student/vocab-battle/submit', async (req, res) => {
 
         await query('UPDATE students SET total_score = total_score + $1, coins = coins + $2 WHERE id = $3', [totalXp, coinsEarned, studentId]);
 
-        res.json({ success: true, xpEarned: totalXp, coinsEarned });
+        // Send notification to teacher
+        await notifyTeacherOfVocabBattleResult(studentId, totalXp, coinsEarned);
+
+        // Hide specifics from student UI
+        res.json({ success: true, hidden: true });
     } catch (err) {
         console.error('Error submitting vocab battle:', err);
         res.status(500).json({ error: 'Failed to submit battle' });
@@ -1790,9 +1876,17 @@ async function bulkAwardRewards(players: { id: string, score: number }[]) {
     }
 }
 
-function scrubPlayers(game: any) {
+function scrubPlayers(game: any, players?: any[]) {
+    const list = players || game.players || [];
     if (game.isUnitQuiz) {
-        return game.players.map((p: any) => ({
+        return list.map((p: any) => scrubSinglePlayer(game, p));
+    }
+    return list;
+}
+
+function scrubSinglePlayer(game: any, p: any) {
+    if (game.isUnitQuiz) {
+        return {
             id: p.id,
             name: p.name,
             answeredCount: Object.entries(p.answers || {}).filter(([qIdx, a]) => {
@@ -1803,24 +1897,97 @@ function scrubPlayers(game: any) {
             status: p.status,
             isFinished: p.isFinished,
             isCheater: p.isCheater
-        }));
+        };
     }
-    return game.players;
+    return p;
 }
 
 // Throttling mechanism for unit quiz updates
 const updateThrottles: Record<string, NodeJS.Timeout | null> = {};
 const pendingPlayerUpdates: Record<string, Set<string>> = {};
 
-async function broadcastPlayerUpdate(pin: string, playerId?: string) {
-    const game = await store.getGame(pin);
-    if (!game || !game.hostId || game.hostId === 'system') return;
+// AI Queue Manager for handle large-scale quizzes (like 1120 questions)
+const aiCheckQueues: Record<string, { pin: string, playerId: string, qIdx: number, text: string, answer: string, type: string }[]> = {};
+const aiQueueThrottles: Record<string, NodeJS.Timeout | null> = {};
 
-    if (game.isUnitQuiz) {
-        if (!pendingPlayerUpdates[pin]) {
-            pendingPlayerUpdates[pin] = new Set();
+async function enqueueAICheck(pin: string, playerId: string, qIdx: number, text: string, answer: string, type: string) {
+    if (!aiCheckQueues[pin]) aiCheckQueues[pin] = [];
+    aiCheckQueues[pin].push({ pin, playerId, qIdx, text, answer, type });
+
+    if (aiQueueThrottles[pin]) return;
+
+    aiQueueThrottles[pin] = setTimeout(async () => {
+        const queue = aiCheckQueues[pin];
+        delete aiCheckQueues[pin];
+        aiQueueThrottles[pin] = null;
+
+        if (!queue || queue.length === 0) return;
+
+        try {
+            console.log(`[AI Queue] Processing ${queue.length} items for pin ${pin}...`);
+            const results = await checkAnswersWithAIBatch(queue.map(item => ({
+                text: item.text,
+                studentAnswer: item.answer,
+                type: item.type
+            })));
+
+            let modCount = 0;
+            const uniquePlayerIds = new Set(queue.map(item => item.playerId));
+
+            // Process each player's updates independently
+            for (const pId of uniquePlayerIds) {
+                const player = await store.getPlayer(pin, pId);
+                if (!player) continue;
+
+                let playerModded = false;
+                queue.forEach((item, i) => {
+                    if (item.playerId !== pId) return;
+                    const aiResult = results[i];
+                    if (!aiResult) return;
+
+                    (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
+                    (player as any).aiFeedbackMap[item.qIdx] = aiResult.feedback;
+
+                    if (aiResult.isCorrect) {
+                        if (!(player as any).partialScoreMap) (player as any).partialScoreMap = {};
+                        const currentPartial = (player as any).partialScoreMap[item.qIdx] || 0;
+                        if (currentPartial === 0) {
+                            player.score += 1;
+                            (player as any).partialScoreMap[item.qIdx] = 1;
+                            playerModded = true;
+                            modCount++;
+                        }
+                    } else if (!isCorrectResult(aiResult)) {
+                        // Even if not correct, we still update feedback if changed
+                        playerModded = true;
+                    }
+                });
+
+                if (playerModded) {
+                    await store.setPlayer(pin, player);
+                    await broadcastPlayerUpdate(pin, pId);
+                }
+            }
+
+            console.log(`[AI Queue] Finished batch for pin ${pin}. Updated ${modCount} scores.`);
+        } catch (err) {
+            console.error('[AI Queue] Background processing error:', err);
         }
+    }, 4000); // 4 second wait to gather more answers
+}
 
+// Utility to check if AI result is meaningfully different for marking as modded
+// Utility to check if AI result is meaningfully different for marking as modded
+function isCorrectResult(aiResult: any) {
+    return aiResult.isCorrect;
+}
+
+async function broadcastPlayerUpdate(pin: string, playerId?: string) {
+    const metadata = await store.getGameMetadata(pin);
+    if (!metadata || !metadata.hostId || metadata.hostId === 'system') return;
+
+    if (metadata.isUnitQuiz) {
+        if (!pendingPlayerUpdates[pin]) pendingPlayerUpdates[pin] = new Set();
         if (playerId) {
             pendingPlayerUpdates[pin].add(playerId);
         } else {
@@ -1832,27 +1999,46 @@ async function broadcastPlayerUpdate(pin: string, playerId?: string) {
 
         // Schedule an update in 1 second (Faster feedback)
         updateThrottles[pin] = setTimeout(async () => {
-            const currentGame = await store.getGame(pin);
-            if (currentGame) {
-                const updates = pendingPlayerUpdates[pin];
-                const cleanPlayers = scrubPlayers(currentGame);
+            const updates = pendingPlayerUpdates[pin];
+            if (!updates) return;
 
+            try {
                 if (updates.has('ALL')) {
-                    io.to(currentGame.hostId).emit('player-update', cleanPlayers);
+                    // Still need full game for "ALL" update, but this is less frequent
+                    const fullGame = await store.getGame(pin);
+                    if (fullGame) {
+                        io.to(fullGame.hostId).emit('player-update', scrubPlayers(fullGame));
+                    }
                 } else {
-                    const changedPlayers = cleanPlayers.filter((p: any) => updates.has(p.id));
+                    // Incremental update: fetch ONLY changed players
+                    const changedPlayers: any[] = [];
+                    for (const pId of Array.from(updates)) {
+                        if (pId === 'ALL') continue;
+                        const p = await store.getPlayer(pin, pId as string);
+                        if (p) {
+                            changedPlayers.push(scrubSinglePlayer(metadata, p));
+                        }
+                    }
+
                     if (changedPlayers.length > 0) {
-                        io.to(currentGame.hostId).emit('player-update-delta', changedPlayers);
+                        io.to(metadata.hostId as string).emit('player-update-delta', changedPlayers);
                     }
                 }
+            } catch (err) {
+                console.error('[broadcastPlayerUpdate] Error:', err);
+            } finally {
+                if (pendingPlayerUpdates[pin]) {
+                    pendingPlayerUpdates[pin].clear();
+                }
+                updateThrottles[pin] = null;
             }
-            if (pendingPlayerUpdates[pin]) {
-                pendingPlayerUpdates[pin].clear();
-            }
-            updateThrottles[pin] = null;
         }, 1000);
     } else {
-        io.to(game.hostId).emit('player-update', scrubPlayers(game));
+        // Normal game: send full update (usually small number of players)
+        const game = await store.getGame(pin);
+        if (game) {
+            io.to(game.hostId).emit('player-update', scrubPlayers(game));
+        }
     }
 }
 
@@ -1918,15 +2104,13 @@ io.on('connection', (socket) => {
     // Helper: Mark player offline on disconnect
     socket.on('disconnect', async () => {
         const pin = (socket as any).pin;
-        if (pin) {
-            const game = await store.getGame(pin);
-            if (game) {
-                const player = game.players.find((p: any) => p.id === socket.id || p.id === (socket as any).studentId);
-                if (player) {
-                    player.status = 'Offline';
-                    await store.setGame(pin, game);
-                    await broadcastPlayerUpdate(pin, player.id);
-                }
+        const studentId = (socket as any).studentId || socket.id;
+        if (pin && studentId) {
+            const player = await store.getPlayer(pin, studentId);
+            if (player) {
+                player.status = 'Offline';
+                await store.setPlayer(pin, player);
+                await broadcastPlayerUpdate(pin, player.id);
             }
         }
     });
@@ -1962,20 +2146,20 @@ io.on('connection', (socket) => {
     // Student: Join Unit Game (via 7-digit ID)
     socket.on('student-join', async ({ pin, studentId }: { pin: string, studentId: string }) => {
         try {
-            const game = await store.getGame(pin);
-            if (!game) {
-                socket.emit('error', 'Game not found');
+            const metadata = await store.getGameMetadata(pin);
+            if (!metadata) {
+                socket.emit('error', 'O\'yin topilmadi');
                 return;
             }
 
             const result = await query('SELECT * FROM students WHERE id = $1', [studentId]);
             if (result.rowCount === 0) {
-                socket.emit('error', 'Student ID not found');
+                socket.emit('error', 'O\'quvchi ID raqami topilmadi');
                 return;
             }
             const student = result.rows[0];
 
-            if (game.isUnitQuiz && !game.isDuel && game.groupId && String(student.group_id).toLowerCase() !== String(game.groupId).toLowerCase()) {
+            if (metadata.isUnitQuiz && !metadata.isDuel && metadata.groupId && String(student.group_id).toLowerCase() !== String(metadata.groupId).toLowerCase()) {
                 socket.emit('error', 'Bu test sizning guruhingiz uchun emas');
                 return;
             }
@@ -1984,7 +2168,7 @@ io.on('connection', (socket) => {
             (socket as any).pin = pin;
             await store.setSocket(studentId, socket.id);
 
-            let player = game.players.find((p: any) => p.id === studentId);
+            let player = await store.getPlayer(pin, studentId);
             if (player) {
                 if (player.status !== 'Cheating') {
                     player.status = 'Online';
@@ -1997,53 +2181,62 @@ io.on('connection', (socket) => {
                     answers: {},
                     status: 'Online'
                 };
-                game.players.push(player);
             }
 
-            await store.setGame(pin, game);
+            await store.setPlayer(pin, player);
             socket.join(pin);
             socket.emit('joined', { name: student.name, pin });
 
-            if (game.hostId && game.hostId !== 'system') {
-                await broadcastPlayerUpdate(pin);
+            if (metadata.hostId && metadata.hostId !== 'system') {
+                await broadcastPlayerUpdate(pin, studentId);
             }
 
-            if (game.status === 'ACTIVE') {
-                if (game.isUnitQuiz) {
-                    const questionsForStudents = (game.quiz.questions as any[]).map((q, idx) => ({
+            if (metadata.status === 'ACTIVE') {
+                if (metadata.isUnitQuiz) {
+                    const questionsForStudents = (metadata.quiz!.questions as any[]).map((q, idx) => ({
                         info: q.info,
                         text: q.text,
                         options: q.options,
                         type: q.type,
                         acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
                         questionIndex: idx + 1,
-                        totalQuestions: game.quiz.questions.length
+                        totalQuestions: metadata.quiz!.questions.length
                     }));
-                    socket.emit('unit-game-started', { questions: questionsForStudents, endTime: game.endTime, title: game.quiz.title });
+                    socket.emit('unit-game-started', { questions: questionsForStudents, endTime: metadata.endTime, title: metadata.quiz!.title });
                 } else {
-                    socket.emit('game-started', { endTime: game.endTime, title: game.quiz.title });
+                    socket.emit('game-started', { endTime: metadata.endTime, title: metadata.quiz!.title });
                 }
             }
         } catch (err) {
-            socket.emit('error', 'Database error');
+            console.error('[student-join] error:', err);
+            socket.emit('error', 'Ma\'lumotlar bazasi xatoligi');
         }
     });
 
     // Student: Status Update (Anti-Cheat)
     socket.on('student-status-update', async ({ pin, studentId, status }: { pin: string, studentId: string, status: 'Online' | 'Offline' | 'Cheating' }) => {
-        const game = await store.getGame(pin);
-        if (!game) return;
-
-        const player = game.players.find((p: any) => p.id === studentId || p.id === socket.id);
+        const player = await store.getPlayer(pin, studentId || (socket as any).studentId || socket.id);
         if (player) {
-            if (status === 'Cheating') {
+            let modded = false;
+            if (status === 'Cheating' && !player.isCheater) {
                 player.isCheater = true;
+                modded = true;
                 console.log(`[Cheat Alert] Student ${studentId || player.name} flagged as cheater in game ${pin}`);
             }
-            if (player.status === 'Cheating' && status === 'Online') return;
-            player.status = status;
-            await store.setGame(pin, game);
-            await broadcastPlayerUpdate(pin, player.id);
+            if (player.status !== 'Cheating' && status !== player.status) {
+                player.status = status;
+                modded = true;
+            } else if (player.status === 'Cheating' && status === 'Online') {
+                // Already caught cheating, don't revert status to Online
+            } else if (status !== player.status) {
+                player.status = status;
+                modded = true;
+            }
+
+            if (modded) {
+                await store.setPlayer(pin, player);
+                await broadcastPlayerUpdate(pin, player.id);
+            }
         }
     });
 
@@ -2146,43 +2339,43 @@ io.on('connection', (socket) => {
 
     // Player: Get Game Status
     socket.on('player-get-status', async ({ pin, studentId }: { pin: string, studentId?: string }) => {
-        const game = await store.getGame(pin);
-        if (!game) return;
+        const metadata = await store.getGameMetadata(pin);
+        if (!metadata) return;
 
         socket.join(pin);
         (socket as any).pin = pin;
 
         if (studentId) {
             (socket as any).studentId = studentId;
-            const player = game.players.find((p: any) => p.id === studentId);
+            const player = await store.getPlayer(pin, studentId);
             if (player) {
                 if (player.status !== 'Cheating') {
                     player.status = 'Online';
                 }
-                await store.setGame(pin, game);
-                await broadcastPlayerUpdate(game.pin, player.id);
+                await store.setPlayer(pin, player);
+                await broadcastPlayerUpdate(pin, studentId);
             }
         }
 
-        if (game.status === 'ACTIVE') {
-            const endTime = game.endTime;
-            if (game.isUnitQuiz) {
-                const questionsForStudents = (game.quiz.questions as any[]).map((q, idx) => ({
+        if (metadata.status === 'ACTIVE') {
+            const endTime = metadata.endTime;
+            if (metadata.isUnitQuiz) {
+                const questionsForStudents = (metadata.quiz!.questions as any[]).map((q, idx) => ({
                     info: q.info,
                     text: q.text,
                     options: q.options,
                     type: q.type,
                     acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
                     questionIndex: idx + 1,
-                    totalQuestions: game.quiz.questions.length
+                    totalQuestions: metadata.quiz!.questions.length
                 }));
-                socket.emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
-            } else if (game.currentQuestionIndex >= 0) {
-                const q = game.quiz.questions[game.currentQuestionIndex];
+                socket.emit('unit-game-started', { questions: questionsForStudents, endTime, title: metadata.quiz!.title });
+            } else if (metadata.currentQuestionIndex !== undefined && metadata.currentQuestionIndex >= 0) {
+                const q = metadata.quiz!.questions[metadata.currentQuestionIndex];
                 socket.emit('question-start', {
                     ...q,
-                    questionIndex: game.currentQuestionIndex + 1,
-                    totalQuestions: game.quiz.questions.length
+                    questionIndex: metadata.currentQuestionIndex + 1,
+                    totalQuestions: metadata.quiz!.questions.length
                 });
             }
         }
@@ -2190,25 +2383,39 @@ io.on('connection', (socket) => {
 
     // Student: Finalize Unit Quiz
     socket.on('unit-player-finish', async ({ pin }: { pin: string }) => {
-        const game = await store.getGame(pin);
-        if (!game || !game.isUnitQuiz || game.status !== 'ACTIVE') return;
+        console.log(`[unit-player-finish] Received from ${socket.id} for pin ${pin}`);
+        const metadata = await store.getGameMetadata(pin);
+        if (!metadata) {
+            console.log(`[unit-player-finish] Error: Metadata for ${pin} not found`);
+            socket.emit('error', 'O\'yin topilmadi');
+            return;
+        }
+        if (!metadata.isUnitQuiz || metadata.status !== 'ACTIVE') {
+            console.log(`[unit-player-finish] Error: Game ${pin} is not a Unit Quiz or not ACTIVE (Status: ${metadata.status})`);
+            socket.emit('error', 'Test hali boshlanmagan yoki yakunlangan');
+            return;
+        }
 
         const playerId = (socket as any).studentId || socket.id;
-        const player = game.players.find((p: any) => p.id === playerId);
-        if (!player) return;
+        const player = await store.getPlayer(pin, playerId);
+        if (!player) {
+            console.log(`[unit-player-finish] Error: Player ${playerId} not found in game ${pin}`);
+            socket.emit('error', 'Siz ushbu o\'yinda emassiz');
+            return;
+        }
 
         (player as any).isFinished = true;
-        await store.setGame(pin, game);
+        await store.setPlayer(pin, player);
 
-        const correctAnswers = (game.quiz.questions as any[]).map(q => ({
+        const correctAnswers = (metadata.quiz!.questions as any[]).map(q => ({
             type: q.type,
             correctIndex: q.correctIndex,
             acceptedAnswers: q.acceptedAnswers
         }));
 
         await broadcastPlayerUpdate(pin, player.id);
-        const aiFeedbackMap = (player as any).aiFeedbackMap || {};
-        socket.emit('unit-finished', { score: player.score, correctAnswers, aiFeedbackMap });
+        console.log(`[unit-player-finish] Success for ${player.name} (${playerId}). Results hidden from student UI.`);
+        socket.emit('unit-finished', { hidden: true });
     });
 
     // Student: Register socket (for Duel Lobby presence)
@@ -2276,20 +2483,19 @@ io.on('connection', (socket) => {
 
     // Player/Student: Submit Answer
     socket.on('player-answer', async ({ pin, answer, questionIndex }: { pin: string, answer: string | number, questionIndex?: number }, callback?: (res: { success: boolean, error?: string }) => void) => {
-        const game = await store.getGame(pin);
-        if (!game || game.status !== 'ACTIVE') return;
+        const metadata = await store.getGameMetadata(pin);
+        if (!metadata || metadata.status !== 'ACTIVE') return;
 
         const playerId = (socket as any).studentId || socket.id;
-        const player = game.players.find((p: any) => p.id === playerId);
+        const player = await store.getPlayer(pin, playerId);
         if (!player) return;
 
-        const qIdx = game.isUnitQuiz && questionIndex !== undefined ? questionIndex : game.currentQuestionIndex;
-        if (qIdx < 0 || qIdx >= game.quiz.questions.length) {
-            console.log(`[player-answer] Invalid qIdx: ${qIdx}, total: ${game.quiz.questions.length}`);
+        const qIdx = metadata.isUnitQuiz && questionIndex !== undefined ? questionIndex : metadata.currentQuestionIndex;
+        if (qIdx === undefined || qIdx < 0 || qIdx >= (metadata.quiz!.questions.length)) {
             return;
         }
 
-        const question = game.quiz.questions[qIdx];
+        const question = metadata.quiz!.questions[qIdx];
         if (!(player as any).partialScoreMap) (player as any).partialScoreMap = {};
         const prevPartialScore = (player as any).partialScoreMap[qIdx] || 0;
 
@@ -2311,77 +2517,51 @@ io.on('connection', (socket) => {
         }
 
         player.answers[qIdx] = answer;
-        player.score = player.score - prevPartialScore + currentScore;
+        player.score = (player.score || 0) - prevPartialScore + currentScore;
         (player as any).partialScoreMap[qIdx] = currentScore;
 
-        await store.setGame(pin, game);
+        await store.setPlayer(pin, player);
 
-        // Immediate acknowledgment for the student
         if (callback) callback({ success: true });
 
-        // Optimistic Status Update: Notify host IMMEDIATELY that progress changed
-        if (game.isUnitQuiz) {
+        if (metadata.isUnitQuiz) {
             await broadcastPlayerUpdate(pin, player.id);
         }
 
-        // Background AI check (Async, don't block the initial broadcast or acknowledgement)
         if (isTextInput && currentScore === 0 && answer) {
-            (async () => {
-                try {
-                    const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
-                    // Fetch fresh game state as it might have changed
-                    const freshGame = await store.getGame(pin);
-                    if (!freshGame) return;
-                    const freshPlayer = freshGame.players.find((p: any) => p.id === playerId);
-                    if (!freshPlayer) return;
-
-                    (freshPlayer as any).aiFeedbackMap = (freshPlayer as any).aiFeedbackMap || {};
-                    (freshPlayer as any).aiFeedbackMap[qIdx] = aiResult.feedback;
-
-                    if (aiResult.isCorrect) {
-                        // If it improved score, update and broadcast again
-                        if (!(freshPlayer as any).partialScoreMap) (freshPlayer as any).partialScoreMap = {};
-                        const currentPartial = (freshPlayer as any).partialScoreMap[qIdx] || 0;
-                        if (currentPartial === 0) {
-                            freshPlayer.score = freshPlayer.score + 1;
-                            (freshPlayer as any).partialScoreMap[qIdx] = 1;
-                        }
-                    }
-                    await store.setGame(pin, freshGame);
-                    await broadcastPlayerUpdate(pin, freshPlayer.id);
-                } catch (aiErr) {
-                    console.error('[player-answer] Background AI check failed:', aiErr);
-                }
-            })();
+            enqueueAICheck(pin, playerId, qIdx, question.text, String(answer), question.type || 'text-input')
+                .catch(e => console.error('[AI-Queue-Error]', e));
         }
 
-        console.log(`[player-answer] Success. Player ${player.name} answered qIdx ${qIdx}. Total answers: ${Object.keys(player.answers).length}`);
-
-        if (!game.isUnitQuiz) {
-            const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
-            io.to(game.hostId).emit('answers-count', answeredCount);
+        if (!metadata.isUnitQuiz) {
+            // Background count for MC questions
+            const game = await store.getGame(pin);
+            if (game) {
+                const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
+                io.to(game.hostId).emit('answers-count', answeredCount);
+            }
         }
     });
+
     socket.on('player-sync-answers', async ({ pin, answers }: { pin: string, answers: Record<string, string | number> }, callback?: (res: { success: boolean, error?: string }) => void) => {
-        const game = await store.getGame(pin);
-        if (!game || game.status !== 'ACTIVE') return;
+        const metadata = await store.getGameMetadata(pin);
+        if (!metadata || metadata.status !== 'ACTIVE') return;
 
         const playerId = (socket as any).studentId || socket.id;
-        const player = game.players.find((p: any) => p.id === playerId);
+        const player = await store.getPlayer(pin, playerId);
         if (!player) return;
 
         let hasUpdates = false;
-
-        // Ensure partialScoreMap exists
         if (!(player as any).partialScoreMap) (player as any).partialScoreMap = {};
+
+        const questions = metadata.quiz!.questions;
 
         for (const [qIdxStr, answer] of Object.entries(answers)) {
             const qIdx = parseInt(qIdxStr);
-            if (isNaN(qIdx) || qIdx < 0 || qIdx >= game.quiz.questions.length) continue;
+            if (isNaN(qIdx) || qIdx < 0 || qIdx >= questions.length) continue;
 
-            // If the server doesn't have this answer yet, process it
             if (player.answers[qIdx] === undefined && answer !== undefined && answer !== null) {
-                const question = game.quiz.questions[qIdx];
+                const question = questions[qIdx];
                 let currentScore = 0;
                 const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching'];
 
@@ -2391,32 +2571,8 @@ io.on('connection', (socket) => {
                     if (checkAnswer(String(answer), question.acceptedAnswers || [])) {
                         currentScore = 1;
                     } else if (answer) {
-                        // Background AI check
-                        (async () => {
-                            try {
-                                const aiResult = await checkAnswerWithAI(question.text, String(answer), question.type || 'text-input');
-
-                                const freshGame = await store.getGame(pin);
-                                if (!freshGame) return;
-                                const freshPlayer = freshGame.players.find((p: any) => p.id === playerId);
-                                if (!freshPlayer) return;
-
-                                (freshPlayer as any).aiFeedbackMap = (freshPlayer as any).aiFeedbackMap || {};
-                                (freshPlayer as any).aiFeedbackMap[qIdx] = aiResult.feedback;
-                                if (aiResult.isCorrect) {
-                                    if (!(freshPlayer as any).partialScoreMap) (freshPlayer as any).partialScoreMap = {};
-                                    const currentPartial = (freshPlayer as any).partialScoreMap[qIdx] || 0;
-                                    if (currentPartial === 0) {
-                                        freshPlayer.score += 1;
-                                        (freshPlayer as any).partialScoreMap[qIdx] = 1;
-                                    }
-                                }
-                                await store.setGame(pin, freshGame);
-                                await broadcastPlayerUpdate(pin, freshPlayer.id);
-                            } catch (err) {
-                                console.error('[player-sync-answers] Background AI check failed:', err);
-                            }
-                        })();
+                        enqueueAICheck(pin, playerId, qIdx, question.text, String(answer), question.type || 'text-input')
+                            .catch(e => console.error('[AI-Queue-Error]', e));
                     }
                 } else {
                     const ansIdx = Number(answer);
@@ -2433,13 +2589,15 @@ io.on('connection', (socket) => {
         }
 
         if (hasUpdates) {
-            console.log(`[player-sync-answers] Synced answers for ${player.name}. Total answers: ${Object.keys(player.answers).length}`);
-            await store.setGame(pin, game);
-            if (game.isUnitQuiz) {
+            await store.setPlayer(pin, player);
+            if (metadata.isUnitQuiz) {
                 await broadcastPlayerUpdate(pin, player.id);
             } else {
-                const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
-                io.to(game.hostId).emit('answers-count', answeredCount);
+                const game = await store.getGame(pin);
+                if (game) {
+                    const answeredCount = game.players.filter(p => p.answers[game.currentQuestionIndex] !== undefined).length;
+                    io.to(game.hostId).emit('answers-count', answeredCount);
+                }
             }
         }
 
@@ -2451,19 +2609,22 @@ io.on('connection', (socket) => {
 function generatePDFInWorker(quiz: any, players: any, groupName: string, teacherName: string): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         try {
-            const isTS = __filename.endsWith('.ts');
+            const isTS = __filename.endsWith('.ts') || !!(process as any)._preload_modules?.includes('ts-node/register');
             const workerScript = path.join(__dirname, 'worker', isTS ? 'pdfWorker.ts' : 'pdfWorker.js');
 
-            // For ts-node support in worker threads, we might need a loader
-            // but for now let's try direct loading if tsc is used.
+            console.log(`[generatePDFInWorker] Script: ${workerScript}, mode: ${isTS ? 'TS' : 'JS'}`);
+
             const worker = new Worker(workerScript, {
                 workerData: { quiz, players, groupName, teacherName },
-                // Enable ts-node loader if we are in TS mode
                 execArgv: isTS ? ['--loader', 'ts-node/esm'] : []
             });
 
             worker.on('message', (msg) => {
-                if (msg.success) resolve(msg.pdfBuffer);
+                if (msg.success) {
+                    // Ensure we have a Buffer, even if passed as Uint8Array/Object in some environments
+                    const buffer = Buffer.isBuffer(msg.pdfBuffer) ? msg.pdfBuffer : Buffer.from(msg.pdfBuffer);
+                    resolve(buffer);
+                }
                 else reject(new Error(msg.error));
             });
             worker.on('error', reject);
@@ -2483,23 +2644,15 @@ async function finishGame(pin: string) {
     game.status = 'FINISHED';
     await store.setGame(pin, game);
     const leaderboard = [...game.players].sort((a, b) => b.score - a.score);
-    io.to(pin).emit('game-over', leaderboard);
+    if (game.isUnitQuiz) {
+        const hiddenLeaderboard = leaderboard.map(p => ({ ...p, score: 0 }));
+        io.to(pin).emit('game-over', hiddenLeaderboard);
+    } else {
+        io.to(pin).emit('game-over', leaderboard);
+    }
 
     if (game.isUnitQuiz) {
-        const correctAnswers = (game.quiz.questions as any[]).map(q => ({
-            type: q.type,
-            correctIndex: q.correctIndex,
-            acceptedAnswers: q.acceptedAnswers
-        }));
-
-        // Send individual results to all players still in the room
-        for (const p of game.players) {
-            const playerSocketId = await store.getSocket(p.id);
-            if (playerSocketId) {
-                const aiFeedbackMap = (p as any).aiFeedbackMap || {};
-                io.to(playerSocketId).emit('unit-finished', { score: p.score, correctAnswers, aiFeedbackMap });
-            }
-        }
+        io.to(pin).emit('unit-finished', { hidden: true });
     }
 
     if (game.isDuel && game.duelId) {
@@ -2526,7 +2679,6 @@ async function finishGame(pin: string) {
                 const teacherRes = await query('SELECT name, telegram_chat_id FROM teachers WHERE id = $1', [group.teacher_id]);
                 const teacherName = teacherRes.rowCount && teacherRes.rowCount > 0 ? teacherRes.rows[0].name : 'Noma\'lum';
 
-                // Phase 2 & 4 Optimization: Offload PDF to Worker Thread
                 let pdfBuffer: Buffer;
                 try {
                     pdfBuffer = await generatePDFInWorker(game.quiz, game.players, group.name, teacherName);
@@ -2535,7 +2687,6 @@ async function finishGame(pin: string) {
                     pdfBuffer = await generateQuizResultPDF(game.quiz, game.players, group.name, teacherName);
                 }
 
-                // Phase 4: Save PDF to server storage
                 try {
                     const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
                     const filename = `Result_${sanitizedGroupName}_${Date.now()}.pdf`;
@@ -2550,18 +2701,28 @@ async function finishGame(pin: string) {
                     try {
                         const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
                         const filename = `Result_${sanitizedGroupName}_${Date.now()}.pdf`;
-                        console.log(`[finishGame] Attempting to send PDF to teacher ${group.teacher_id} (Chat: ${teacherRes.rows[0].telegram_chat_id}, File: ${filename})`);
+                        const chatId = teacherRes.rows[0].telegram_chat_id;
 
-                        await bot.telegram.sendDocument(teacherRes.rows[0].telegram_chat_id, {
+                        if (!(pdfBuffer instanceof Buffer) && !Buffer.isBuffer(pdfBuffer)) {
+                            pdfBuffer = Buffer.from(pdfBuffer as any);
+                        }
+
+                        console.log(`[finishGame] Attempting to send PDF to teacher (Chat: ${chatId}, File: ${filename}, BufferSize: ${pdfBuffer.length})`);
+
+                        await bot.telegram.sendDocument(chatId, {
                             source: pdfBuffer,
                             filename: filename
                         }, {
                             caption: `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}`,
                             parse_mode: 'HTML'
                         });
-                        console.log(`[finishGame] PDF successfully sent to teacher.`);
-                    } catch (e) {
-                        console.error('[finishGame] PDF send error to teacher:', e);
+                        console.log(`[finishGame] PDF successfully sent to teacher ${chatId}.`);
+                    } catch (e: any) {
+                        console.error(`[finishGame] PDF send error to teacher:`, e);
+                        if (e.description) console.error(`[finishGame] Telegram API Error Description: ${e.description}`);
+                        if (e.code === 'ETIMEDOUT' || e.code === 'ECONNRESET') {
+                            console.error(`[finishGame] CRITICAL: Telegram API is unreachable! Check internet on server.`);
+                        }
                     }
                 }
 
@@ -2574,7 +2735,7 @@ async function finishGame(pin: string) {
                             source: pdfBuffer,
                             filename: `Result_${sanitizedGroupName}_${Date.now()}.pdf`
                         }, {
-                            caption: `📊 <b>${game.quiz.title}</b> (Menejer uchun)\n🏫 Guruh: ${group.name}\n👤 O'qituvchi: ${group.teacher_id}`,
+                            caption: `📊 <b>${game.quiz.title}</b> (Menejer uchun)\n🏫 Guruh: ${group.name}\n👤 O'qituvchi: ${teacherName}`,
                             parse_mode: 'HTML'
                         });
                     } catch (e) {
@@ -2582,10 +2743,8 @@ async function finishGame(pin: string) {
                     }
                 }
 
-                // Bulk Update for XP & Coins
-                bulkAwardRewards(game.players); // Executing async without blocking
+                bulkAwardRewards(game.players);
 
-                // Send to students (async without blocking finishGame)
                 (async () => {
                     for (const player of game.players) {
                         try {

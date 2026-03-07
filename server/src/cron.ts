@@ -1,5 +1,7 @@
 import cron from 'node-cron';
 import { query } from './db';
+import path from 'path';
+import fs from 'fs';
 
 const CLEANUP_INTERVAL = "90 days";
 
@@ -38,8 +40,6 @@ export function startCronJobs() {
         await runCleanup('contact_logs', 'contacted_at');
 
         // 4. Clean old PDF result files (Server storage)
-        const path = require('path');
-        const fs = require('fs');
         const resultsDir = path.join(__dirname, '..', 'storage', 'results');
         if (fs.existsSync(resultsDir)) {
             const files = fs.readdirSync(resultsDir);
@@ -64,8 +64,9 @@ export function startCronJobs() {
     // Weekly Group Leaderboard: Every Sunday at 20:00
     cron.schedule('0 20 * * 0', async () => {
         console.log('[Cron] Sending weekly group leaderboards...');
-        const { bot } = require('./bot');
-        const { sendGroupWeeklyLeaderboard } = require('./telegram_game');
+        // Lazy import to avoid circular dependency at startup
+        const { bot } = await import('./bot');
+        const { sendGroupWeeklyLeaderboard } = await import('./telegram_game');
         await sendGroupWeeklyLeaderboard(bot);
     }, {
         timezone: "Asia/Tashkent"

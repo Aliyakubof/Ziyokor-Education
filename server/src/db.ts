@@ -16,8 +16,9 @@ const isLocalhost = finalConnectionString.includes('localhost') || finalConnecti
 export const pool = new Pool({
     connectionString: finalConnectionString,
     ssl: isLocalhost ? false : { rejectUnauthorized: false },
-    max: 50,
-    idleTimeoutMillis: 10000
+    max: 20,               // Neon free tier max connection limit
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 5000
 });
 
 pool.on('connect', (client) => {

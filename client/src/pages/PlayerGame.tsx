@@ -114,11 +114,26 @@ export default function PlayerGame() {
             setTextAnswer('');
         });
 
-        socket.on('unit-finished', (data: { score: number, correctAnswers: any[], aiFeedbackMap?: Record<number, string> }) => {
+        socket.on('unit-finished', (data: { score?: number, correctAnswers?: any[], aiFeedbackMap?: Record<number, string>, hidden?: boolean }) => {
+            setIsSubmitting(false);
+            localStorage.removeItem('unit-answers'); // Only clear on success
             setView('FINISHED');
-            setRank({ rank: 0, score: data.score });
-            setUnitCorrectAnswers(data.correctAnswers || []);
-            setUnitAIFeedback(data.aiFeedbackMap || {});
+            if (data.hidden) {
+                setRank({ rank: 0, score: 0 });
+                setUnitCorrectAnswers([]);
+                setUnitAIFeedback({});
+            } else {
+                setRank({ rank: 0, score: data.score || 0 });
+                setUnitCorrectAnswers(data.correctAnswers || []);
+                setUnitAIFeedback(data.aiFeedbackMap || {});
+            }
+        });
+
+        socket.on('error', (msg: string) => {
+            if (isSubmitting) {
+                setIsSubmitting(false);
+                alert(`Xatolik: ${msg}`);
+            }
         });
 
         socket.on('game-over', (leaderboard) => {
@@ -209,12 +224,15 @@ export default function PlayerGame() {
         return null;
     };
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const finalizeSubmission = () => {
         const pin = localStorage.getItem('kahoot-pin');
         if (pin) {
+            setIsSubmitting(true);
             socket.emit('unit-player-finish', { pin });
-            // Clear saved answers after submission
-            localStorage.removeItem('unit-answers');
+            // Note: We no longer clear unit-answers here. 
+            // We clear it in the 'unit-finished' event handler to ensure reliability.
         }
     };
 
@@ -245,32 +263,28 @@ export default function PlayerGame() {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-transparent">
                 <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border border-slate-200 relative z-10">
-                    <div className="w-24 h-24 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-yellow-500/20 animate-float">
-                        <Trophy className="text-white" size={48} />
+                    <div className="w-24 h-24 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-emerald-500/20 animate-float">
+                        <CheckCircle2 className="text-white" size={48} />
                     </div>
 
-                    <h1 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">Test Tugadi!</h1>
-                    <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-10">Sizning natijangiz</p>
+                    <h1 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">Test Yakunlandi!</h1>
+                    <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-10">Muvaffaqiyatli topshirildi</p>
 
-                    <div className="relative mb-10">
-                        <div className="text-[120px] font-black text-slate-800 leading-none tracking-tighter">
-                            {rank?.score}
+                    <div className="mb-10 bg-sky-50 border border-sky-100 rounded-[2rem] px-8 py-10 text-center">
+                        <div className="w-12 h-12 bg-sky-100 text-sky-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Info size={24} />
                         </div>
-                        <div className="text-2xl font-black text-blue-500 absolute bottom-4 right-1/4 translate-x-12 uppercase">
-                            Ball
-                        </div>
-                    </div>
-
-                    <div className="mb-6 bg-sky-50 border border-sky-100 rounded-2xl px-5 py-4 text-sky-600 text-sm font-medium">
-                        📩 Natijalar va to'g'ri javoblar <span className="font-black">Telegram bot</span> orqali yuboriladi
+                        <p className="text-sky-800 font-bold leading-relaxed">
+                            Natijalar va to'g'ri javoblar <span className="text-indigo-600">Telegram bot</span> orqali o'qituvchingizga yuborildi.
+                        </p>
                     </div>
 
                     <div className="space-y-3">
                         <button
                             onClick={() => window.location.href = '/'}
-                            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 font-black py-4 rounded-2xl transition-all border border-slate-200"
+                            className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95"
                         >
-                            CHIQISH
+                            ASOSIY MENYUGA QAYTISH
                         </button>
                     </div>
                 </div>
@@ -357,9 +371,22 @@ export default function PlayerGame() {
                     <div className="mt-8 space-y-3">
                         <button
                             onClick={finalizeSubmission}
-                            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black py-5 rounded-[2rem] text-xl transition-all shadow-xl shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2"
+                            disabled={isSubmitting}
+                            className={`w-full py-6 rounded-[2rem] font-black text-2xl shadow-xl transition-all flex items-center justify-center gap-4 active:scale-95
+                                ${isSubmitting
+                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-emerald-500/20 hover:scale-105'}`}
                         >
-                            <CheckCircle2 size={24} /> TESTNI TUGATISH
+                            {isSubmitting ? (
+                                <>
+                                    <div className="w-6 h-6 border-4 border-slate-300 border-t-slate-500 rounded-full animate-spin"></div>
+                                    YUBORILMOQDA...
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle2 size={32} /> TESTNI TUGATISH
+                                </>
+                            )}
                         </button>
                         <button
                             onClick={() => goToQuestion(0)}

@@ -16,91 +16,185 @@ const getGenAI = () => {
     return new GoogleGenerativeAI(apiKey);
 };
 
+export interface AIBatchCheckResult {
+    results: AICheckResult[];
+}
+
+const aiCache = new Map<string, AICheckResult>();
+
+function getCacheKey(question: string, answer: string): string {
+    return `${question.trim().toLowerCase()}|||${answer.trim().toLowerCase()}`;
+}
+
+export async function checkAnswersWithAIBatch(
+    questions: { text: string, studentAnswer: string, type: string }[]
+): Promise<AICheckResult[]> {
+    const apiKey = process.env.GEMINI_API_KEY || "";
+    if (!apiKey) {
+        return questions.map(() => ({ isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "AI tekshiruv vaqtincha mavjud emas." }));
+    }
+
+    if (questions.length === 0) return [];
+
+    const finalResults: AICheckResult[] = new Array(questions.length);
+    const pendingQuestions: { text: string, studentAnswer: string, type: string, originalIndex: number }[] = [];
+
+    // 1. Check Cache First
+    questions.forEach((q, i) => {
+        const key = getCacheKey(q.text, q.studentAnswer);
+        if (aiCache.has(key)) {
+            finalResults[i] = aiCache.get(key)!;
+        } else {
+            pendingQuestions.push({ ...q, originalIndex: i });
+        }
+    });
+
+    if (pendingQuestions.length === 0) return finalResults;
+
+    console.log(`[AI Batch Check] ${questions.length} total, ${pendingQuestions.length} unique/new questions to check.`);
+
+    // 2. Process Unique Questions in Chunks
+    // Chunk size 10: fewer API calls for large batches (e.g. 1120 questions = 112 chunks vs 224)
+    const CHUNK_SIZE = 10;
+    const chunks: { text: string, studentAnswer: string, type: string, originalIndex: number }[][] = [];
+    for (let i = 0; i < pendingQuestions.length; i += CHUNK_SIZE) {
+        chunks.push(pendingQuestions.slice(i, i + CHUNK_SIZE));
+    }
+
+    console.log(`[AI Batch Check] Processing ${pendingQuestions.length} questions in ${chunks.length} chunks (Parallel Pool)...`);
+
+    const allResultsRaw: (AICheckResult[] | null)[] = new Array(chunks.length).fill(null);
+
+    // Concurrency pool: 2 parallel chunks max to avoid quota errors when 3-4 groups run simultaneously
+    const CONCURRENCY_LIMIT = 2;
+    const chunkIndices = [...Array(chunks.length).keys()];
+
+    async function processChunk(idx: number) {
+        const chunk = chunks[idx];
+        const MAX_RETRIES = 3;
+        let attempt = 0;
+
+        while (attempt < MAX_RETRIES) {
+            attempt++;
+            try {
+                const genAI = getGenAI();
+                const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+                const model = genAI.getGenerativeModel({ model: modelName });
+
+                const batchInfo = chunk.map((q: any, i: number) => `SAVOL #${i + 1}:\nTur: ${q.type}\nSavol: ${q.text}\nJavob: ${q.studentAnswer}`).join('\n\n---\n\n');
+
+                const prompt = `Siz tajribali o'zbek tili va ingliz tili o'qituvchisisiz. Quyidagi ${chunk.length} ta savol va o'quvchi javoblarini baholang.
+
+MUHIM QOIDALAR:
+1. MA'NO va MAZMUN asosiy mezon. Imlo xatolari (yengil typo) yoki kichik grammatik kamchiliklar javobni noto'g'ri deyishga sabab bo'lmasligi kerak.
+2. Javob o'zbek yoki ingliz tilida bo'lishi mumkin.
+3. Agar javob savolning asosiy ma'nosiga mos kelsa va tushunish mumkin bo'lsa, uni TO'G'RI deb belgilang.
+4. Faqat savol bilan mutlaqo bog'liq bo'lmagan yoki mantiqan teskari javoblarni NOTO'G'RI deb belgilang.
+5. Har bir javob uchun contentScore (0-100) va grammarScore (0-100) bering.
+6. Har bir javob uchun o'zbek tilida juda qisqa, foydali feedback yozing.
+
+Faqat quyidagi JSON formatida javob bering:
+{
+  "results": [
+    {"isCorrect": true, "grammarScore": 95, "contentScore": 100, "feedback": "Juda yaxshi!"},
+    ... (jami ${chunk.length} ta element)
+  ]
+}
+
+BAHOLASH UCHUN MA'LUMOTLAR:
+${batchInfo}`;
+
+                console.log(`[AI Batch Check] Chunk ${idx + 1}/${chunks.length} | Attempt ${attempt} (Start)`);
+
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                let text = response.text();
+
+                text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+                if (jsonMatch) {
+                    const parsed = JSON.parse(jsonMatch[0]) as AIBatchCheckResult;
+                    if (parsed.results && parsed.results.length === chunk.length) {
+                        console.log(`[AI Batch Check] Chunk ${idx + 1}/${chunks.length} | Success`);
+                        const mappedResults = parsed.results.map(r => ({
+                            isCorrect: !!r.isCorrect,
+                            grammarScore: Math.min(100, Math.max(0, Number(r.grammarScore) || 0)),
+                            contentScore: Math.min(100, Math.max(0, Number(r.contentScore) || 0)),
+                            feedback: String(r.feedback || "")
+                        }));
+
+                        allResultsRaw[idx] = mappedResults;
+
+                        // Update Cache
+                        mappedResults.forEach((res, i) => {
+                            const q = chunk[i];
+                            const key = getCacheKey(q.text, q.studentAnswer);
+                            aiCache.set(key, res);
+                        });
+
+                        return;
+                    }
+                }
+                throw new Error(`Invalid response format or count mismatch (Got ${text.length} chars)`);
+
+            } catch (err: any) {
+                const isRateLimit = err.message?.includes("429") || err.message?.includes("Quota") || err.message?.includes("RESOURCE_EXHAUSTED");
+                console.error(`[AI Batch Check] Chunk ${idx + 1} Attempt ${attempt} failed: ${err.message?.substring(0, 100)}...`);
+
+                if (attempt === MAX_RETRIES) {
+                    const errorResults = chunk.map(() => ({
+                        isCorrect: false,
+                        contentScore: 0,
+                        grammarScore: 0,
+                        feedback: "Xatolik (Limit yoki Format)."
+                    }));
+                    allResultsRaw[idx] = errorResults;
+                    return;
+                }
+
+                // Longer wait on rate limit, exponential backoff otherwise
+                const waitTime = isRateLimit ? (30000 + Math.random() * 15000) : (3000 * Math.pow(2, attempt));
+                console.log(`[AI Batch Check] Retrying chunk ${idx + 1} in ${Math.round(waitTime / 1000)}s...`);
+                await new Promise(r => setTimeout(r, waitTime));
+            }
+        }
+    }
+
+    // Run pool
+    const workers = [];
+    for (let i = 0; i < CONCURRENCY_LIMIT; i++) {
+        workers.push((async () => {
+            while (chunkIndices.length > 0) {
+                const idx = chunkIndices.shift();
+                if (idx !== undefined) await processChunk(idx);
+            }
+        })());
+    }
+
+    await Promise.all(workers);
+
+    // Merge pending results back into finalResults using originalIndex
+    allResultsRaw.forEach((chunkRes, chunkIdx) => {
+        if (chunkRes) {
+            const chunk = chunks[chunkIdx];
+            chunkRes.forEach((res, i) => {
+                const originalIdx = chunk[i].originalIndex;
+                finalResults[originalIdx] = res;
+            });
+        }
+    });
+
+    return finalResults;
+}
+
 export async function checkAnswerWithAI(
     question: string,
     studentAnswer: string,
     questionType: string
 ): Promise<AICheckResult> {
-    const apiKey = process.env.GEMINI_API_KEY || "";
-    if (!apiKey) {
-        console.error("GEMINI_API_KEY is not set");
-        return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "AI tekshiruv vaqtincha mavjud emas." };
-    }
-
-    // Fail-fast for empty answers
-    if (!studentAnswer || studentAnswer.trim().length < 2) {
-        return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "Javob bo'sh yoki juda qisqa." };
-    }
-
-    const MAX_RETRIES = 3;
-    let attempt = 0;
-
-    while (attempt < MAX_RETRIES) {
-        attempt++;
-        try {
-            const genAI = getGenAI();
-            const modelName = process.env.GEMINI_MODEL || "gemma-3-1b-it";
-            const model = genAI.getGenerativeModel({ model: modelName });
-
-            const prompt = `Siz tajribali o'zbek tili va ingliz tili o'qituvchisisiz. Berilgan savolga o'quvchi javobini baholang.
-
-MUHIM QOIDALAR:
-1. Javobning MA'NO va MAZMUNI asosiy mezon. Imlo xatolari yoki grammatik kamchiliklar YAGONA sabab bo'lib, javobni noto'g'ri deb hisoblash mumkin emas.
-2. Javob o'zbek, rus yoki ingliz tilida bo'lishi mumkin - bu normaldur.
-3. Agar javob savolning asosiy ma'nosiga mos kelsa va tushunish mumkin bo'lsa, u TO'G'RI.
-4. Faqat savol bilan mutlaqo bog'liq bo'lmagan yoki noto'g'ri ma'noli javobni noto'g'ri deb belgilang.
-5. To'liq emas, lekin to'g'ri yo'naltirilgan javobga contentScore 50-80 bering.
-
-Savol turi: "${questionType}"
-Savol: "${question}"
-O'quvchi javobi: "${studentAnswer}"
-
-Faqat quyidagi JSON formatida javob bering (boshqa hech narsa yozmang):
-{"isCorrect": boolean, "grammarScore": number (0-100), "contentScore": number (0-100), "feedback": "O'zbekcha qisqa izoh"}`;
-
-            console.log(`[AI Check] Request for: "${studentAnswer.substring(0, 30)}..." (Attempt ${attempt})`);
-
-            const aiPromise = model.generateContent(prompt);
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error("AI_TIMEOUT")), 15000)
-            );
-
-            const result = await Promise.race([aiPromise, timeoutPromise]) as any;
-            const response = await result.response;
-            let text = response.text();
-
-            console.log(`[AI Check] Raw response: ${text}`);
-
-            text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-
-            if (jsonMatch) {
-                const parsed = JSON.parse(jsonMatch[0]);
-                console.log(`[AI Check] Parsed Result: ${parsed.isCorrect ? 'Correct' : 'Incorrect'} (content: ${parsed.contentScore})`);
-                return {
-                    isCorrect: !!parsed.isCorrect,
-                    grammarScore: Math.min(100, Math.max(0, Number(parsed.grammarScore) || 0)),
-                    contentScore: Math.min(100, Math.max(0, Number(parsed.contentScore) || 0)),
-                    feedback: String(parsed.feedback || "")
-                };
-            }
-            throw new Error("Invalid AI response format");
-
-        } catch (err: any) {
-            console.error(`[AI Check] Attempt ${attempt} failed:`, err.message);
-            if (attempt === MAX_RETRIES) {
-                return {
-                    isCorrect: false,
-                    contentScore: 0,
-                    grammarScore: 0,
-                    feedback: "Javobni tekshirishda xatolik yuz berdi. Iltimos keyinroq urinib ko'ring."
-                };
-            }
-            await new Promise(r => setTimeout(r, 1000 * attempt));
-        }
-    }
-
-    return { isCorrect: false, contentScore: 0, grammarScore: 0, feedback: "Javobni tekshirishda xatolik." };
+    const results = await checkAnswersWithAIBatch([{ text: question, studentAnswer, type: questionType }]);
+    return results[0];
 }
 
 
@@ -122,7 +216,7 @@ export async function generateVocabBattleWithAI(
 
     try {
         const genAI = getGenAI();
-        const modelName = process.env.GEMINI_MODEL || "gemma-3-1b-it";
+        const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
         const prompt = `

@@ -7,21 +7,21 @@ import PlayerGame from './pages/PlayerGame';
 import HostGame from './pages/HostGame';
 import AdminPanel from './pages/AdminPanel';
 import TeacherDashboard from './pages/TeacherDashboard';
-import ManagerDashboard from './pages/ManagerDashboard.tsx';
+import ManagerDashboard from './pages/ManagerDashboard';
 import StudentLogin from './pages/StudentLogin';
 
 import StudentDashboard from './pages/StudentDashboard';
-import Leaderboard from './pages/Leaderboard.tsx';
+import Leaderboard from './pages/Leaderboard';
 import Shop from './pages/Shop';
-import SoloQuiz from './pages/SoloQuiz.tsx';
+import SoloQuiz from './pages/SoloQuiz';
 import DuelLobby from './pages/DuelLobby';
 import UnitLobby from './pages/UnitLobby';
 import UnitJoin from './pages/UnitJoin';
 import Login from './pages/Login';
 import GroupDetails from './pages/GroupDetails';
-import BattleDetails from './pages/BattleDetails.tsx';
+import BattleDetails from './pages/BattleDetails';
 import { AuthProvider, useAuth } from './AuthContext';
-import AppMonitor from './AppMonitor.tsx';
+import AppMonitor from './AppMonitor';
 
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' | 'manager' }) => {
   const { isAuthenticated, role } = useAuth();

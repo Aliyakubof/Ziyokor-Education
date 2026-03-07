@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
-import { BookOpen, ChevronLeft, Zap, Clock, ChevronRight, CheckCircle, XCircle, Swords, Trophy, Coins } from 'lucide-react';
+import { BookOpen, ChevronLeft, Zap, Clock, ChevronRight, CheckCircle, XCircle, Swords, Trophy, Coins, History } from 'lucide-react';
 
 export default function SoloQuiz() {
     const { user } = useAuth();
@@ -144,8 +144,9 @@ export default function SoloQuiz() {
                 const data = await res.json();
                 setResults({
                     type: 'battle',
-                    score: data.xpEarned,
-                    coins: data.coinsEarned,
+                    hidden: data.hidden,
+                    score: data.xpEarned || 0,
+                    coins: data.coinsEarned || 0,
                     percentage: (totalXp / (battleQuestions.length * 250)) * 100 // Estimate max nominal XP
                 });
             }
@@ -166,6 +167,38 @@ export default function SoloQuiz() {
     // -------- Renders --------
 
     if (results) {
+        if (results.hidden) {
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans p-6 flex items-center justify-center">
+                    <div className="max-w-md w-full bg-white rounded-[3rem] p-10 text-center shadow-xl border border-slate-100 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+                        <div className="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-lg shadow-indigo-100 animate-float">
+                            <CheckCircle size={48} />
+                        </div>
+
+                        <h2 className="text-3xl font-black text-slate-800 mb-2">Muvaffaqiyatli!</h2>
+                        <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-10">Sizning natijangiz</p>
+
+                        <div className="bg-sky-50 border border-sky-100 rounded-[2rem] p-8 mb-10">
+                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                <History className="text-sky-600" size={24} />
+                            </div>
+                            <p className="text-sky-800 font-bold leading-relaxed">
+                                Natijalar va to'g'ri javoblar <span className="text-indigo-600">Telegram bot</span> orqali o'qituvchingizga yuborildi.
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={() => { setResults(null); setSelectedQuiz(null); }}
+                            className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95"
+                        >
+                            ASOSIY MENYUGA QAYTISH
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="min-h-screen bg-slate-50 font-sans p-6">
                 <div className="max-w-md mx-auto space-y-6">
