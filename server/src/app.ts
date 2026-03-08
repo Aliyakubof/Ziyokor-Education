@@ -2084,6 +2084,7 @@ io.on('connection', (socket) => {
     // Host: Create Unit Game
     socket.on('host-create-unit-game', async ({ quizId, groupId }: { quizId: string, groupId: string }) => {
         try {
+            const now = Date.now();
             // PIN reuse logic removed to ensure fresh start every time
             const result = await query('SELECT * FROM unit_quizzes WHERE id = $1', [quizId]);
             if (result.rowCount === 0) {
