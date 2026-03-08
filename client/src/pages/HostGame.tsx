@@ -18,7 +18,7 @@ interface QuestionData {
 const MemoizedPlayerCard = memo(({ player, totalQuestionsCount }: { player: any; totalQuestionsCount: number }) => {
     const answeredCount = player.answeredCount || 0;
     const isFinished = player.isFinished || false;
-    const percentage = (answeredCount / totalQuestionsCount) * 100;
+    const percentage = totalQuestionsCount > 0 ? (answeredCount / totalQuestionsCount) * 100 : 0;
     const isCheating = player.isCheater || player.status === 'Cheating';
 
     return (
@@ -303,7 +303,7 @@ export default function HostGame() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {unitPlayers.map((player) => (
                             <MemoizedPlayerCard
-                                key={player.id || player.name}
+                                key={player.id}
                                 player={player}
                                 totalQuestionsCount={totalQuestionsCount}
                             />

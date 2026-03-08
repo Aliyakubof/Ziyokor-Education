@@ -2042,10 +2042,10 @@ async function broadcastPlayerUpdate(pin: string, playerId?: string) {
             }
         }, 1000);
     } else {
-        // Normal game: send full update (usually small number of players)
+        // Normal game: send full update to room for cluster safety
         const game = await store.getGame(pin);
         if (game) {
-            io.to(game.hostId).emit('player-update', scrubPlayers(game));
+            io.to(pin).emit('player-update', scrubPlayers(game));
         }
     }
 }
