@@ -7,16 +7,45 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 async function runStressTest() {
     console.log('🚀 Gemini Stress Test boshlandi (150 ta savol)...');
 
-    // 150 ta turli xil savollar (bu yerda namunaviy 150 ta savol shakllantiriladi)
+    // 150 ta savol: Bu safar o'quvchi javoblari TO'G'RI yoki juda yaqin (sinonim/qisqartma)
     const testQuestions = [];
 
-    // Qiyin grammatik mavzular: Conditionals, Passive Voice, Reported Speech, Perfect tenses
     const categories = [
-        { type: 'rewrite', prompt: 'Rewrite to Passive: ', q: 'The government is building a new bridge.', a: 'A new bridge is being built by the government.', student: 'New bridge is being built' },
-        { type: 'rewrite', prompt: 'Rewrite to Reported Speech: ', q: '\"I will call you tomorrow,\" he said.', a: 'He said he would call me the next day.', student: 'He said he\u2019d call me tomorrow' },
-        { type: 'fill-blank', prompt: 'Fill in the blank: ', q: 'If I [...] (see) him, I would have told him.', a: 'had seen', student: 'seen' },
-        { type: 'find-mistake', prompt: 'Find mistake: ', q: 'He don\'t know where is the keys.', a: 'He doesn\'t know where the keys are.', student: 'He doesn\u2019t know where the keys are.' },
-        { type: 'text-input', prompt: 'Explain the meaning of: ', q: 'Break a leg', a: 'Good luck', student: 'Wish me luck' }
+        {
+            type: 'rewrite',
+            prompt: 'Passive Voice: ',
+            q: 'People speak English all over the world.',
+            a: 'English is spoken all over the world.',
+            student: 'English is spoken all over the world' // To'liq to'g'ri
+        },
+        {
+            type: 'rewrite',
+            prompt: 'Reported Speech: ',
+            q: '\"I am happy,\" she said.',
+            a: 'She said she was happy.',
+            student: 'She said that she was happy' // "that" qo'shilgan, to'g'ri variant
+        },
+        {
+            type: 'fill-blank',
+            prompt: 'Fill blanks: ',
+            q: 'She [...] (go) to the cinema yesterday.',
+            a: 'went',
+            student: 'went' // To'liq to'g'ri
+        },
+        {
+            type: 'find-mistake',
+            prompt: 'Find and fix: ',
+            q: 'He have a car.',
+            a: 'He has a car.',
+            student: 'He has a car' // To'g'rilangan variant
+        },
+        {
+            type: 'text-input',
+            prompt: 'Synonym of: ',
+            q: 'Difficult',
+            a: 'Hard',
+            student: 'Challenging' // Sinonim, Gemini buni to'g'ri deyishi kerak
+        }
     ];
 
     for (let i = 0; i < 150; i++) {
