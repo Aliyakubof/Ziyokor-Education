@@ -26,6 +26,7 @@ const UnitLobby = () => {
 
         socket.on('game-created', (newPin: string) => {
             setPin(newPin);
+            setPlayers([]); // IMPORTANT: Clear players list for the new session
         });
 
         socket.on('player-update', (updatedPlayers: Player[]) => {

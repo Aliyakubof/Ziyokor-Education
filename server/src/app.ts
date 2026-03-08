@@ -1988,10 +1988,11 @@ async function broadcastPlayerUpdate(pin: string, playerId?: string) {
 
     if (metadata.isUnitQuiz) {
         // If it's in LOBBY status, always send full update to ensure teacher sees everyone correctly
+        // Cluster-safe: Emit to the room instead of just hostId
         if (metadata.status === 'LOBBY') {
             const fullGame = await store.getGame(pin);
             if (fullGame) {
-                io.to(fullGame.hostId).emit('player-update', scrubPlayers(fullGame));
+                io.to(pin).emit('player-update', scrubPlayers(fullGame));
             }
             return;
         }
@@ -2013,13 +2014,11 @@ async function broadcastPlayerUpdate(pin: string, playerId?: string) {
 
             try {
                 if (updates.has('ALL')) {
-                    // Still need full game for "ALL" update, but this is less frequent
                     const fullGame = await store.getGame(pin);
                     if (fullGame) {
-                        io.to(fullGame.hostId).emit('player-update', scrubPlayers(fullGame));
+                        io.to(pin).emit('player-update', scrubPlayers(fullGame));
                     }
                 } else {
-                    // Incremental update: fetch ONLY changed players
                     const changedPlayers: any[] = [];
                     for (const pId of Array.from(updates)) {
                         if (pId === 'ALL') continue;
@@ -2030,7 +2029,7 @@ async function broadcastPlayerUpdate(pin: string, playerId?: string) {
                     }
 
                     if (changedPlayers.length > 0) {
-                        io.to(metadata.hostId as string).emit('player-update-delta', changedPlayers);
+                        io.to(pin).emit('player-update-delta', changedPlayers);
                     }
                 }
             } catch (err) {
