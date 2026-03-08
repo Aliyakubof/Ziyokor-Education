@@ -689,7 +689,7 @@ const GroupDetails = () => {
                                             <tbody className="divide-y divide-slate-100">
                                                 {safeParseResults(result.player_results).map((player: any) => {
                                                     const score = player.score || 0;
-                                                    const correctCount = Math.round(score / 100);
+                                                    const correctCount = score;
                                                     const total = result.total_questions || 0;
                                                     const percentage = total > 0 ? Math.round((correctCount / total) * 100) : 0;
                                                     const isPassed = percentage > 59;
@@ -729,7 +729,7 @@ const GroupDetails = () => {
                                     <div className="md:hidden space-y-3">
                                         {safeParseResults(result.player_results).map((player: any) => {
                                             const score = player.score || 0;
-                                            const correctCount = Math.round(score / 100);
+                                            const correctCount = score;
                                             const total = result.total_questions || 0;
                                             const percentage = total > 0 ? Math.round((correctCount / total) * 100) : 0;
                                             const isPassed = percentage > 59;

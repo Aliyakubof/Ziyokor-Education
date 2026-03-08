@@ -431,7 +431,7 @@ export default function StudentDashboard() {
                                             </div>
                                             {game.total_questions > 0 && (
                                                 <span className="text-[10px] font-bold text-slate-400">
-                                                    {Math.round(game.score / 100)} / {game.total_questions}
+                                                    {Math.round(game.score)} / {game.total_questions}
                                                 </span>
                                             )}
                                         </div>
