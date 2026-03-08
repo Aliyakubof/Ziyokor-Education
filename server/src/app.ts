@@ -2285,7 +2285,7 @@ io.on('connection', (socket) => {
                         text: q.text,
                         options: q.options,
                         type: q.type,
-                        acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
+                        acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
                         questionIndex: idx + 1,
                         totalQuestions: (questions as any[]).length
                     }));
@@ -2365,7 +2365,7 @@ io.on('connection', (socket) => {
                 text: q.text,
                 options: q.options,
                 type: q.type,
-                acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
+                acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
                 questionIndex: idx + 1,
                 totalQuestions: questions.length
             }));
@@ -2425,7 +2425,7 @@ io.on('connection', (socket) => {
                     text: q.text,
                     options: q.options,
                     type: q.type,
-                    acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
+                    acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
                     questionIndex: idx + 1,
                     totalQuestions: questions.length
                 }));
@@ -2474,7 +2474,7 @@ io.on('connection', (socket) => {
                     text: q.text,
                     options: q.options,
                     type: q.type,
-                    acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
+                    acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
                     questionIndex: idx + 1,
                     totalQuestions: (questions as any[]).length
                 }));
@@ -2641,7 +2641,7 @@ io.on('connection', (socket) => {
         const prevPartialScore = (player as any).partialScoreMap[qIdx] || 0;
 
         let currentScore = 0;
-        const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching'];
+        const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching', 'vocabulary'];
         const isTextInput = textTypes.slice(0, 4).includes(question.type || '');
 
         if (question.type === 'matching' || question.type === 'word-box') {
@@ -2704,7 +2704,7 @@ io.on('connection', (socket) => {
             if (player.answers[qIdx] === undefined && answer !== undefined && answer !== null) {
                 const question = questions[qIdx];
                 let currentScore = 0;
-                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching'];
+                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching', 'vocabulary'];
 
                 if (question.type === 'matching' || question.type === 'word-box') {
                     currentScore = countCorrectParts(String(answer), question.acceptedAnswers || []);
