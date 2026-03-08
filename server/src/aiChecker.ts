@@ -28,7 +28,7 @@ function getCacheKey(question: string, answer: string): string {
 }
 
 export async function checkAnswersWithAIBatch(
-    questions: { text: string, studentAnswer: string, type: string }[]
+    questions: { text: string, studentAnswer: string, type: string, acceptedAnswers?: string[] }[]
 ): Promise<AICheckResult[]> {
     const apiKey = process.env.GEMINI_API_KEY || "";
     if (!apiKey) {
@@ -118,17 +118,23 @@ export async function checkAnswersWithAIBatch(
                 const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite";
                 const model = genAI.getGenerativeModel({ model: modelName });
 
-                const batchInfo = chunk.map((q: any, i: number) => `SAVOL #${i + 1}:\nTur: ${q.type}\nSavol: ${q.text}\nJavob: ${q.studentAnswer}`).join('\n\n---\n\n');
+                const batchInfo = chunk.map((q: any, i: number) => {
+                    const correctHint = q.acceptedAnswers && q.acceptedAnswers.length > 0
+                        ? `\nTo'g'ri javob(lar): ${q.acceptedAnswers.join(' | ')}`
+                        : '';
+                    return `SAVOL #${i + 1}:\nTur: ${q.type}\nSavol: ${q.text}${correctHint}\nO'quvchi javobi: ${q.studentAnswer}`;
+                }).join('\n\n---\n\n');
 
                 const prompt = `Siz tajribali o'zbek tili va ingliz tili o'qituvchisisiz. Quyidagi ${chunk.length} ta savol va o'quvchi javoblarini baholang.
 
 MUHIM QOIDALAR:
-1. MA'NO va MAZMUN asosiy mezon. Imlo xatolari (yengil typo) yoki kichik grammatik kamchiliklar javobni noto'g'ri deyishga sabab bo'lmasligi kerak.
-2. Javob o'zbek yoki ingliz tilida bo'lishi mumkin.
-3. Agar javob savolning asosiy ma'nosiga mos kelsa va tushunish mumkin bo'lsa, uni TO'G'RI deb belgilang.
-4. Faqat savol bilan mutlaqo bog'liq bo'lmagan yoki mantiqan teskari javoblarni NOTO'G'RI deb belgilang.
-5. Har bir javob uchun contentScore (0-100) va grammarScore (0-100) bering.
-6. Har bir javob uchun o'zbek tilida juda qisqa, foydali feedback yozing.
+1. Agar "To'g'ri javob(lar)" ko'rsatilgan bo'lsa, o'quvchi javobi shu javob(lar) bilan MAZMUN jihatdan mos kelishini tekshiring.
+2. MA'NO va MAZMUN asosiy mezon. Yengil imlo xatolari yoki kichik grammatik kamchiliklar javobni noto'g'ri deyishga sabab bo'lmasligi kerak.
+3. Javob o'zbek yoki ingliz tilida bo'lishi mumkin.
+4. Agar javob to'g'ri javob bilan mazmunan bir xil yoki juda yaqin bo'lsa, TO'G'RI deb belgilang.
+5. Faqat savolga mutlaqo aloqasiz yoki teskari ma'noli javoblarni NOTO'G'RI deb belgilang.
+6. Har bir javob uchun contentScore (0-100) va grammarScore (0-100) bering.
+7. Har bir javob uchun o'zbek tilida juda qisqa, foydali feedback yozing (agar xato bo'lsa, to'g'ri javobni ham ko'rsat).
 
 Faqat quyidagi JSON formatida javob bering:
 {

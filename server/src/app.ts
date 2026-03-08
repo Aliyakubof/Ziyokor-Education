@@ -538,7 +538,7 @@ app.post('/api/student/quiz/submit', async (req, res) => {
 
         let immediateScore = 0;
         const results: any[] = [];
-        const aiCheckPending: { qIdx: number, text: string, studentAnswer: string, type: string }[] = [];
+        const aiCheckPending: { qIdx: number, text: string, studentAnswer: string, type: string, acceptedAnswers?: string[] }[] = [];
 
         for (let i = 0; i < questions.length; i++) {
             const q = questions[i];
@@ -562,7 +562,7 @@ app.post('/api/student/quiz/submit', async (req, res) => {
                     immediateScore += 1;
                 } else if (studentAns) {
                     isPending = true;
-                    aiCheckPending.push({ qIdx: i, text: q.text, studentAnswer: studentAns, type: q.type });
+                    aiCheckPending.push({ qIdx: i, text: q.text, studentAnswer: studentAns, type: q.type, acceptedAnswers: q.acceptedAnswers || [] });
                 }
             } else {
                 if (Number(studentAns) === q.correctIndex) {
@@ -1907,12 +1907,12 @@ const updateThrottles: Record<string, NodeJS.Timeout | null> = {};
 const pendingPlayerUpdates: Record<string, Set<string>> = {};
 
 // AI Queue Manager for handle large-scale quizzes (like 1120 questions)
-const aiCheckQueues: Record<string, { pin: string, playerId: string, qIdx: number, text: string, answer: string, type: string }[]> = {};
+const aiCheckQueues: Record<string, { pin: string, playerId: string, qIdx: number, text: string, answer: string, type: string, acceptedAnswers?: string[] }[]> = {};
 const aiQueueThrottles: Record<string, NodeJS.Timeout | null> = {};
 
-async function enqueueAICheck(pin: string, playerId: string, qIdx: number, text: string, answer: string, type: string) {
+async function enqueueAICheck(pin: string, playerId: string, qIdx: number, text: string, answer: string, type: string, acceptedAnswers?: string[]) {
     if (!aiCheckQueues[pin]) aiCheckQueues[pin] = [];
-    aiCheckQueues[pin].push({ pin, playerId, qIdx, text, answer, type });
+    aiCheckQueues[pin].push({ pin, playerId, qIdx, text, answer, type, acceptedAnswers });
 
     if (aiQueueThrottles[pin]) return;
 
@@ -1928,7 +1928,8 @@ async function enqueueAICheck(pin: string, playerId: string, qIdx: number, text:
             const results = await checkAnswersWithAIBatch(queue.map(item => ({
                 text: item.text,
                 studentAnswer: item.answer,
-                type: item.type
+                type: item.type,
+                acceptedAnswers: item.acceptedAnswers
             })));
 
             let modCount = 0;

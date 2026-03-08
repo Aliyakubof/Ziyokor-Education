@@ -797,7 +797,7 @@ export default function PlayerGame() {
                 </div>
             </main>
 
-            {isUnitMode && (
+            {isUnitMode && (view === 'PLAYING' || view === 'UNIT_REVIEW') && (
                 <footer className="p-4 bg-white/80 backdrop-blur-md border-t border-slate-200 flex items-center justify-between shrink-0">
                     <button
                         onClick={() => {
