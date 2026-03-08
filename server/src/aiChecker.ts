@@ -78,7 +78,7 @@ export async function checkAnswersWithAIBatch(
             attempt++;
             try {
                 const genAI = getGenAI();
-                const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+                const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
                 const model = genAI.getGenerativeModel({ model: modelName });
 
                 const batchInfo = chunk.map((q: any, i: number) => `SAVOL #${i + 1}:\nTur: ${q.type}\nSavol: ${q.text}\nJavob: ${q.studentAnswer}`).join('\n\n---\n\n');
@@ -216,7 +216,7 @@ export async function generateVocabBattleWithAI(
 
     try {
         const genAI = getGenAI();
-        const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+        const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
         const prompt = `
