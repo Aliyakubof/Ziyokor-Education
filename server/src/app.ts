@@ -2084,7 +2084,18 @@ io.on('connection', (socket) => {
     socket.on('host-create-unit-game', async ({ quizId, groupId }: { quizId: string, groupId: string }) => {
         try {
             const now = Date.now();
-            // PIN reuse logic removed to ensure fresh start every time
+
+            // SECURITY: Always clear any existing LOBBY for this group/quiz before creating a new one
+            // This prevents "ghost" sessions even if reuse was disabled.
+            const allGames = await store.getAllGames();
+            for (const p of Object.keys(allGames)) {
+                const g = allGames[p];
+                if (g.isUnitQuiz && g.groupId === groupId && g.quiz.id === quizId && g.status === 'LOBBY') {
+                    await store.deleteGame(p);
+                    console.log(`Unit Game PRE-CLEAN: ${p} for group ${groupId}`);
+                }
+            }
+
             const result = await query('SELECT * FROM unit_quizzes WHERE id = $1', [quizId]);
             if (result.rowCount === 0) {
                 socket.emit('error', 'Unit Quiz not found');
