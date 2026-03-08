@@ -2290,7 +2290,12 @@ io.on('connection', (socket) => {
                         questionIndex: idx + 1,
                         totalQuestions: (questions as any[]).length
                     }));
-                    socket.emit('unit-game-started', { questions: questionsForStudents, endTime: metadata.endTime, title: metadata.quiz!.title });
+                    socket.emit('unit-game-started', {
+                        questions: questionsForStudents,
+                        endTime: metadata.endTime,
+                        title: metadata.quiz!.title,
+                        createdAt: metadata.createdAt
+                    });
                 } else {
                     socket.emit('game-started', { endTime: metadata.endTime, title: metadata.quiz!.title });
                 }
@@ -2370,7 +2375,12 @@ io.on('connection', (socket) => {
                 questionIndex: idx + 1,
                 totalQuestions: questions.length
             }));
-            io.to(pin).emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
+            io.to(pin).emit('unit-game-started', {
+                questions: questionsForStudents,
+                endTime,
+                title: game.quiz.title,
+                createdAt: game.createdAt
+            });
         } else {
             await sendQuestion(pin);
         }
@@ -2430,7 +2440,12 @@ io.on('connection', (socket) => {
                     questionIndex: idx + 1,
                     totalQuestions: questions.length
                 }));
-                socket.emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
+                socket.emit('unit-game-started', {
+                    questions: questionsForStudents,
+                    endTime,
+                    title: game.quiz.title,
+                    createdAt: game.createdAt
+                });
             } else if (game.currentQuestionIndex >= 0) {
                 const q = game.quiz.questions[game.currentQuestionIndex];
                 socket.emit('question-new', {
@@ -2479,7 +2494,12 @@ io.on('connection', (socket) => {
                     questionIndex: idx + 1,
                     totalQuestions: (questions as any[]).length
                 }));
-                socket.emit('unit-game-started', { questions: questionsForStudents, endTime, title: metadata.quiz!.title });
+                socket.emit('unit-game-started', {
+                    questions: questionsForStudents,
+                    endTime,
+                    title: metadata.quiz!.title,
+                    createdAt: metadata.createdAt
+                });
             } else if (metadata.currentQuestionIndex !== undefined && metadata.currentQuestionIndex >= 0) {
                 const q = metadata.quiz!.questions[metadata.currentQuestionIndex];
                 socket.emit('question-start', {
@@ -2596,7 +2616,8 @@ io.on('connection', (socket) => {
                 currentQuestionIndex: 0,
                 isUnitQuiz: true,
                 isDuel: true,
-                duelId
+                duelId,
+                createdAt: Date.now()
             };
             await store.setGame(pin, game);
 

@@ -83,7 +83,7 @@ export default function PlayerGame() {
             socket.emit('player-get-status', { pin: pinFromStore, studentId: idFromStore || undefined });
         }
 
-        socket.on('unit-game-started', (data: { questions: any[], endTime: number, title: string }) => {
+        socket.on('unit-game-started', (data: { questions: any[], endTime: number, title: string, createdAt?: number }) => {
             console.log('Unit game started event received:', data);
 
             if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
@@ -93,13 +93,26 @@ export default function PlayerGame() {
                 return;
             }
 
+            const pin = localStorage.getItem('kahoot-pin');
+
+            // SESSION RESET LOGIC: 
+            // If the game started has a different 'createdAt' than what we have saved for this PIN,
+            // it means a new fresh session has started even if PIN is the same.
+            if (pin && data.createdAt) {
+                const lastCreatedAt = localStorage.getItem(`unit-created-at-${pin}`);
+                if (lastCreatedAt && lastCreatedAt !== String(data.createdAt)) {
+                    console.log('[Session] New session detected (createdAt mismatch). Resetting local answers.');
+                    localStorage.removeItem(`unit-answers-${pin}`);
+                }
+                localStorage.setItem(`unit-created-at-${pin}`, String(data.createdAt));
+            }
+
             setIsUnitMode(true);
             setUnitQuestions(data.questions);
             setGlobalEndTime(data.endTime);
             setQuizTitle(data.title);
 
             // Restore saved answers from PIN-specific localStorage
-            const pin = localStorage.getItem('kahoot-pin');
             const savedAnswersRaw = pin ? localStorage.getItem(`unit-answers-${pin}`) : null;
             const savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : {};
 
