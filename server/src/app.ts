@@ -833,9 +833,9 @@ app.post('/api/unit-quizzes', async (req, res) => {
         const id = uuidv4();
         await query(
             'INSERT INTO unit_quizzes (id, title, questions, level, unit, time_limit) VALUES ($1, $2, $3, $4, $5, $6)',
-            [id, title, JSON.stringify(questions), level, unit, time_limit || 30]
+            [id, title, Array.isArray(questions) ? JSON.stringify(questions) : questions, level, unit, time_limit || 30]
         );
-        res.json({ id, title, questions, level, unit, time_limit: time_limit || 30 });
+        res.json({ id, title, questions: Array.isArray(questions) ? questions : JSON.parse(questions), level, unit, time_limit: time_limit || 30 });
     } catch (err) {
         console.error('Error creating unit quiz:', err);
         res.status(500).json({ error: 'Error creating unit quiz' });
@@ -848,9 +848,9 @@ app.put('/api/unit-quizzes/:id', async (req, res) => {
         const { id } = req.params;
         await query(
             'UPDATE unit_quizzes SET title = $1, questions = $2, level = $3, unit = $4, time_limit = $5 WHERE id = $6',
-            [title, JSON.stringify(questions), level, unit, time_limit || 30, id]
+            [title, Array.isArray(questions) ? JSON.stringify(questions) : questions, level, unit, time_limit || 30, id]
         );
-        res.json({ id, title, questions, level, unit, time_limit: time_limit || 30 });
+        res.json({ id, title, questions: Array.isArray(questions) ? questions : JSON.parse(questions), level, unit, time_limit: time_limit || 30 });
     } catch (err) {
         console.error('Error updating unit quiz:', err);
         res.status(500).json({ error: 'Error updating unit quiz' });
@@ -2310,14 +2310,23 @@ io.on('connection', (socket) => {
         io.to(pin).emit('game-started', { endTime, title: game.quiz.title });
 
         if (game.isUnitQuiz) {
-            const questionsForStudents = (game.quiz.questions as any[]).map((q, idx) => ({
+            let questions = game.quiz.questions;
+            if (typeof questions === 'string') {
+                try {
+                    questions = JSON.parse(questions);
+                } catch (e) {
+                    console.error('[host-start-game] Failed to parse questions:', e);
+                    questions = [];
+                }
+            }
+            const questionsForStudents = (questions as any[]).map((q, idx) => ({
                 info: q.info,
                 text: q.text,
                 options: q.options,
                 type: q.type,
                 acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
                 questionIndex: idx + 1,
-                totalQuestions: game.quiz.questions.length
+                totalQuestions: questions.length
             }));
             io.to(pin).emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
         } else {
@@ -2361,14 +2370,23 @@ io.on('connection', (socket) => {
             socket.emit('game-started', { endTime, title: game.quiz.title });
 
             if (game.isUnitQuiz) {
-                const questionsForStudents = (game.quiz.questions as any[]).map((q, idx) => ({
+                let questions = game.quiz.questions;
+                if (typeof questions === 'string') {
+                    try {
+                        questions = JSON.parse(questions);
+                    } catch (e) {
+                        console.error('[host-get-status] Failed to parse questions:', e);
+                        questions = [];
+                    }
+                }
+                const questionsForStudents = (questions as any[]).map((q, idx) => ({
                     info: q.info,
                     text: q.text,
                     options: q.options,
                     type: q.type,
                     acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
                     questionIndex: idx + 1,
-                    totalQuestions: game.quiz.questions.length
+                    totalQuestions: questions.length
                 }));
                 socket.emit('unit-game-started', { questions: questionsForStudents, endTime, title: game.quiz.title });
             } else if (game.currentQuestionIndex >= 0) {

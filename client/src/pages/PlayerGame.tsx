@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
-import { Trophy, Clock, CheckCircle2, Send, XCircle, Info } from 'lucide-react';
+import { Clock, CheckCircle2, Send, XCircle, Info } from 'lucide-react';
 
 interface QuestionData {
     info?: string;
@@ -32,9 +32,9 @@ const normalizeAnswer = (val: string | number): string => {
 
 export default function PlayerGame() {
     const [view, setView] = useState<'WAITING' | 'PLAYING' | 'ANSWERED' | 'FINISHED' | 'UNIT_SUMMARY' | 'UNIT_REVIEW'>('WAITING');
-    const [rank, setRank] = useState<{ rank: number; score: number } | null>(null);
     const [question, setQuestion] = useState<QuestionData | null>(null);
     const [textAnswer, setTextAnswer] = useState('');
+    const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
 
     const [isConnected, setIsConnected] = useState(socket.connected);
@@ -44,7 +44,6 @@ export default function PlayerGame() {
     const [unitQuestions, setUnitQuestions] = useState<QuestionData[]>([]);
     const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
     const [unitAnswers, setUnitAnswers] = useState<Record<number, any>>(() => {
-        // Restore answers from localStorage if available
         try {
             const saved = localStorage.getItem('unit-answers');
             return saved ? JSON.parse(saved) : {};
@@ -54,6 +53,11 @@ export default function PlayerGame() {
     const [unitAIFeedback, setUnitAIFeedback] = useState<Record<number, string>>({});
     const [globalEndTime, setGlobalEndTime] = useState<number | null>(null);
     const [quizTitle, setQuizTitle] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [syncStatus, setSyncStatus] = useState<Record<number, 'SAVING' | 'SAVED' | 'ERROR'>>({});
+
+    const pinFromStore = localStorage.getItem('kahoot-pin');
+    const idFromStore = localStorage.getItem('student-id');
 
     useEffect(() => {
         const onConnect = () => setIsConnected(true);
@@ -69,46 +73,49 @@ export default function PlayerGame() {
         });
 
         // Request status immediately (for re-sync after navigation or refresh)
-        const pinFromStore = localStorage.getItem('kahoot-pin');
-        const idFromStore = localStorage.getItem('student-id');
         if (pinFromStore) {
             socket.emit('player-get-status', { pin: pinFromStore, studentId: idFromStore || undefined });
         }
 
-        socket.on('unit-game-started', (data: { questions: QuestionData[], endTime?: number, title?: string }) => {
+        socket.on('unit-game-started', (data: { questions: any[], endTime: number, title: string }) => {
+            console.log('Unit game started event received:', data);
+
+            if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
+                console.error('Invalid questions data received for unit game:', data);
+                setError('Savollar yuklanishida xatolik yuz berdi. Iltimos, qayta urinib ko\'ring.');
+                setView('WAITING');
+                return;
+            }
+
             setIsUnitMode(true);
             setUnitQuestions(data.questions);
-            setGlobalEndTime(data.endTime || null);
-            setQuizTitle(data.title || '');
+            setGlobalEndTime(data.endTime);
+            setQuizTitle(data.title);
 
-            // Restore saved answers from localStorage — don't reset if student already answered
+            // Restore saved answers from localStorage
             const savedAnswersRaw = localStorage.getItem('unit-answers');
             const savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : {};
-            const hasExistingAnswers = Object.keys(savedAnswers).length > 0;
 
-            if (!hasExistingAnswers) {
-                setCurrentUnitIndex(0);
-                setQuestion(data.questions[0]);
-                setView('PLAYING');
-            } else {
-                // Student is reconnecting — restore their position
-                setUnitAnswers(savedAnswers);
-                setCurrentUnitIndex(0);
-                setQuestion(data.questions[0]);
-                setView('PLAYING');
+            setUnitAnswers(savedAnswers);
 
-                // Sync answers back to the server so the Host's dashboard progress is correct
-                const pinFromStore = localStorage.getItem('kahoot-pin');
-                if (pinFromStore) {
-                    socket.emit('player-sync-answers', { pin: pinFromStore, answers: savedAnswers }, (ack: { success: boolean }) => {
-                        console.log('[Sync] Initial answers sync completed:', ack.success);
-                    });
-                }
+            // Sync answers back to the server so the Host's dashboard progress is correct
+            if (pinFromStore && Object.keys(savedAnswers).length > 0) {
+                socket.emit('player-sync-answers', { pin: pinFromStore, answers: savedAnswers }, (ack: { success: boolean }) => {
+                    console.log('[Sync] Initial answers sync completed:', ack.success);
+                });
             }
+
+            // Find first unanswered question or stay at 0
+            const firstUnanswered = data.questions.findIndex((_, idx) => savedAnswers[idx] === undefined);
+            const nextIdx = firstUnanswered === -1 ? 0 : firstUnanswered;
+
+            setCurrentUnitIndex(nextIdx);
+            setQuestion(data.questions[nextIdx]);
+            setView('PLAYING');
         });
 
         socket.on('question-start', (q) => {
-            if (isUnitMode) return; // Ignore global question-start in unit mode
+            if (isUnitMode) return;
             setQuestion(q);
             setView('PLAYING');
             setTextAnswer('');
@@ -116,14 +123,12 @@ export default function PlayerGame() {
 
         socket.on('unit-finished', (data: { score?: number, correctAnswers?: any[], aiFeedbackMap?: Record<number, string>, hidden?: boolean }) => {
             setIsSubmitting(false);
-            localStorage.removeItem('unit-answers'); // Only clear on success
+            localStorage.removeItem('unit-answers');
             setView('FINISHED');
             if (data.hidden) {
-                setRank({ rank: 0, score: 0 });
                 setUnitCorrectAnswers([]);
                 setUnitAIFeedback({});
             } else {
-                setRank({ rank: 0, score: data.score || 0 });
                 setUnitCorrectAnswers(data.correctAnswers || []);
                 setUnitAIFeedback(data.aiFeedbackMap || {});
             }
@@ -136,16 +141,12 @@ export default function PlayerGame() {
             }
         });
 
-        socket.on('game-over', (leaderboard) => {
+        socket.on('game-over', () => {
             setView('FINISHED');
-            const myId = socket.id;
-            const myIdAlt = (socket as any).studentId;
-            const myRank = leaderboard.findIndex((p: any) => p.id === myId || p.id === myIdAlt) + 1;
-            const myScore = leaderboard.find((p: any) => p.id === myId || p.id === myIdAlt)?.score || 0;
-            setRank({ rank: myRank, score: myScore });
+            // Score and rank calculation removed as 'rank' state is no longer used
         });
 
-        // Anti-Cheat listener: Send cheating status to server if tab is switched
+        // Anti-Cheat listener
         const handleVisibilityChange = () => {
             if (document.hidden) {
                 const pin = localStorage.getItem('kahoot-pin');
@@ -168,20 +169,15 @@ export default function PlayerGame() {
             socket.off('game-over');
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, [isUnitMode]);
-
-    const [syncStatus, setSyncStatus] = useState<Record<number, 'SAVING' | 'SAVED' | 'ERROR'>>({});
+    }, [isUnitMode, isSubmitting, view]);
 
     const saveUnitAnswer = (val: number | string) => {
         const newAnswers = { ...unitAnswers, [currentUnitIndex]: val };
         setUnitAnswers(newAnswers);
-        // Persist to localStorage so answers survive tab switches / refreshes
         localStorage.setItem('unit-answers', JSON.stringify(newAnswers));
 
-        // UI Feedback
         setSyncStatus(prev => ({ ...prev, [currentUnitIndex]: 'SAVING' }));
 
-        // Sync with server immediately for real-time progress for host
         const pin = localStorage.getItem('kahoot-pin');
         if (pin) {
             socket.emit('player-answer',
@@ -194,7 +190,6 @@ export default function PlayerGame() {
                     }
                 }
             );
-            // Safety timeout in case callback never fires (e.g. legacy server or network drop)
             setTimeout(() => {
                 setSyncStatus(prev => {
                     if (prev[currentUnitIndex] === 'SAVING') {
@@ -224,15 +219,11 @@ export default function PlayerGame() {
         return null;
     };
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
     const finalizeSubmission = () => {
         const pin = localStorage.getItem('kahoot-pin');
         if (pin) {
             setIsSubmitting(true);
             socket.emit('unit-player-finish', { pin });
-            // Note: We no longer clear unit-answers here. 
-            // We clear it in the 'unit-finished' event handler to ensure reliability.
         }
     };
 
@@ -292,8 +283,31 @@ export default function PlayerGame() {
         );
     }
 
-
-
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-brand-dark text-center">
+                <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border border-slate-200 relative z-10">
+                    <div className="w-24 h-24 bg-red-100 rounded-[2rem] flex items-center justify-center mx-auto mb-8 animate-bounce">
+                        <XCircle className="text-red-500" size={48} />
+                    </div>
+                    <h2 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Xatolik</h2>
+                    <p className="text-slate-500 font-medium mb-10">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95"
+                    >
+                        QAYTADAN URINISH
+                    </button>
+                    <button
+                        onClick={() => navigate('/student/dashboard')}
+                        className="w-full mt-4 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-slate-600 transition-colors"
+                    >
+                        DASHBOARDGA QAYTISH
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     if (!isConnected) {
         return (
