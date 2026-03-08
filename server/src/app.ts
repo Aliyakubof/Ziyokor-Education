@@ -2081,8 +2081,8 @@ io.on('connection', (socket) => {
             const existingPin = Object.keys(allGames).find(p => {
                 const g = allGames[p];
                 const age = g.createdAt ? (now - g.createdAt) : (5 * 60 * 60 * 1000); // If no createdAt, assume very old
-                // Only reuse if it's a LOBBY game from the same group/quiz and less than 1 hour old
-                return g.isUnitQuiz && g.groupId === groupId && g.quiz.id === quizId && g.status === 'LOBBY' && age < (1 * 60 * 60 * 1000);
+                // Only reuse if it's a LOBBY game from the same group/quiz and less than 10 minutes old
+                return g.isUnitQuiz && g.groupId === groupId && g.quiz.id === quizId && g.status === 'LOBBY' && age < (10 * 60 * 1000);
             });
 
             if (existingPin) {

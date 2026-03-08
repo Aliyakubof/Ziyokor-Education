@@ -76,8 +76,13 @@ const UnitLobby = () => {
     const goBack = () => {
         if (pin) {
             socket.emit('host-reset-unit-lobby', { pin });
+            // Give socket.io a tiny moment to send the packet
+            setTimeout(() => {
+                navigate('/teacher');
+            }, 100);
+        } else {
+            navigate('/teacher');
         }
-        navigate('/teacher');
     };
 
     return (
