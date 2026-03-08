@@ -2489,6 +2489,12 @@ io.on('connection', (socket) => {
                     try { questions = JSON.parse(questions); } catch (e) { questions = []; }
                 }
                 if (metadata.quiz) {
+                    const player = studentId ? await store.getPlayer(pin, studentId) : null;
+                    if (player && (player as any).isFinished) {
+                        socket.emit('unit-finished', { hidden: true });
+                        return;
+                    }
+
                     const questionsForStudents = (questions as any[]).map((q, idx) => ({
                         info: q.info,
                         text: q.text,

@@ -87,7 +87,7 @@ export const generateQuizResultPDF = (
                 } else {
                     const answer = player.answers[qIdx];
                     if (answer !== undefined) {
-                        if (['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'].includes(q.type || '')) {
+                        if (['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'vocabulary', 'matching'].includes(q.type || '')) {
                             if (checkAnswer(answer, q.acceptedAnswers || [])) {
                                 correctCount++;
                             }
@@ -128,7 +128,7 @@ export const generateQuizResultPDF = (
                 let isCorrect = false;
                 let studentDisplayAnswer = 'Javob berilmagan';
 
-                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box'];
+                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'vocabulary', 'matching'];
 
                 // 1. Determine the display answer based on question type
                 if (textTypes.includes(q.type || '')) {
