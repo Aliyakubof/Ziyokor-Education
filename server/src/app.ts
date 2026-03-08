@@ -2118,6 +2118,7 @@ io.on('connection', (socket) => {
                 const game = await store.getGame(existingPin);
                 if (game) {
                     game.hostId = socket.id; // Re-bind host to current socket
+                    game.createdAt = Date.now(); // Update timestamp so clients know it's a new session
                     await store.setGame(existingPin, game);
                     socket.join(existingPin);
                     socket.emit('game-created', existingPin);
@@ -2281,21 +2282,23 @@ io.on('connection', (socket) => {
                     if (typeof questions === 'string') {
                         try { questions = JSON.parse(questions); } catch (e) { questions = []; }
                     }
-                    const questionsForStudents = (questions as any[]).map((q, idx) => ({
-                        info: q.info,
-                        text: q.text,
-                        options: q.options,
-                        type: q.type,
-                        acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
-                        questionIndex: idx + 1,
-                        totalQuestions: (questions as any[]).length
-                    }));
-                    socket.emit('unit-game-started', {
-                        questions: questionsForStudents,
-                        endTime: metadata.endTime,
-                        title: metadata.quiz!.title,
-                        createdAt: metadata.createdAt
-                    });
+                    if (metadata.quiz) {
+                        const questionsForStudents = (questions as any[]).map((q, idx) => ({
+                            info: q.info,
+                            text: q.text,
+                            options: q.options,
+                            type: q.type,
+                            acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
+                            questionIndex: idx + 1,
+                            totalQuestions: (questions as any[]).length
+                        }));
+                        socket.emit('unit-game-started', {
+                            questions: questionsForStudents,
+                            endTime: metadata.endTime,
+                            title: metadata.quiz.title,
+                            createdAt: metadata.createdAt
+                        });
+                    }
                 } else {
                     socket.emit('game-started', { endTime: metadata.endTime, title: metadata.quiz!.title });
                 }
@@ -2485,21 +2488,23 @@ io.on('connection', (socket) => {
                 if (typeof questions === 'string') {
                     try { questions = JSON.parse(questions); } catch (e) { questions = []; }
                 }
-                const questionsForStudents = (questions as any[]).map((q, idx) => ({
-                    info: q.info,
-                    text: q.text,
-                    options: q.options,
-                    type: q.type,
-                    acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
-                    questionIndex: idx + 1,
-                    totalQuestions: (questions as any[]).length
-                }));
-                socket.emit('unit-game-started', {
-                    questions: questionsForStudents,
-                    endTime,
-                    title: metadata.quiz!.title,
-                    createdAt: metadata.createdAt
-                });
+                if (metadata.quiz) {
+                    const questionsForStudents = (questions as any[]).map((q, idx) => ({
+                        info: q.info,
+                        text: q.text,
+                        options: q.options,
+                        type: q.type,
+                        acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
+                        questionIndex: idx + 1,
+                        totalQuestions: (questions as any[]).length
+                    }));
+                    socket.emit('unit-game-started', {
+                        questions: questionsForStudents,
+                        endTime,
+                        title: metadata.quiz.title,
+                        createdAt: metadata.createdAt
+                    });
+                }
             } else if (metadata.currentQuestionIndex !== undefined && metadata.currentQuestionIndex >= 0) {
                 const q = metadata.quiz!.questions[metadata.currentQuestionIndex];
                 socket.emit('question-start', {

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
-import { Clock, CheckCircle2, Send, XCircle, Info } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, Info } from 'lucide-react';
 
 interface QuestionData {
     info?: string;
@@ -17,21 +17,19 @@ interface QuestionData {
 
 const normalizeAnswer = (val: string | number): string => {
     let s = String(val).toLowerCase().trim();
-    // Remove all apostrophe variants entirely to allow matching even if omitted
     s = s.replace(/[’‘‛ʻ´'`]/g, "");
-    // Handle double quote variants (mapping to standard or removing)
     s = s.replace(/[“”]/g, '"');
-    // Replace all basic punctuation with a space to preserve word boundaries
     s = s.replace(/[.,!?;:]/g, " ");
-    // Normalize separator '+' to space
     s = s.replace(/\+/g, " ");
-    // Normalize multiple spaces and ensure trimmed
     s = s.replace(/\s+/g, " ");
     return s.trim();
 };
 
 export default function PlayerGame() {
     const [view, setView] = useState<'WAITING' | 'PLAYING' | 'ANSWERED' | 'FINISHED' | 'UNIT_SUMMARY' | 'UNIT_REVIEW'>('WAITING');
+    const viewRef = useRef(view);
+    useEffect(() => { viewRef.current = view; }, [view]);
+
     const [question, setQuestion] = useState<QuestionData | null>(null);
     const [textAnswer, setTextAnswer] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -46,10 +44,8 @@ export default function PlayerGame() {
     const [unitAnswers, setUnitAnswers] = useState<Record<number, any>>({});
     const [unitCorrectAnswers, setUnitCorrectAnswers] = useState<any[]>([]);
     const [unitAIFeedback, setUnitAIFeedback] = useState<Record<number, string>>({});
-    const [globalEndTime, setGlobalEndTime] = useState<number | null>(null);
     const [quizTitle, setQuizTitle] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [syncStatus, setSyncStatus] = useState<Record<number, 'SAVING' | 'SAVED' | 'ERROR'>>({});
 
     const pinFromStore = localStorage.getItem('kahoot-pin');
     const idFromStore = localStorage.getItem('student-id');
@@ -59,9 +55,16 @@ export default function PlayerGame() {
         if (pinFromStore) {
             try {
                 const saved = localStorage.getItem(`unit-answers-${pinFromStore}`);
-                if (saved) setUnitAnswers(JSON.parse(saved));
-                else setUnitAnswers({});
-            } catch { setUnitAnswers({}); }
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    setUnitAnswers(parsed);
+                } else {
+                    setUnitAnswers({});
+                }
+            } catch (e) {
+                console.error('Error loading unit answers:', e);
+                setUnitAnswers({});
+            }
         }
     }, [pinFromStore]);
 
@@ -74,55 +77,44 @@ export default function PlayerGame() {
 
         socket.on('game-started', (data: any) => {
             setView('WAITING');
-            if (data?.endTime) setGlobalEndTime(data.endTime);
             if (data?.title) setQuizTitle(data.title);
         });
-
-        // Request status immediately (for re-sync after navigation or refresh)
-        if (pinFromStore) {
-            socket.emit('player-get-status', { pin: pinFromStore, studentId: idFromStore || undefined });
-        }
-
         socket.on('unit-game-started', (data: { questions: any[], endTime: number, title: string, createdAt?: number }) => {
-            console.log('Unit game started event received:', data);
+            console.log('[Unit] Game started event received:', data);
 
             if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
                 console.error('Invalid questions data received for unit game:', data);
-                setError('Savollar yuklanishida xatolik yuz berdi. Iltimos, qayta urinib ko\'ring.');
+                setError('Savollar yuklanishida xatolik yuz berdi.');
                 setView('WAITING');
                 return;
             }
 
             const pin = localStorage.getItem('kahoot-pin');
 
-            // SESSION RESET LOGIC: 
-            // If the game started has a different 'createdAt' than what we have saved for this PIN,
-            // it means a new fresh session has started even if PIN is the same.
+            // SESSION RESET LOGIC
             if (pin && data.createdAt) {
                 const lastCreatedAt = localStorage.getItem(`unit-created-at-${pin}`);
                 if (lastCreatedAt && lastCreatedAt !== String(data.createdAt)) {
-                    console.log('[Session] New session detected (createdAt mismatch). Resetting local answers.');
+                    console.log('[Session] New session detected. Resetting local answers.');
                     localStorage.removeItem(`unit-answers-${pin}`);
+                    setUnitAnswers({});
                 }
                 localStorage.setItem(`unit-created-at-${pin}`, String(data.createdAt));
             }
 
             setIsUnitMode(true);
             setUnitQuestions(data.questions);
-            setGlobalEndTime(data.endTime);
             setQuizTitle(data.title);
 
-            // Restore saved answers from PIN-specific localStorage
-            const savedAnswersRaw = pin ? localStorage.getItem(`unit-answers-${pin}`) : null;
+            // Reload answers after possible reset
+            const currentPin = localStorage.getItem('kahoot-pin');
+            const savedAnswersRaw = currentPin ? localStorage.getItem(`unit-answers-${currentPin}`) : null;
             const savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : {};
-
             setUnitAnswers(savedAnswers);
 
-            // Sync answers back to the server so the Host's dashboard progress is correct
-            if (pin && Object.keys(savedAnswers).length > 0) {
-                socket.emit('player-sync-answers', { pin: pin, answers: savedAnswers }, (ack: { success: boolean }) => {
-                    console.log('[Sync] Initial answers sync completed:', ack.success);
-                });
+            // Sync answers back to the server
+            if (currentPin && Object.keys(savedAnswers).length > 0) {
+                socket.emit('player-sync-answers', { pin: currentPin, answers: savedAnswers });
             }
 
             // Find first unanswered question or stay at 0
@@ -135,7 +127,6 @@ export default function PlayerGame() {
         });
 
         socket.on('question-start', (q) => {
-            if (isUnitMode) return;
             setQuestion(q);
             setView('PLAYING');
             setTextAnswer('');
@@ -145,9 +136,9 @@ export default function PlayerGame() {
             setIsSubmitting(false);
             const pin = localStorage.getItem('kahoot-pin');
             if (pin) localStorage.removeItem(`unit-answers-${pin}`);
-            // Also clean up generic legacy key if exists
-            localStorage.removeItem('unit-answers');
+            localStorage.removeItem('unit-answers'); // cleanup legacy
             setView('FINISHED');
+
             if (data.hidden) {
                 setUnitCorrectAnswers([]);
                 setUnitAIFeedback({});
@@ -158,23 +149,29 @@ export default function PlayerGame() {
         });
 
         socket.on('error', (msg: string) => {
-            if (isSubmitting) {
-                setIsSubmitting(false);
-                alert(`Xatolik: ${msg}`);
+            console.error('[Socket Error]:', msg);
+            setIsSubmitting(false);
+            if (msg.includes('O\'yin topilmadi') || msg.includes('pin')) {
+                setError(msg);
             }
         });
 
         socket.on('game-over', () => {
             setView('FINISHED');
-            // Score and rank calculation removed as 'rank' state is no longer used
         });
+
+        // Request status once on mount
+        if (pinFromStore) {
+            console.log('[Init] Requesting game status for pin:', pinFromStore);
+            socket.emit('player-get-status', { pin: pinFromStore, studentId: idFromStore || undefined });
+        }
 
         // Anti-Cheat listener
         const handleVisibilityChange = () => {
             if (document.hidden) {
                 const pin = localStorage.getItem('kahoot-pin');
-                const studentId = localStorage.getItem('student-id') || socket.id || (socket as any).studentId;
-                if (pin && studentId && view !== 'FINISHED' && view !== 'UNIT_SUMMARY' && view !== 'UNIT_REVIEW') {
+                const studentId = localStorage.getItem('student-id') || socket.id;
+                if (pin && studentId && !['FINISHED', 'UNIT_SUMMARY', 'UNIT_REVIEW'].includes(viewRef.current)) {
                     socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
                 }
             }
@@ -190,9 +187,10 @@ export default function PlayerGame() {
             socket.off('question-start');
             socket.off('unit-finished');
             socket.off('game-over');
+            socket.off('error');
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, [isUnitMode, isSubmitting, view]);
+    }, []); // RUN ONCE ON MOUNT
 
     const saveUnitAnswer = (val: number | string) => {
         const newAnswers = { ...unitAnswers, [currentUnitIndex]: val };
@@ -202,26 +200,12 @@ export default function PlayerGame() {
         if (pin) {
             localStorage.setItem(`unit-answers-${pin}`, JSON.stringify(newAnswers));
 
-            setSyncStatus(prev => ({ ...prev, [currentUnitIndex]: 'SAVING' }));
-
             socket.emit('player-answer',
                 { pin, answer: val, questionIndex: currentUnitIndex },
-                (ack: { success: boolean }) => {
-                    if (ack && ack.success) {
-                        setSyncStatus(prev => ({ ...prev, [currentUnitIndex]: 'SAVED' }));
-                    } else {
-                        setSyncStatus(prev => ({ ...prev, [currentUnitIndex]: 'ERROR' }));
-                    }
+                () => {
+                    // Ack handled
                 }
             );
-            setTimeout(() => {
-                setSyncStatus(prev => {
-                    if (prev[currentUnitIndex] === 'SAVING') {
-                        return { ...prev, [currentUnitIndex]: 'ERROR' };
-                    }
-                    return prev;
-                });
-            }, 5000);
         }
     };
 
@@ -236,9 +220,7 @@ export default function PlayerGame() {
     const getCurrentTopic = () => {
         if (!isUnitMode || !unitQuestions.length) return null;
         for (let i = currentUnitIndex; i >= 0; i--) {
-            if (unitQuestions[i].type === 'info-slide') {
-                return unitQuestions[i].text;
-            }
+            if (unitQuestions[i].type === 'info-slide') return unitQuestions[i].text;
         }
         return null;
     };
@@ -264,44 +246,27 @@ export default function PlayerGame() {
 
     if (view === 'FINISHED') {
         if (isUnitMode) {
-            // Use a side effect to navigate to avoid rendering issues during the state update
-            setTimeout(() => {
-                navigate('/student/dashboard', { replace: true });
-            }, 0);
+            setTimeout(() => { navigate('/student/dashboard', { replace: true }); }, 100);
             return (
-                <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-brand-dark">
+                <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-brand-dark">
                     <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
                 </div>
             );
         }
 
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-transparent">
-                <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border border-slate-200 relative z-10">
-                    <div className="w-24 h-24 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-emerald-500/20 animate-float">
+            <div className="flex flex-col items-center justify-center min-h-screen p-6">
+                <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border border-slate-200">
+                    <div className="w-24 h-24 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl">
                         <CheckCircle2 className="text-white" size={48} />
                     </div>
-
-                    <h1 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">Test Yakunlandi!</h1>
+                    <h1 className="text-4xl font-black text-slate-800 mb-2">Test Yakunlandi!</h1>
                     <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-10">Muvaffaqiyatli topshirildi</p>
-
-                    <div className="mb-10 bg-sky-50 border border-sky-100 rounded-[2rem] px-8 py-10 text-center">
-                        <div className="w-12 h-12 bg-sky-100 text-sky-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Info size={24} />
-                        </div>
-                        <p className="text-sky-800 font-bold leading-relaxed">
-                            Natijalar va to'g'ri javoblar <span className="text-indigo-600">Telegram bot</span> orqali o'qituvchingizga yuborildi.
-                        </p>
+                    <div className="mb-10 bg-sky-50 border border-sky-100 rounded-[2rem] px-8 py-10">
+                        <Info className="text-sky-600 mx-auto mb-4" size={24} />
+                        <p className="text-sky-800 font-bold">Natijalar o'qituvchingizga yuborildi.</p>
                     </div>
-
-                    <div className="space-y-3">
-                        <button
-                            onClick={() => window.location.href = '/'}
-                            className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95"
-                        >
-                            ASOSIY MENYUGA QAYTISH
-                        </button>
-                    </div>
+                    <button onClick={() => window.location.href = '/'} className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl">ASOSIY MENYUGA QAYTISH</button>
                 </div>
             </div>
         );
@@ -309,25 +274,15 @@ export default function PlayerGame() {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-brand-dark text-center">
-                <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border border-slate-200 relative z-10">
+            <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-brand-dark text-center">
+                <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl">
                     <div className="w-24 h-24 bg-red-100 rounded-[2rem] flex items-center justify-center mx-auto mb-8 animate-bounce">
                         <XCircle className="text-red-500" size={48} />
                     </div>
-                    <h2 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Xatolik</h2>
+                    <h2 className="text-3xl font-black text-slate-900 mb-2">Xatolik</h2>
                     <p className="text-slate-500 font-medium mb-10">{error}</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95"
-                    >
-                        QAYTADAN URINISH
-                    </button>
-                    <button
-                        onClick={() => navigate('/student/dashboard')}
-                        className="w-full mt-4 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-slate-600 transition-colors"
-                    >
-                        DASHBOARDGA QAYTISH
-                    </button>
+                    <button onClick={() => window.location.reload()} className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl mb-4">QAYTADAN URINISH</button>
+                    <button onClick={() => navigate('/student/dashboard')} className="w-full text-slate-400 font-bold text-xs uppercase tracking-widest">DASHBOARDGA QAYTISH</button>
                 </div>
             </div>
         );
@@ -335,30 +290,26 @@ export default function PlayerGame() {
 
     if (!isConnected) {
         return (
-            <div className="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
+            <div className="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm text-white">
                 <div className="w-20 h-20 border-4 border-white/20 border-t-white rounded-full animate-spin mb-6"></div>
-                <h2 className="text-2xl font-black text-white mb-2">Aloqa uzildi</h2>
-                <p className="text-slate-300 font-medium max-w-xs">Internet bilan bog'lanish qayta tiklanmoqda... Iltimos kuting.</p>
+                <h2 className="text-2xl font-black">Aloqa uzildi</h2>
+                <p>Internet bilan bog'lanish qayta tiklanmoqda...</p>
             </div>
         );
     }
 
     if (view === 'WAITING' || (view === 'ANSWERED' && !isUnitMode)) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden bg-transparent">
-                <div className="flex flex-col items-center gap-8 z-10">
+            <div className="flex flex-col items-center justify-center min-h-screen p-6">
+                <div className="flex flex-col items-center gap-8">
                     <div className="relative">
                         <div className="w-32 h-32 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin"></div>
                         <div className="absolute inset-0 flex items-center justify-center">
-                            {view === 'WAITING' ? (
-                                <Clock className="text-blue-500 animate-pulse" size={40} />
-                            ) : (
-                                <CheckCircle2 className="text-emerald-500 animate-bounce" size={40} />
-                            )}
+                            {view === 'WAITING' ? <Clock className="text-blue-500 animate-pulse" size={40} /> : <CheckCircle2 className="text-emerald-500 animate-bounce" size={40} />}
                         </div>
                     </div>
                     <div className="text-center">
-                        <h2 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
+                        <h2 className="text-3xl font-black text-slate-900 mb-2">
                             {view === 'WAITING' ? "Tayyor turing!" : "Javob yuborildi!"}
                         </h2>
                         <p className="text-slate-500 font-bold text-xs uppercase tracking-[0.2em] animate-pulse">
@@ -372,66 +323,31 @@ export default function PlayerGame() {
 
     if (view === 'UNIT_SUMMARY') {
         return (
-            <div className="min-h-screen flex flex-col p-6 bg-transparent">
+            <div className="min-h-screen flex flex-col p-6">
                 <div className="w-full max-w-2xl mx-auto bg-white rounded-[3rem] p-8 shadow-xl border border-slate-200 flex-1 flex flex-col">
                     <h2 className="text-3xl font-black text-slate-800 mb-2 text-center">Xulosa</h2>
                     <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8 text-center italic">Javoblaringizni tekshiring</p>
-
-                    <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto space-y-3 pr-2 scroll-hide">
                         {unitQuestions.map((q, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => goToQuestion(idx)}
-                                className="w-full flex items-center justify-between p-5 rounded-2xl border border-slate-100 bg-slate-50 hover:border-indigo-300 transition-all group"
-                            >
+                            <button key={idx} onClick={() => goToQuestion(idx)} className="w-full flex items-center justify-between p-5 rounded-2xl border border-slate-100 bg-slate-50">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-slate-400 border border-slate-200 group-hover:text-indigo-500 group-hover:border-indigo-200 transition-colors">
-                                        {idx + 1}
-                                    </div>
+                                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-slate-400">{idx + 1}</div>
                                     <div className="text-left">
                                         <p className="text-sm font-bold text-slate-700 line-clamp-1">{q.text}</p>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
-                                            {q.type === 'info-slide' ? (
-                                                <span className="text-blue-400">Mavzu / Ma'lumot</span>
-                                            ) : unitAnswers[idx] !== undefined ? (
-                                                <span className="text-emerald-500">Javob berilgan</span>
-                                            ) : (
-                                                <span className="text-orange-400">Javobsiz</span>
-                                            )}
+                                        <p className="text-[10px] font-black text-slate-400 uppercase mt-0.5">
+                                            {q.type === 'info-slide' ? <span className="text-blue-400">Mavzu</span> : unitAnswers[idx] !== undefined ? <span className="text-emerald-500">Javob berilgan</span> : <span className="text-orange-400">Javobsiz</span>}
                                         </p>
                                     </div>
                                 </div>
-                                <div className="text-slate-300 group-hover:text-indigo-400 transition-colors">→</div>
+                                <div className="text-slate-300">→</div>
                             </button>
                         ))}
                     </div>
-
                     <div className="mt-8 space-y-3">
-                        <button
-                            onClick={finalizeSubmission}
-                            disabled={isSubmitting}
-                            className={`w-full py-6 rounded-[2rem] font-black text-2xl shadow-xl transition-all flex items-center justify-center gap-4 active:scale-95
-                                ${isSubmitting
-                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                    : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-emerald-500/20 hover:scale-105'}`}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <div className="w-6 h-6 border-4 border-slate-300 border-t-slate-500 rounded-full animate-spin"></div>
-                                    YUBORILMOQDA...
-                                </>
-                            ) : (
-                                <>
-                                    <CheckCircle2 size={32} /> TESTNI TUGATISH
-                                </>
-                            )}
+                        <button onClick={finalizeSubmission} disabled={isSubmitting} className="w-full py-6 rounded-[2rem] font-black text-2xl bg-indigo-600 text-white shadow-xl">
+                            {isSubmitting ? "YUBORILMOQDA..." : "TESTNI TUGATISH"}
                         </button>
-                        <button
-                            onClick={() => goToQuestion(0)}
-                            className="w-full text-slate-400 font-bold text-xs uppercase tracking-widest py-2 hover:text-slate-600 transition-colors"
-                        >
-                            Savollarga qaytish
-                        </button>
+                        <button onClick={() => goToQuestion(0)} className="w-full text-slate-400 font-bold text-xs uppercase">Savollarga qaytish</button>
                     </div>
                 </div>
             </div>
@@ -449,130 +365,40 @@ export default function PlayerGame() {
             const normalizedPlayerAns = normalizeAnswer(playerAns || '');
             const isCorrect = isReview && correctInfo?.acceptedAnswers?.some((a: string) => normalizeAnswer(a) === normalizedPlayerAns);
 
-            // Multi-gap specific rendering
             if (isFillBlankMulti) {
                 const parts = question.text.split('[...]');
-                // Parse answers: "ans1, ans2" -> ["ans1", "ans2"]
-                // unitAnswers[currentUnitIndex] should be stored as "ans1+ans2" string to keep compatibility,
-                // or we can allow it to be an array. For simplicity, let's keep it as joined string and split it here.
                 const currentAnswersList = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
-
                 return (
                     <div className="w-full max-w-4xl mx-auto bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
-                        {isReview && (
-                            <div className="mb-6 p-4 rounded-2xl border text-center font-black uppercase tracking-widest text-xs bg-slate-50 border-slate-200 text-slate-500">
-                                {correctInfo?.acceptedAnswers?.join('+')}
-                            </div>
-                        )}
-                        <h2 className="text-center text-xl font-bold text-slate-800 mb-8 lowercase opacity-60 italic">
-                            Fill in the blanks
-                        </h2>
-
-                        <div className="text-xl md:text-2xl font-medium text-slate-800 leading-loose text-center">
+                        {isReview && <div className="mb-6 p-4 rounded-2xl bg-slate-50 text-center font-black">{correctInfo?.acceptedAnswers?.join('+')}</div>}
+                        <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">Fill in the blanks</h2>
+                        <div className="text-xl md:text-2xl text-slate-800 leading-loose text-center">
                             {parts.map((part, i) => (
                                 <span key={i}>
                                     {part}
                                     {i < parts.length - 1 && (
-                                        <input
-                                            type="text"
-                                            value={currentAnswersList[i] || ''}
-                                            readOnly={isReview}
-                                            onChange={(e) => {
-                                                const newAns = [...currentAnswersList];
-                                                newAns[i] = e.target.value;
-                                                setTextAnswer(newAns.join('+'));
-                                            }}
-                                            onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)}
-                                            className={`mx-2 inline-block w-32 border-b-2 bg-slate-50 text-center font-bold px-2 py-1 outline-none transition-all
-                                                ${isReview
-                                                    ? 'border-slate-300 text-slate-600' // Simple review style for now
-                                                    : 'border-indigo-300 focus:border-indigo-600 text-indigo-700'
-                                                }`}
-                                            placeholder="..."
-                                        />
+                                        <input type="text" value={currentAnswersList[i] || ''} readOnly={isReview} onChange={(e) => {
+                                            const newAns = [...currentAnswersList];
+                                            newAns[i] = e.target.value;
+                                            setTextAnswer(newAns.join('+'));
+                                        }} onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)} className="mx-2 w-32 border-b-2 bg-slate-50 text-center font-bold outline-none" placeholder="..." />
                                     )}
                                 </span>
                             ))}
                         </div>
-
-                        {!isUnitMode && !isReview && (
-                            <button
-                                onClick={() => textAnswer.trim() && sendAnswer(textAnswer.trim())}
-                                disabled={!textAnswer.trim()}
-                                className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2"
-                            >
-                                <Send size={20} /> SUBMIT
-                            </button>
-                        )}
                     </div>
                 );
             }
 
-            // Normal single input handling (text-input, single fill-blank, find-mistake, rewrite)
             const aiFeedback = isReview ? unitAIFeedback[currentUnitIndex] : null;
             return (
-                <div className="w-full max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200 mt-8 mb-4">
-                    {isReview && (
-                        <div className={`mb-6 p-4 rounded-2xl border text-center font-black uppercase tracking-widest text-xs
-                            ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-red-50 border-red-200 text-red-600'}`}>
-                            {isCorrect ? 'TO\'G\'RI!' : 'XATO!'}
-                        </div>
-                    )}
-                    <h2 className="text-center text-xl font-bold text-slate-800 mb-8 lowercase opacity-60 italic">
-                        {question.type === 'fill-blank' ? "Fill in the Blank" :
-                            question.type === 'find-mistake' ? "Find and fix the mistake" :
-                                question.type === 'rewrite' ? "Rewrite the sentence" :
-                                    "Enter your answer"}
-                    </h2>
-
-                    {/* Displaying question text inside the card for better visibility if it's a long sentence */}
-                    <div className="text-xl md:text-2xl font-bold text-slate-800 text-center mb-10 leading-relaxed px-4">
-                        {question.text}
-                    </div>
-
-                    <textarea
-                        rows={2}
-                        value={isReview ? (playerAns || '') : textAnswer}
-                        readOnly={isReview}
-                        onChange={(e) => {
-                            setTextAnswer(e.target.value);
-                            // Auto-resize logic
-                            e.target.style.height = 'auto';
-                            e.target.style.height = `${e.target.scrollHeight}px`;
-                        }}
-                        onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer.trim())}
-                        className={`w-full border-2 rounded-2xl px-6 py-4 text-center text-xl font-bold transition-all mb-6 resize-none overflow-hidden min-h-[80px]
-                            ${isReview
-                                ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-red-50 border-red-500 text-red-700')
-                                : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-500 shadow-inner'}`}
-                        placeholder="Javobingizni yozing..."
-                    />
-
-                    {isReview && aiFeedback && (
-                        <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl mb-4 text-left">
-                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                                <Info size={12} /> AI Fikri:
-                            </p>
-                            <p className="text-blue-700 font-bold text-sm leading-relaxed">{aiFeedback}</p>
-                        </div>
-                    )}
-
-                    {isReview && !isCorrect && (
-                        <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl text-left">
-                            <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-1">To'g'ri javoblar:</p>
-                            <p className="text-indigo-600 font-bold">{correctInfo?.acceptedAnswers?.join('+')}</p>
-                        </div>
-                    )}
-
-                    {!isUnitMode && !isReview && (
-                        <button
-                            onClick={() => textAnswer.trim() && sendAnswer(textAnswer.trim())}
-                            disabled={!textAnswer.trim()}
-                            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2"
-                        >
-                            <Send size={20} /> SUBMIT
-                        </button>
-                    )}
+                <div className="w-full max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200">
+                    {isReview && <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isCorrect ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{isCorrect ? 'TO\'G\'RI!' : 'XATO!'}</div>}
+                    <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">{question.type}</h2>
+                    <div className="text-xl md:text-2xl font-bold text-center mb-10 leading-relaxed">{question.text}</div>
+                    <textarea rows={2} value={isReview ? (playerAns || '') : textAnswer} readOnly={isReview} onChange={(e) => { setTextAnswer(e.target.value); e.target.style.height = 'auto'; e.target.style.height = `${e.target.scrollHeight}px`; }} onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer.trim())} className="w-full border-2 rounded-2xl px-6 py-4 text-center text-xl font-bold mb-6 resize-none" placeholder="Javobingizni yozing..." />
+                    {isReview && aiFeedback && <div className="bg-blue-50 p-4 rounded-2xl mb-4 text-sm font-bold text-blue-700">AI: {aiFeedback}</div>}
+                    {isReview && !isCorrect && <div className="bg-indigo-50 p-4 rounded-2xl text-indigo-600 font-bold">To'g'ri: {correctInfo?.acceptedAnswers?.join('+')}</div>}
                 </div>
             );
         }
@@ -581,136 +407,56 @@ export default function PlayerGame() {
             const isCorrect = isReview && playerAns === (correctInfo?.acceptedAnswers?.[0] || '');
             const targetWord = (question.acceptedAnswers?.[0] || '').replace(/[^a-zA-Z0-9]/g, '');
             const currentVal = (isReview ? playerAns : textAnswer) || '';
-
             return (
-                <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
                     <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200">
                         <div className="text-center space-y-6">
-                            <h2 className="text-3xl md:text-5xl font-black text-slate-800 leading-tight">
-                                {question.text}
-                            </h2>
-                            <p className="text-slate-400 font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2">
-                                <Info size={16} /> Enter the word letter by letter
-                            </p>
+                            <h2 className="text-3xl md:text-5xl font-black text-slate-800 leading-tight">{question.text}</h2>
                         </div>
-
-                        <div className="mt-12 flex flex-wrap justify-center gap-2 md:gap-3">
+                        <div className="mt-12 flex flex-wrap justify-center gap-2">
                             {Array.from({ length: targetWord.length }).map((_, i) => (
-                                <input
-                                    key={i}
-                                    id={`voc-box-${i}`}
-                                    type="text"
-                                    maxLength={1}
-                                    value={currentVal[i] || ''}
-                                    readOnly={isReview}
-                                    autoFocus={!isReview && i === 0}
-                                    autoComplete="off"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Backspace' && !currentVal[i] && i > 0) {
-                                            const prevBox = document.getElementById(`voc-box-${i - 1}`) as HTMLInputElement;
-                                            prevBox?.focus();
-                                        }
-                                    }}
-                                    onChange={(e) => {
-                                        const char = e.target.value.slice(-1).toLowerCase();
-                                        if (char && !/[a-z0-9]/i.test(char)) return; // Only alphanumeric
-
-                                        const newChars = currentVal.split('');
-                                        while (newChars.length < targetWord.length) newChars.push('');
-                                        newChars[i] = char;
-                                        const finalVal = newChars.join('').slice(0, targetWord.length);
-
-                                        setTextAnswer(finalVal);
-                                        if (!isReview && isUnitMode) saveUnitAnswer(finalVal);
-
-                                        if (char && i < targetWord.length - 1) {
-                                            const nextBox = document.getElementById(`voc-box-${i + 1}`) as HTMLInputElement;
-                                            nextBox?.focus();
-                                        }
-                                    }}
-                                    className={`
-                                        w-12 h-16 md:w-16 md:h-20 text-2xl md:text-4xl font-black text-center rounded-2xl border-2 transition-all outline-none uppercase
-                                        ${isReview
-                                            ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-red-50 border-red-500 text-red-600')
-                                            : (currentVal[i] ? 'bg-indigo-50 border-indigo-500 text-indigo-600 shadow-lg shadow-indigo-500/10' : 'bg-slate-50 border-slate-200 focus:border-indigo-400 focus:bg-white text-slate-400')
-                                        }
-                                    `}
-                                />
+                                <input key={i} id={`voc-box-${i}`} type="text" maxLength={1} value={currentVal[i] || ''} readOnly={isReview} autoFocus={!isReview && i === 0} autoComplete="off" onKeyDown={(e) => {
+                                    if (e.key === 'Backspace' && !currentVal[i] && i > 0) {
+                                        const prevBox = document.getElementById(`voc-box-${i - 1}`) as HTMLInputElement;
+                                        prevBox?.focus();
+                                    }
+                                }} onChange={(e) => {
+                                    const char = e.target.value.slice(-1).toLowerCase();
+                                    if (char && !/[a-z0-9]/i.test(char)) return;
+                                    const newChars = currentVal.split('');
+                                    while (newChars.length < targetWord.length) newChars.push('');
+                                    newChars[i] = char;
+                                    const finalVal = newChars.join('').slice(0, targetWord.length);
+                                    setTextAnswer(finalVal);
+                                    if (!isReview && isUnitMode) saveUnitAnswer(finalVal);
+                                    if (char && i < targetWord.length - 1) {
+                                        const nextBox = document.getElementById(`voc-box-${i + 1}`) as HTMLInputElement;
+                                        nextBox?.focus();
+                                    }
+                                }} className={`w-12 h-16 md:w-16 md:h-20 text-2xl md:text-4xl font-black text-center rounded-2xl border-2 transition-all outline-none uppercase ${isReview ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-red-50 border-red-500 text-red-600') : (currentVal[i] ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'bg-slate-50 border-slate-200')}`} />
                             ))}
                         </div>
-
-                        {isReview && !isCorrect && (
-                            <div className="mt-8 p-6 rounded-3xl bg-emerald-50 border border-emerald-100 flex flex-col items-center">
-                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">To'g'ri javob</span>
-                                <span className="text-2xl font-black text-emerald-600 uppercase tracking-tight">{question.acceptedAnswers?.[0]}</span>
-                            </div>
-                        )}
+                        {isReview && !isCorrect && <div className="mt-8 p-6 rounded-3xl bg-emerald-50 text-emerald-600 text-center font-black">To'g'ri: {question.acceptedAnswers?.[0]}</div>}
                     </div>
                 </div>
             );
-        }
-
-        if (question.type === 'word-box') {
-            return <WordBoxView
-                question={question}
-                unitAnswers={unitAnswers}
-                currentUnitIndex={currentUnitIndex}
-                onAnswer={sendAnswer}
-                isUnitMode={isUnitMode}
-                isReview={isReview}
-                correctInfo={correctInfo}
-            />;
-        }
-
-        if (question.type === 'matching') {
-            return <MatchingView
-                question={question}
-                unitAnswers={unitAnswers}
-                currentUnitIndex={currentUnitIndex}
-                onAnswer={sendAnswer}
-                isUnitMode={isUnitMode}
-                isReview={isReview}
-                correctInfo={correctInfo}
-            />;
         }
 
         if (question.type === 'true-false') {
             const currentAns = unitAnswers[currentUnitIndex];
             const isTrueCorrect = isReview && correctInfo?.correctIndex === 0;
             const isFalseCorrect = isReview && correctInfo?.correctIndex === 1;
-
             return (
                 <div className="flex flex-col h-full space-y-6">
-                    <div className="text-xl md:text-2xl font-bold text-slate-800 text-center leading-relaxed px-4">
-                        {question.text}
-                    </div>
+                    <div className="text-xl md:text-2xl font-bold text-center leading-relaxed px-4">{question.text}</div>
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button
-                            onClick={() => !isReview && sendAnswer(0)} // True
-                            disabled={isReview}
-                            className={`rounded-[2rem] flex flex-col items-center justify-center group transition-all shadow-xl relative overflow-hidden border-4
-                                ${isReview
-                                    ? (isTrueCorrect ? 'bg-emerald-500 border-yellow-400 scale-105' : currentAns === 0 ? 'bg-red-500 border-transparent opacity-50' : 'bg-slate-200 border-transparent opacity-30')
-                                    : (isUnitMode && currentAns === 0 ? 'bg-blue-600 border-yellow-400 scale-105 shadow-blue-500/40' : 'bg-blue-500 border-transparent shadow-blue-500/20 active:scale-95')}`}
-                        >
-                            <div className="w-16 h-16 md:w-24 md:h-24 bg-white/20 rounded-full flex items-center justify-center text-3xl md:text-5xl mb-2 md:mb-4 text-white">
-                                <CheckCircle2 size={32} className="md:w-12 md:h-12" />
-                            </div>
-                            <span className="text-xl md:text-2xl font-black text-white uppercase tracking-widest">TRUE</span>
+                        <button onClick={() => !isReview && sendAnswer(0)} disabled={isReview} className={`rounded-[2rem] flex flex-col items-center justify-center p-8 transition-all shadow-xl border-4 ${isReview ? (isTrueCorrect ? 'bg-emerald-500 border-yellow-400' : currentAns === 0 ? 'bg-red-500' : 'bg-slate-200 opacity-30') : (isUnitMode && currentAns === 0 ? 'bg-blue-600 border-yellow-400 shadow-blue-500/40' : 'bg-blue-500 border-transparent shadow-blue-500/20 active:scale-95')}`}>
+                            <CheckCircle2 size={48} className="text-white mb-4" />
+                            <span className="text-2xl font-black text-white">TRUE</span>
                         </button>
-
-                        <button
-                            onClick={() => !isReview && sendAnswer(1)} // False
-                            disabled={isReview}
-                            className={`rounded-[2rem] flex flex-col items-center justify-center group transition-all shadow-xl relative overflow-hidden border-4
-                                ${isReview
-                                    ? (isFalseCorrect ? 'bg-emerald-500 border-yellow-400 scale-105' : currentAns === 1 ? 'bg-red-500 border-transparent opacity-50' : 'bg-slate-200 border-transparent opacity-30')
-                                    : (isUnitMode && currentAns === 1 ? 'bg-red-600 border-yellow-400 scale-105 shadow-red-500/40' : 'bg-red-500 border-transparent shadow-red-500/20 active:scale-95')}`}
-                        >
-                            <div className="w-16 h-16 md:w-24 md:h-24 bg-white/20 rounded-full flex items-center justify-center text-3xl md:text-5xl mb-2 md:mb-4 text-white">
-                                <XCircle size={32} className="md:w-12 md:h-12" />
-                            </div>
-                            <span className="text-xl md:text-2xl font-black text-white uppercase tracking-widest">FALSE</span>
+                        <button onClick={() => !isReview && sendAnswer(1)} disabled={isReview} className={`rounded-[2rem] flex flex-col items-center justify-center p-8 transition-all shadow-xl border-4 ${isReview ? (isFalseCorrect ? 'bg-emerald-500 border-yellow-400' : currentAns === 1 ? 'bg-red-500' : 'bg-slate-200 opacity-30') : (isUnitMode && currentAns === 1 ? 'bg-red-600 border-yellow-400 shadow-red-500/40' : 'bg-red-500 border-transparent shadow-red-500/20 active:scale-95')}`}>
+                            <XCircle size={48} className="text-white mb-4" />
+                            <span className="text-2xl font-black text-white">FALSE</span>
                         </button>
                     </div>
                 </div>
@@ -720,50 +466,31 @@ export default function PlayerGame() {
         if (question.type === 'info-slide') {
             return (
                 <div className="flex items-center justify-center h-full">
-                    <div className="w-full max-w-2xl bg-white rounded-[2.5rem] p-8 shadow-2xl border border-blue-100 text-center animate-float overflow-hidden relative">
+                    <div className="w-full max-w-2xl bg-white rounded-[2.5rem] p-8 shadow-2xl border border-blue-100 text-center relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-2 bg-blue-500"></div>
-                        <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                            <Info className="text-blue-500" size={32} />
-                        </div>
-                        <h2 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mb-4 text-center">Mavzu / Information</h2>
-                        <p className="text-2xl md:text-3xl font-black text-slate-800 leading-tight">
-                            {question.text}
-                        </p>
+                        <Info className="text-blue-500 mx-auto mb-6" size={32} />
+                        <h2 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mb-4">Information</h2>
+                        <p className="text-2xl md:text-3xl font-black text-slate-800 leading-tight">{question.text}</p>
                     </div>
                 </div>
             );
         }
 
-        // Multiple Choice
+        // Multiple Choice / Default
         const currentAnsMCQ = unitAnswers[currentUnitIndex];
         return (
             <div className="flex flex-col h-full space-y-6">
-                <div className="text-xl md:text-2xl font-bold text-slate-800 text-center leading-relaxed px-4">
-                    {question.text}
-                </div>
-                <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-3 md:gap-4">
+                <div className="text-xl md:text-2xl font-bold text-center leading-relaxed px-4">{question.text}</div>
+                <div className="flex-1 grid grid-cols-2 gap-4">
                     {[0, 1, 2, 3].map(i => {
                         const isCorrect = isReview && correctInfo?.correctIndex === i;
                         const isWrongSelection = isReview && currentAnsMCQ === i && !isCorrect;
-
                         return (
-                            <button
-                                key={i}
-                                onClick={() => !isReview && sendAnswer(i)}
-                                disabled={isReview}
-                                className={`border-4 rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center group transition-all shadow-xl relative overflow-hidden
-                                    ${isReview
-                                        ? (isCorrect ? 'bg-emerald-500 border-yellow-400 scale-105 z-10 shadow-emerald-500/20' : isWrongSelection ? 'bg-red-500 border-transparent opacity-60' : 'bg-slate-50 border-transparent opacity-30')
-                                        : (isUnitMode && currentAnsMCQ === i ? 'border-yellow-400 bg-slate-50 active:scale-95' : 'border-slate-100 bg-white hover:border-blue-300 active:scale-95')}`}
-                            >
-                                <div className={`w-14 h-14 md:w-20 md:h-20 rounded-xl md:rounded-2xl flex items-center justify-center text-2xl md:text-4xl shadow-lg mb-2 md:mb-4 group-hover:scale-110 transition-transform relative z-10 text-white
-                                    ${i === 0 ? 'bg-blue-500' : i === 1 ? 'bg-emerald-500' : i === 2 ? 'bg-orange-500' : 'bg-indigo-500'}`}>
+                            <button key={i} onClick={() => !isReview && sendAnswer(i)} disabled={isReview} className={`border-4 rounded-3xl flex flex-col items-center justify-center p-4 transition-all shadow-xl ${isReview ? (isCorrect ? 'bg-emerald-500 border-yellow-400 text-white' : isWrongSelection ? 'bg-red-500 text-white' : 'bg-slate-50 opacity-30') : (isUnitMode && currentAnsMCQ === i ? 'border-yellow-400 bg-slate-50' : 'border-slate-100 bg-white active:scale-95')}`}>
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white mb-2 ${i === 0 ? 'bg-blue-500' : i === 1 ? 'bg-emerald-500' : i === 2 ? 'bg-orange-500' : 'bg-indigo-500'}`}>
                                     <span>{i === 0 ? '▲' : i === 1 ? '◆' : i === 2 ? '●' : '■'}</span>
                                 </div>
-                                <span className={`text-sm md:text-lg font-bold relative z-10 text-center px-4 leading-tight
-                                    ${isReview && (isCorrect || isWrongSelection) ? 'text-white' : 'text-slate-700'}`}>
-                                    {question.options[i]}
-                                </span>
+                                <span className="text-sm md:text-lg font-bold text-center leading-tight">{question.options[i]}</span>
                             </button>
                         );
                     })}
@@ -774,415 +501,34 @@ export default function PlayerGame() {
 
     return (
         <div className="flex flex-col h-[100dvh] bg-transparent">
-            <header className="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center border-b border-slate-200 z-10 shrink-0">
+            <header className="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center border-b border-slate-200 shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="bg-indigo-50 border border-indigo-100 px-4 py-1.5 rounded-xl">
-                        <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block">
-                            {isUnitMode && unitQuestions[currentUnitIndex]?.type === 'info-slide' ? "Ma'lumot" : 'Savol'}
-                        </span>
+                        <span className="text-[10px] font-black text-indigo-300 uppercase block">{isUnitMode ? 'Unit' : 'Savol'}</span>
                         <div className="text-lg font-black text-indigo-600">
-                            {isUnitMode ?
-                                (unitQuestions[currentUnitIndex]?.type === 'info-slide'
-                                    ? 'ℹ️'
-                                    : `${unitQuestions.slice(0, currentUnitIndex + 1).filter((q: any) => q.type !== 'info-slide').length} / ${unitQuestions.filter((q: any) => q.type !== 'info-slide').length}`)
-                                : `${question?.questionIndex} / ${question?.totalQuestions}`}
+                            {isUnitMode ? `${unitQuestions.slice(0, currentUnitIndex + 1).length} / ${unitQuestions.length}` : `${question?.questionIndex} / ${question?.totalQuestions}`}
                         </div>
                     </div>
-                    {isUnitMode && syncStatus[currentUnitIndex] && (
-                        <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all duration-500
-                            ${syncStatus[currentUnitIndex] === 'SAVED' ? 'bg-emerald-50 text-emerald-500' : 'bg-orange-50 text-orange-400 animate-pulse'}`}>
-                            {syncStatus[currentUnitIndex] === 'SAVED' ? '✓ Saqlandi' : '... Saqlanmoqda'}
-                        </div>
-                    )}
                 </div>
-
-                <div className="flex-1 px-6 text-center">
-                    {isUnitMode && (
-                        <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 mx-auto">
-                            {question?.info || getCurrentTopic() || quizTitle || 'Unit Quiz'}
-                        </h2>
-                    )}
-                </div>
-
-                <div className="w-20 flex justify-end">
-                    {globalEndTime && !isUnitMode && (
-                        <div className="text-sm font-black text-blue-500 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 shadow-sm animate-pulse-slow">
-                            <Clock size={14} className="inline mr-1 mb-0.5" />
-                            {Math.max(0, Math.floor((globalEndTime - Date.now()) / 60000))}:
-                            {Math.max(0, Math.floor((globalEndTime - Date.now()) / 1000) % 60).toString().padStart(2, '0')}
-                        </div>
-                    )}
+                <div className="flex-1 text-center">
+                    <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{question?.info || getCurrentTopic() || quizTitle}</h2>
                 </div>
             </header>
 
             <main className="flex-1 p-4 md:p-6 overflow-y-auto w-full max-w-5xl mx-auto flex flex-col">
-                <div className="flex-1 relative">
-                    {renderQuestionContent()}
-                </div>
+                <div className="flex-1 relative">{renderQuestionContent()}</div>
             </main>
 
             {isUnitMode && (view === 'PLAYING' || view === 'UNIT_REVIEW') && (
-                <footer className="p-4 bg-white/80 backdrop-blur-md border-t border-slate-200 flex items-center justify-between shrink-0">
-                    <button
-                        onClick={() => {
-                            if (view !== 'UNIT_REVIEW' && question && ['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '') && textAnswer.trim() !== '') {
-                                saveUnitAnswer(textAnswer.trim());
-                            }
-                            if (currentUnitIndex > 0) {
-                                const newIdx = currentUnitIndex - 1;
-                                setCurrentUnitIndex(newIdx);
-                                setQuestion(unitQuestions[newIdx]);
-                                if (view !== 'UNIT_REVIEW') setTextAnswer(unitAnswers[newIdx] || '');
-                            }
-                        }}
-                        disabled={currentUnitIndex === 0}
-                        className="px-6 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold disabled:opacity-30 transition-all flex items-center gap-2 hover:bg-slate-200 active:scale-95"
-                    >
-                        ← Orqaga
-                    </button>
-
-                    <div className="flex gap-1.5 overflow-x-auto max-w-[40%] px-2 py-1 scroll-hide bg-slate-50/50 rounded-full">
-                        {unitQuestions.map((_, i) => {
-                            let dotColor = 'bg-slate-200';
-                            if (view === 'UNIT_REVIEW') {
-                                const correctAns = unitCorrectAnswers[i];
-                                const playerAns = unitAnswers[i];
-                                if (playerAns === undefined) {
-                                    if (unitQuestions[i].type === 'info-slide') dotColor = 'bg-blue-300';
-                                    else dotColor = 'bg-slate-300';
-                                } else {
-                                    const normalizedPlayerAns = normalizeAnswer(playerAns || '');
-                                    const isCorrect = (correctAns?.type === 'multiple-choice' || correctAns?.type === 'true-false')
-                                        ? playerAns === correctAns?.correctIndex
-                                        : correctAns?.acceptedAnswers?.some((a: string) => normalizeAnswer(a) === normalizedPlayerAns);
-                                    dotColor = isCorrect ? 'bg-emerald-400 shadow-sm shadow-emerald-500/20' : 'bg-red-400 shadow-sm shadow-red-500/20';
-                                }
-                            } else {
-                                if (i === currentUnitIndex) dotColor = 'bg-indigo-500 w-10';
-                                else if (unitAnswers[i] !== undefined) dotColor = 'bg-emerald-400';
-                                else if (unitQuestions[i].type === 'info-slide') dotColor = 'bg-blue-300';
-                            }
-
-                            return (
-                                <div
-                                    key={i}
-                                    className={`h-1.5 w-6 rounded-full shrink-0 transition-all ${dotColor} ${i === currentUnitIndex && view !== 'UNIT_REVIEW' ? 'w-10' : ''}`}
-                                />
-                            );
-                        })}
-                    </div>
-
+                <footer className="p-4 bg-white/80 border-t border-slate-200 flex items-center justify-between shrink-0">
+                    <button onClick={() => { if (currentUnitIndex > 0) goToQuestion(currentUnitIndex - 1); }} disabled={currentUnitIndex === 0} className="px-6 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold disabled:opacity-30">← Orqaga</button>
+                    <div className="flex-1 flex justify-center">{currentUnitIndex + 1} / {unitQuestions.length}</div>
                     {currentUnitIndex === unitQuestions.length - 1 ? (
-                        <button
-                            onClick={() => {
-                                if (view !== 'UNIT_REVIEW' && question && ['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '') && textAnswer.trim() !== '') {
-                                    saveUnitAnswer(textAnswer.trim());
-                                }
-                                setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY');
-                            }}
-                            className={`px-6 py-3 rounded-2xl font-black shadow-lg transition-all flex items-center gap-2 active:scale-95
-                                ${view === 'UNIT_REVIEW' ? 'bg-slate-800 text-white' : 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-indigo-500/20 hover:scale-105'}`}
-                        >
-                            {view === 'UNIT_REVIEW' ? 'Yopish' : 'REVIEW & SUBMIT'}
-                        </button>
+                        <button onClick={() => setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY')} className="px-6 py-3 rounded-2xl font-black bg-indigo-600 text-white">SUBMIT</button>
                     ) : (
-                        <button
-                            onClick={() => {
-                                if (view !== 'UNIT_REVIEW' && question && ['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '') && textAnswer.trim() !== '') {
-                                    saveUnitAnswer(textAnswer.trim());
-                                }
-                                const newIdx = currentUnitIndex + 1;
-                                setCurrentUnitIndex(newIdx);
-                                setQuestion(unitQuestions[newIdx]);
-                                if (view !== 'UNIT_REVIEW') setTextAnswer(unitAnswers[newIdx] || '');
-                            }}
-                            className="px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-700 transition-all active:scale-95 flex items-center gap-2"
-                        >
-                            Keyingisi →
-                        </button>
+                        <button onClick={() => goToQuestion(currentUnitIndex + 1)} className="px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold">Keyingisi →</button>
                     )}
                 </footer>
-            )}
-        </div>
-    );
-}
-
-// WordBoxView
-function WordBoxView({ question, unitAnswers, currentUnitIndex, onAnswer, isUnitMode, isReview, correctInfo }: any) {
-    const [selectedWord, setSelectedWord] = useState<string | null>(null);
-    const [blanks, setBlanks] = useState<Record<number, string>>({});
-
-    useEffect(() => {
-        const initialBlanks = typeof unitAnswers[currentUnitIndex] === 'string'
-            ? unitAnswers[currentUnitIndex].split('+').reduce((acc: any, val: string, i: number) => {
-                if (val) acc[i + 1] = val;
-                return acc;
-            }, {})
-            : {};
-        setBlanks(initialBlanks);
-        setSelectedWord(null);
-    }, [currentUnitIndex, unitAnswers]);
-
-
-    const toggleBlank = (index: number) => {
-        if (isReview) return;
-        const newBlanks = { ...blanks };
-        if (newBlanks[index]) {
-            delete newBlanks[index];
-        } else if (selectedWord) {
-            newBlanks[index] = selectedWord;
-            setSelectedWord(null);
-        } else {
-            return;
-        }
-
-        setBlanks(newBlanks);
-        if (isUnitMode) {
-            // Preservation of indices: find max index to ensure we don't truncate
-            const parts = question.text.split(/(\[\d+\])/g);
-            const gapIndices = parts
-                .map((p: string) => p.match(/\[(\d+)\]/))
-                .filter((m: RegExpMatchArray | null) => m)
-                .map((m: RegExpMatchArray | null) => parseInt(m![1]));
-            const maxIdx = Math.max(...gapIndices, 0);
-
-            const answerArray = [];
-            for (let i = 1; i <= maxIdx; i++) {
-                answerArray.push(newBlanks[i] || "");
-            }
-            const answerString = answerArray.join('+');
-            onAnswer(answerString);
-        }
-    };
-
-    const renderTextFromProps = () => {
-        const parts = question.text.split(/(\[\d+\])/g);
-        const correctAccepted = correctInfo?.acceptedAnswers?.[0]?.split('+') || [];
-
-        return parts.map((part: string, i: number) => {
-            const match = part.match(/\[(\d+)\]/);
-            if (match) {
-                const blankIdx = parseInt(match[1]);
-                const val = blanks[blankIdx];
-                // Note: Indexing might be tricky. If acceptedAnswers is "word1, word2", 
-                // index 1 corresponds to word1.
-                const correctWord = correctAccepted[blankIdx - 1];
-                const isCorrect = isReview && val && correctWord && normalizeAnswer(val) === normalizeAnswer(correctWord);
-
-                return (
-                    <button
-                        key={i}
-                        onClick={() => toggleBlank(blankIdx)}
-                        disabled={isReview}
-                        className={`mx-1 px-3 py-1 rounded-lg border-2 font-bold transition-all
-                            ${isReview
-                                ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : val ? 'bg-red-50 border-red-500 text-red-700' : 'bg-slate-100 border-slate-300 opacity-50')
-                                : (blanks[blankIdx]
-                                    ? 'bg-indigo-100 border-indigo-400 text-indigo-700 shadow-sm'
-                                    : 'bg-slate-100 border-slate-300 text-slate-400 border-dashed hover:border-slate-400')
-                            }`}
-                    >
-                        {val || (isReview ? `(${correctWord || blankIdx})` : `(${blankIdx})`)}
-                    </button>
-                );
-            }
-            return <span key={i} className="text-slate-700 leading-relaxed">{part}</span>;
-        });
-    };
-
-    return (
-        <div className="flex flex-col h-full space-y-4">
-            {!isReview && (
-                <div className="bg-white/90 backdrop-blur-sm p-4 rounded-[2rem] border border-slate-200 shadow-sm">
-                    <div className="flex flex-wrap justify-center gap-2">
-                        {question.options.map((word: string, i: number) => {
-                            const isUsed = Object.values(blanks).includes(word);
-                            return (
-                                <button
-                                    key={i}
-                                    onClick={() => !isUsed && setSelectedWord(word === selectedWord ? null : word)}
-                                    className={`px-4 py-2 rounded-xl font-bold text-sm transition-all shadow-sm
-                                        ${word === selectedWord ? 'bg-indigo-600 text-white shadow-indigo-500/20 scale-105' :
-                                            isUsed ? 'bg-slate-100 text-slate-300 opacity-50 cursor-not-allowed' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-                                        }`}
-                                >
-                                    {word}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-            <div className={`flex-1 bg-white p-6 rounded-[2.5rem] border flex flex-col items-center justify-center overflow-y-auto shadow-inner
-                ${isReview ? 'border-slate-100' : 'border-slate-200'}`}>
-                <div className="text-lg md:text-xl font-medium text-center leading-loose">
-                    {renderTextFromProps()}
-                </div>
-                {!isUnitMode && !isReview && (
-                    <button
-                        onClick={() => {
-                            const parts = question.text.split(/(\[\d+\])/g);
-                            const gapIndices = parts
-                                .map((p: string) => p.match(/\[(\d+)\]/))
-                                .filter((m: RegExpMatchArray | null) => m)
-                                .map((m: RegExpMatchArray | null) => parseInt(m![1]));
-                            const maxIdx = Math.max(...gapIndices, 0);
-
-                            const answerArray = [];
-                            for (let i = 1; i <= maxIdx; i++) {
-                                answerArray.push(blanks[i] || "");
-                            }
-                            const answerString = answerArray.join('+');
-                            onAnswer(answerString);
-                        }}
-                        disabled={Object.keys(blanks).length === 0}
-                        className="mt-6 bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg shadow-indigo-500/20 transition-all hover:bg-indigo-500 active:scale-95"
-                    >
-                        <Send size={20} className="inline mr-2" /> SUBMIT
-                    </button>
-                )}
-                {isReview && (
-                    <div className="mt-8 flex items-center gap-2 text-slate-400 font-black uppercase tracking-widest text-[10px]">
-                        <Info size={14} /> REVIEW MODE
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
-// MatchingView
-function MatchingView({ question, unitAnswers, currentUnitIndex, onAnswer, isUnitMode, isReview, correctInfo }: any) {
-    const [selectedWordIdx, setSelectedWordIdx] = useState<number | null>(null);
-    const [matches, setMatches] = useState<Record<number, string>>({}); // wordIdx -> definition (letter)
-
-    const words = question.options; // Left side
-    // For student view, we might need definitions to be randomized or shown as letters.
-    // In our CreateQuiz, we save definitions in acceptedAnswers as a '+' separated string.
-
-    const [defsWithLetters, setDefsWithLetters] = useState<{ letter: string, text: string }[]>([]);
-
-    useEffect(() => {
-        const correctLetters = "ABCDEFGHIJKLMN";
-        // Create a list with original labels to know which definition corresponds to which original index
-        const originalWithLabels = (isReview ? (correctInfo?.acceptedAnswers || []) : (question.acceptedAnswers || []))
-            .map((text: string, index: number) => ({ text, index }));
-
-        // Shuffle the list for non-review mode
-        let displayedDefs = [...originalWithLabels];
-        if (!isReview) {
-            displayedDefs = displayedDefs.sort(() => Math.random() - 0.5);
-        }
-
-        const mapped = displayedDefs.map((item: any, i: number) => ({
-            letter: correctLetters[i] || '?',
-            text: item.text,
-            originalIndex: item.index
-        }));
-        setDefsWithLetters(mapped);
-
-        // Load existing matches
-        const savedMatchStr = unitAnswers[currentUnitIndex];
-        if (savedMatchStr) {
-            const savedMatches: Record<number, string> = {};
-            savedMatchStr.split('+').forEach((m: string, i: number) => {
-                if (m) savedMatches[i] = m;
-            });
-            setMatches(savedMatches);
-        } else {
-            setMatches({});
-        }
-        setSelectedWordIdx(null);
-    }, [currentUnitIndex, unitAnswers, question, correctInfo, isReview]);
-
-    const handleMatch = (defItem: { letter: string, text: string, originalIndex?: number }) => {
-        if (isReview || selectedWordIdx === null) return;
-
-        const newMatches = { ...matches, [selectedWordIdx]: defItem.text };
-        setMatches(newMatches);
-        setSelectedWordIdx(null);
-
-        if (isUnitMode) {
-            const matchArray = [];
-            for (let i = 0; i < words.length; i++) {
-                matchArray.push(newMatches[i] || "");
-            }
-            onAnswer(matchArray.join('+'));
-        }
-    };
-
-    return (
-        <div className="flex flex-col space-y-6 pb-10">
-            <div className="text-xl md:text-2xl font-bold text-slate-800 text-center leading-relaxed px-4">
-                {question.text}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-1">
-                {/* Words Column */}
-                <div className="space-y-4">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Words</h3>
-                    {words.map((word: string, i: number) => (
-                        <button
-                            key={i}
-                            onClick={() => !isReview && setSelectedWordIdx(i === selectedWordIdx ? null : i)}
-                            className={`w-full p-4 rounded-2xl border-2 text-left font-bold transition-all flex items-center justify-between
-                                ${selectedWordIdx === i ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-lg' :
-                                    matches[i] ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-600 hover:border-indigo-200'}`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <span className="text-xs opacity-40">{i + 1}.</span>
-                                {word}
-                            </div>
-                            {matches[i] && (
-                                <div className="bg-emerald-500 text-white px-2 h-6 rounded-lg flex items-center justify-center text-[10px] font-black uppercase">
-                                    moslandi
-                                </div>
-                            )}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Definitions Column */}
-                <div className="space-y-4">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Definitions</h3>
-                    {defsWithLetters.map((def, i) => {
-                        const isSelected = Object.values(matches).includes(def.letter);
-                        return (
-                            <button
-                                key={i}
-                                onClick={() => handleMatch(def)}
-                                className={`w-full p-4 rounded-2xl border-2 text-left transition-all flex gap-4
-                                    ${isReview ? 'border-slate-100 bg-white opacity-80 cursor-default' :
-                                        isSelected ? 'border-slate-100 bg-slate-50 text-slate-400 opacity-50' :
-                                            selectedWordIdx !== null ? 'border-indigo-200 bg-white hover:border-indigo-500 hover:bg-indigo-50 shadow-sm' : 'border-slate-100 bg-white'}`}
-                            >
-                                <div className="bg-slate-800 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black shrink-0">
-                                    {def.letter}
-                                </div>
-                                <div className="text-sm font-medium leading-tight pt-1">
-                                    {def.text}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Remove manual submit button in Unit Mode to rely on footer navigation */}
-
-            {!isUnitMode && !isReview && (
-                <button
-                    onClick={() => {
-                        const matchArray = [];
-                        for (let i = 0; i < words.length; i++) {
-                            matchArray.push(matches[i] || "");
-                        }
-                        onAnswer(matchArray.join('+'));
-                    }}
-                    disabled={Object.keys(matches).length === 0}
-                    className="bg-indigo-600 text-white px-10 py-5 rounded-[2rem] font-black shadow-xl shadow-indigo-500/20 transition-all hover:bg-indigo-500 active:scale-95 flex items-center justify-center gap-2 shrink-0"
-                >
-                    <Send size={24} /> JAVOBNI YUBORISH
-                </button>
             )}
         </div>
     );
