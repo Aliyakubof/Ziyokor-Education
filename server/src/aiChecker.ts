@@ -1,5 +1,6 @@
 import * as dotenv from 'dotenv';
 import path from 'path';
+import { query } from './db';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 export interface AICheckResult {
@@ -39,15 +40,51 @@ export async function checkAnswersWithAIBatch(
     const finalResults: AICheckResult[] = new Array(questions.length);
     const pendingQuestions: { text: string, studentAnswer: string, type: string, originalIndex: number }[] = [];
 
-    // 1. Check Cache First
+    // 1. Check Local Memory Cache First
+    const keysToDb: { key: string, originalIndex: number }[] = [];
     questions.forEach((q, i) => {
         const key = getCacheKey(q.text, q.studentAnswer);
         if (aiCache.has(key)) {
             finalResults[i] = aiCache.get(key)!;
         } else {
-            pendingQuestions.push({ ...q, originalIndex: i });
+            keysToDb.push({ key, originalIndex: i });
         }
     });
+
+    if (keysToDb.length > 0) {
+        // 2. Check Database Cache
+        console.log(`[AI Cache] Checking DB for ${keysToDb.length} questions...`);
+        const hashes = keysToDb.map(k => k.key);
+        try {
+            const dbRes = await query(
+                'SELECT question_hash, result FROM ai_responses_cache WHERE question_hash = ANY($1)',
+                [hashes]
+            );
+
+            const dbMap = new Map<string, AICheckResult>();
+            dbRes.rows.forEach(row => {
+                dbMap.set(row.question_hash, row.result as AICheckResult);
+            });
+
+            keysToDb.forEach(item => {
+                if (dbMap.has(item.key)) {
+                    const result = dbMap.get(item.key)!;
+                    finalResults[item.originalIndex] = result;
+                    aiCache.set(item.key, result); // Sync to memory cache
+                } else {
+                    const q = questions[item.originalIndex];
+                    pendingQuestions.push({ ...q, originalIndex: item.originalIndex });
+                }
+            });
+        } catch (err) {
+            console.error('[AI Cache] DB Lookup Error:', err);
+            // Fallback: treat all as pending
+            keysToDb.forEach(item => {
+                const q = questions[item.originalIndex];
+                pendingQuestions.push({ ...q, originalIndex: item.originalIndex });
+            });
+        }
+    }
 
     if (pendingQuestions.length === 0) return finalResults;
 
@@ -78,7 +115,7 @@ export async function checkAnswersWithAIBatch(
             attempt++;
             try {
                 const genAI = getGenAI();
-                const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+                const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite";
                 const model = genAI.getGenerativeModel({ model: modelName });
 
                 const batchInfo = chunk.map((q: any, i: number) => `SAVOL #${i + 1}:\nTur: ${q.type}\nSavol: ${q.text}\nJavob: ${q.studentAnswer}`).join('\n\n---\n\n');
@@ -126,12 +163,23 @@ ${batchInfo}`;
 
                         allResultsRaw[idx] = mappedResults;
 
-                        // Update Cache
-                        mappedResults.forEach((res, i) => {
+                        // Update Cache (Memory & DB)
+                        for (const [i, res] of mappedResults.entries()) {
                             const q = chunk[i];
                             const key = getCacheKey(q.text, q.studentAnswer);
                             aiCache.set(key, res);
-                        });
+
+                            try {
+                                await query(
+                                    `INSERT INTO ai_responses_cache (question_hash, question_text, answer_text, result)
+                                     VALUES ($1, $2, $3, $4)
+                                     ON CONFLICT (question_hash) DO NOTHING`,
+                                    [key, q.text, q.studentAnswer, JSON.stringify(res)]
+                                );
+                            } catch (dbErr) {
+                                console.error('[AI Cache] DB Save Error:', dbErr);
+                            }
+                        }
 
                         return;
                     }
@@ -216,7 +264,7 @@ export async function generateVocabBattleWithAI(
 
     try {
         const genAI = getGenAI();
-        const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+        const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
         const prompt = `
