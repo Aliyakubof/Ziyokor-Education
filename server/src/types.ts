@@ -70,4 +70,5 @@ export interface GameSession {
     groupId?: string;
     timePerQuestion?: number;
     endTime?: number;
+    createdAt?: number;
 }

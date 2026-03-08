@@ -2077,9 +2077,12 @@ io.on('connection', (socket) => {
         try {
             // Check if an existing lobby for this group/quiz already exists to reuse PIN
             const allGames = await store.getAllGames();
+            const now = Date.now();
             const existingPin = Object.keys(allGames).find(p => {
                 const g = allGames[p];
-                return g.isUnitQuiz && g.groupId === groupId && g.quiz.id === quizId && g.status === 'LOBBY';
+                const age = g.createdAt ? (now - g.createdAt) : 0;
+                // Only reuse if it's a LOBBY game from the same group/quiz and less than 4 hours old
+                return g.isUnitQuiz && g.groupId === groupId && g.quiz.id === quizId && g.status === 'LOBBY' && age < (4 * 60 * 60 * 1000);
             });
 
             if (existingPin) {
@@ -2112,7 +2115,8 @@ io.on('connection', (socket) => {
                 status: 'LOBBY' as 'LOBBY',
                 currentQuestionIndex: -1,
                 isUnitQuiz: true,
-                groupId
+                groupId,
+                createdAt: now
             };
             await store.setGame(pin, game);
             socket.join(pin);
@@ -2121,6 +2125,18 @@ io.on('connection', (socket) => {
         } catch (err) {
             console.error('[host-create-unit-game] error:', err);
             socket.emit('error', 'Database error');
+        }
+    });
+
+    socket.on('host-reset-unit-lobby', async ({ pin }: { pin: string }) => {
+        try {
+            const game = await store.getGame(pin);
+            if (game && game.status === 'LOBBY') {
+                await store.deleteGame(pin);
+                console.log(`Unit Game RESET: ${pin}`);
+            }
+        } catch (err) {
+            console.error('[host-reset-unit-lobby] error:', err);
         }
     });
 
