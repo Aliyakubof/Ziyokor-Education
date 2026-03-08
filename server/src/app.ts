@@ -1891,7 +1891,11 @@ function scrubSinglePlayer(game: any, p: any) {
             name: p.name,
             answeredCount: Object.entries(p.answers || {}).filter(([qIdx, a]) => {
                 const isValidAnswer = a !== "" && a !== null && a !== undefined;
-                const isNotInfoSlide = game.quiz?.questions?.[Number(qIdx)]?.type !== 'info-slide';
+                let questions = game.quiz?.questions;
+                if (typeof questions === 'string') {
+                    try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+                }
+                const isNotInfoSlide = (questions as any[])?.[Number(qIdx)]?.type !== 'info-slide';
                 return isValidAnswer && isNotInfoSlide;
             }).length,
             status: p.status,
@@ -2086,14 +2090,26 @@ io.on('connection', (socket) => {
         try {
             const now = Date.now();
 
-            // SECURITY: Always clear any existing LOBBY for this group/quiz before creating a new one
-            // This prevents "ghost" sessions even if reuse was disabled.
+            // REUSE: Check if there's already a LOBBY for this group and quiz
             const allGames = await store.getAllGames();
+            let existingPin: string | null = null;
             for (const p of Object.keys(allGames)) {
                 const g = allGames[p];
-                if (g.isUnitQuiz && g.groupId === groupId && g.quiz.id === quizId && g.status === 'LOBBY') {
-                    await store.deleteGame(p);
-                    console.log(`Unit Game PRE-CLEAN: ${p} for group ${groupId}`);
+                if (g && g.isUnitQuiz && g.groupId === groupId && g.quiz?.id === quizId && g.status === 'LOBBY') {
+                    existingPin = p;
+                    break;
+                }
+            }
+
+            if (existingPin) {
+                const game = await store.getGame(existingPin);
+                if (game) {
+                    game.hostId = socket.id; // Re-bind host to current socket
+                    await store.setGame(existingPin, game);
+                    socket.join(existingPin);
+                    socket.emit('game-created', existingPin);
+                    console.log(`Unit Game REUSED: ${existingPin} for group ${groupId}`);
+                    return;
                 }
             }
 
@@ -2455,8 +2471,10 @@ io.on('connection', (socket) => {
             socket.emit('error', 'O\'yin topilmadi');
             return;
         }
-        if (!metadata.isUnitQuiz || metadata.status !== 'ACTIVE') {
-            console.log(`[unit-player-finish] Error: Game ${pin} is not a Unit Quiz or not ACTIVE (Status: ${metadata.status})`);
+
+        // Allow finishing in either LOBBY or ACTIVE state for unit quizzes
+        if (!metadata.isUnitQuiz || (metadata.status !== 'ACTIVE' && metadata.status !== 'LOBBY')) {
+            console.log(`[unit-player-finish] Error: Game ${pin} is not a Unit Quiz or invalid Status: ${metadata.status}`);
             socket.emit('error', 'Test hali boshlanmagan yoki yakunlangan');
             return;
         }
@@ -2549,14 +2567,30 @@ io.on('connection', (socket) => {
     // Player/Student: Submit Answer
     socket.on('player-answer', async ({ pin, answer, questionIndex }: { pin: string, answer: string | number, questionIndex?: number }, callback?: (res: { success: boolean, error?: string }) => void) => {
         const metadata = await store.getGameMetadata(pin);
-        if (!metadata || metadata.status !== 'ACTIVE') return;
+
+        if (!metadata) {
+            if (callback) callback({ success: false, error: 'O\'yin topilmadi' });
+            return;
+        }
+
+        // Allow answers during LOBBY for Unit Quizzes to prevent "Saving..." hang if teacher hasn't pressed Start yet
+        const isAllowedState = metadata.status === 'ACTIVE' || (metadata.isUnitQuiz && metadata.status === 'LOBBY');
+
+        if (!isAllowedState) {
+            if (callback) callback({ success: false, error: 'O\'yin hali boshlanmagan' });
+            return;
+        }
 
         const playerId = (socket as any).studentId || socket.id;
         const player = await store.getPlayer(pin, playerId);
-        if (!player) return;
+        if (!player) {
+            if (callback) callback({ success: false, error: 'O\'quvchi topilmadi' });
+            return;
+        }
 
         const qIdx = metadata.isUnitQuiz && questionIndex !== undefined ? questionIndex : metadata.currentQuestionIndex;
         if (qIdx === undefined || qIdx < 0 || qIdx >= (metadata.quiz!.questions.length)) {
+            if (callback) callback({ success: false, error: 'Savol raqami noto\'g\'ri' });
             return;
         }
 
@@ -2594,7 +2628,7 @@ io.on('connection', (socket) => {
         }
 
         if (isTextInput && currentScore === 0 && answer) {
-            enqueueAICheck(pin, playerId, qIdx, question.text, String(answer), question.type || 'text-input')
+            enqueueAICheck(pin, playerId, qIdx, question.text, String(answer), question.type || 'text-input', question.acceptedAnswers)
                 .catch(e => console.error('[AI-Queue-Error]', e));
         }
 
