@@ -2080,9 +2080,9 @@ io.on('connection', (socket) => {
             const now = Date.now();
             const existingPin = Object.keys(allGames).find(p => {
                 const g = allGames[p];
-                const age = g.createdAt ? (now - g.createdAt) : 0;
-                // Only reuse if it's a LOBBY game from the same group/quiz and less than 4 hours old
-                return g.isUnitQuiz && g.groupId === groupId && g.quiz.id === quizId && g.status === 'LOBBY' && age < (4 * 60 * 60 * 1000);
+                const age = g.createdAt ? (now - g.createdAt) : (5 * 60 * 60 * 1000); // If no createdAt, assume very old
+                // Only reuse if it's a LOBBY game from the same group/quiz and less than 1 hour old
+                return g.isUnitQuiz && g.groupId === groupId && g.quiz.id === quizId && g.status === 'LOBBY' && age < (1 * 60 * 60 * 1000);
             });
 
             if (existingPin) {
@@ -2131,9 +2131,20 @@ io.on('connection', (socket) => {
     socket.on('host-reset-unit-lobby', async ({ pin }: { pin: string }) => {
         try {
             const game = await store.getGame(pin);
-            if (game && game.status === 'LOBBY') {
-                await store.deleteGame(pin);
-                console.log(`Unit Game RESET: ${pin}`);
+            // Delete the specific PIN game
+            await store.deleteGame(pin);
+            console.log(`Unit Game RESET: ${pin}`);
+
+            if (game && game.isUnitQuiz) {
+                // Also clear ANY other leaked lobbies for this group and quiz to be safe
+                const allGames = await store.getAllGames();
+                for (const p of Object.keys(allGames)) {
+                    const g = allGames[p];
+                    if (g.isUnitQuiz && g.groupId === game.groupId && g.quiz.id === game.quiz.id && g.status === 'LOBBY') {
+                        await store.deleteGame(p);
+                        console.log(`Unit Game RESET (Ghost Clean): ${p}`);
+                    }
+                }
             }
         } catch (err) {
             console.error('[host-reset-unit-lobby] error:', err);
