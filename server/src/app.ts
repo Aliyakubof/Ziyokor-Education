@@ -2274,16 +2274,20 @@ io.on('connection', (socket) => {
                 await broadcastPlayerUpdate(pin, studentId);
             }
 
-            if (metadata.status === 'ACTIVE') {
+            if (metadata.status === 'ACTIVE' || (metadata.isUnitQuiz && metadata.status === 'LOBBY')) {
                 if (metadata.isUnitQuiz) {
-                    const questionsForStudents = (metadata.quiz!.questions as any[]).map((q, idx) => ({
+                    let questions = metadata.quiz!.questions;
+                    if (typeof questions === 'string') {
+                        try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+                    }
+                    const questionsForStudents = (questions as any[]).map((q, idx) => ({
                         info: q.info,
                         text: q.text,
                         options: q.options,
                         type: q.type,
                         acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
                         questionIndex: idx + 1,
-                        totalQuestions: metadata.quiz!.questions.length
+                        totalQuestions: (questions as any[]).length
                     }));
                     socket.emit('unit-game-started', { questions: questionsForStudents, endTime: metadata.endTime, title: metadata.quiz!.title });
                 } else {
@@ -2458,17 +2462,21 @@ io.on('connection', (socket) => {
             }
         }
 
-        if (metadata.status === 'ACTIVE') {
+        if (metadata.status === 'ACTIVE' || (metadata.isUnitQuiz && metadata.status === 'LOBBY')) {
             const endTime = metadata.endTime;
             if (metadata.isUnitQuiz) {
-                const questionsForStudents = (metadata.quiz!.questions as any[]).map((q, idx) => ({
+                let questions = metadata.quiz!.questions;
+                if (typeof questions === 'string') {
+                    try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+                }
+                const questionsForStudents = (questions as any[]).map((q, idx) => ({
                     info: q.info,
                     text: q.text,
                     options: q.options,
                     type: q.type,
                     acceptedAnswers: q.type === 'matching' ? q.acceptedAnswers : undefined,
                     questionIndex: idx + 1,
-                    totalQuestions: metadata.quiz!.questions.length
+                    totalQuestions: (questions as any[]).length
                 }));
                 socket.emit('unit-game-started', { questions: questionsForStudents, endTime, title: metadata.quiz!.title });
             } else if (metadata.currentQuestionIndex !== undefined && metadata.currentQuestionIndex >= 0) {
@@ -2510,7 +2518,12 @@ io.on('connection', (socket) => {
         (player as any).isFinished = true;
         await store.setPlayer(pin, player);
 
-        const correctAnswers = (metadata.quiz!.questions as any[]).map(q => ({
+        let questions = metadata.quiz!.questions;
+        if (typeof questions === 'string') {
+            try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+        }
+
+        const correctAnswers = (questions as any[]).map(q => ({
             type: q.type,
             correctIndex: q.correctIndex,
             acceptedAnswers: q.acceptedAnswers
