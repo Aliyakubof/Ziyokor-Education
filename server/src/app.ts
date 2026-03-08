@@ -1987,6 +1987,15 @@ async function broadcastPlayerUpdate(pin: string, playerId?: string) {
     if (!metadata || !metadata.hostId || metadata.hostId === 'system') return;
 
     if (metadata.isUnitQuiz) {
+        // If it's in LOBBY status, always send full update to ensure teacher sees everyone correctly
+        if (metadata.status === 'LOBBY') {
+            const fullGame = await store.getGame(pin);
+            if (fullGame) {
+                io.to(fullGame.hostId).emit('player-update', scrubPlayers(fullGame));
+            }
+            return;
+        }
+
         if (!pendingPlayerUpdates[pin]) pendingPlayerUpdates[pin] = new Set();
         if (playerId) {
             pendingPlayerUpdates[pin].add(playerId);
@@ -2075,31 +2084,7 @@ io.on('connection', (socket) => {
     // Host: Create Unit Game
     socket.on('host-create-unit-game', async ({ quizId, groupId }: { quizId: string, groupId: string }) => {
         try {
-            // Check if an existing lobby for this group/quiz already exists to reuse PIN
-            const allGames = await store.getAllGames();
-            const now = Date.now();
-            const existingPin = Object.keys(allGames).find(p => {
-                const g = allGames[p];
-                const age = g.createdAt ? (now - g.createdAt) : (5 * 60 * 60 * 1000); // If no createdAt, assume very old
-                // Only reuse if it's a LOBBY game from the same group/quiz and less than 10 minutes old
-                return g.isUnitQuiz && g.groupId === groupId && g.quiz.id === quizId && g.status === 'LOBBY' && age < (10 * 60 * 1000);
-            });
-
-            if (existingPin) {
-                const game = allGames[existingPin];
-                game.hostId = socket.id; // Update host to current socket
-                await store.setGame(existingPin, game);
-                socket.join(existingPin);
-                socket.emit('game-created', existingPin);
-                console.log(`Unit Game REUSED: ${existingPin} for group ${groupId}`);
-
-                // Send current players to the new host socket immediately
-                if (game.players.length > 0) {
-                    socket.emit('player-update', scrubPlayers(game));
-                }
-                return;
-            }
-
+            // PIN reuse logic removed to ensure fresh start every time
             const result = await query('SELECT * FROM unit_quizzes WHERE id = $1', [quizId]);
             if (result.rowCount === 0) {
                 socket.emit('error', 'Unit Quiz not found');
