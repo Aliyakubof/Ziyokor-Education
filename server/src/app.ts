@@ -2501,13 +2501,15 @@ io.on('connection', (socket) => {
         }
 
         // Allow finishing in either LOBBY or ACTIVE state for unit quizzes
-        if (!metadata.isUnitQuiz || (metadata.status !== 'ACTIVE' && metadata.status !== 'LOBBY')) {
-            console.log(`[unit-player-finish] Error: Game ${pin} is not a Unit Quiz or invalid Status: ${metadata.status}`);
-            socket.emit('error', 'Test hali boshlanmagan yoki yakunlangan');
+        const isValidStatus = metadata.status === 'ACTIVE' || metadata.status === 'LOBBY';
+        if (!metadata.isUnitQuiz || !isValidStatus) {
+            console.log(`[unit-player-finish] REJECTED: pin=${pin}, isUnit=${metadata.isUnitQuiz}, status=${metadata.status}`);
+            socket.emit('error', 'Test holati noto\'g\'ri (LOBBY yoki ACTIVE bo\'lishi kerak)');
             return;
         }
 
         const playerId = (socket as any).studentId || socket.id;
+        console.log(`[unit-player-finish] Processing for player: ${playerId}`);
         const player = await store.getPlayer(pin, playerId);
         if (!player) {
             console.log(`[unit-player-finish] Error: Player ${playerId} not found in game ${pin}`);
@@ -2518,12 +2520,19 @@ io.on('connection', (socket) => {
         (player as any).isFinished = true;
         await store.setPlayer(pin, player);
 
-        let questions = metadata.quiz!.questions;
-        if (typeof questions === 'string') {
-            try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+        let questions: any[] = [];
+        try {
+            const rawQuestions = metadata.quiz?.questions;
+            if (Array.isArray(rawQuestions)) {
+                questions = rawQuestions;
+            } else if (typeof rawQuestions === 'string') {
+                questions = JSON.parse(rawQuestions);
+            }
+        } catch (e) {
+            console.error('[unit-player-finish] Questions parse error:', e);
         }
 
-        const correctAnswers = (questions as any[]).map(q => ({
+        const correctAnswers = questions.map(q => ({
             type: q.type,
             correctIndex: q.correctIndex,
             acceptedAnswers: q.acceptedAnswers
