@@ -2274,7 +2274,7 @@ io.on('connection', (socket) => {
                 await broadcastPlayerUpdate(pin, studentId);
             }
 
-            if (metadata.status === 'ACTIVE' || (metadata.isUnitQuiz && metadata.status === 'LOBBY')) {
+            if (metadata.status === 'ACTIVE') {
                 if (metadata.isUnitQuiz) {
                     let questions = metadata.quiz!.questions;
                     if (typeof questions === 'string') {
@@ -2462,7 +2462,7 @@ io.on('connection', (socket) => {
             }
         }
 
-        if (metadata.status === 'ACTIVE' || (metadata.isUnitQuiz && metadata.status === 'LOBBY')) {
+        if (metadata.status === 'ACTIVE') {
             const endTime = metadata.endTime;
             if (metadata.isUnitQuiz) {
                 let questions = metadata.quiz!.questions;
@@ -2616,7 +2616,7 @@ io.on('connection', (socket) => {
         }
 
         // Allow answers during LOBBY for Unit Quizzes to prevent "Saving..." hang if teacher hasn't pressed Start yet
-        const isAllowedState = metadata.status === 'ACTIVE' || (metadata.isUnitQuiz && metadata.status === 'LOBBY');
+        const isAllowedState = metadata.status === 'ACTIVE';
 
         if (!isAllowedState) {
             if (callback) callback({ success: false, error: 'O\'yin hali boshlanmagan' });
