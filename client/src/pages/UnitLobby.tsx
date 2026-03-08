@@ -32,11 +32,24 @@ const UnitLobby = () => {
             setPlayers(updatedPlayers);
         });
 
+        socket.on('player-update-delta', (changedPlayers: any[]) => {
+            setPlayers(prev => {
+                const newPlayers = [...prev];
+                changedPlayers.forEach(c => {
+                    const idx = newPlayers.findIndex(p => p.id === c.id);
+                    if (idx !== -1) newPlayers[idx] = { ...newPlayers[idx], ...c };
+                    else newPlayers.push(c);
+                });
+                return newPlayers;
+            });
+        });
+
         socket.on('error', (err) => alert(err));
 
         return () => {
             socket.off('game-created');
             socket.off('player-update');
+            socket.off('player-update-delta');
             socket.off('error');
         };
     }, [quizId, groupId]);

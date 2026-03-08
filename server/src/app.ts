@@ -2075,6 +2075,28 @@ io.on('connection', (socket) => {
     // Host: Create Unit Game
     socket.on('host-create-unit-game', async ({ quizId, groupId }: { quizId: string, groupId: string }) => {
         try {
+            // Check if an existing lobby for this group/quiz already exists to reuse PIN
+            const allGames = await store.getAllGames();
+            const existingPin = Object.keys(allGames).find(p => {
+                const g = allGames[p];
+                return g.isUnitQuiz && g.groupId === groupId && g.quiz.id === quizId && g.status === 'LOBBY';
+            });
+
+            if (existingPin) {
+                const game = allGames[existingPin];
+                game.hostId = socket.id; // Update host to current socket
+                await store.setGame(existingPin, game);
+                socket.join(existingPin);
+                socket.emit('game-created', existingPin);
+                console.log(`Unit Game REUSED: ${existingPin} for group ${groupId}`);
+
+                // Send current players to the new host socket immediately
+                if (game.players.length > 0) {
+                    socket.emit('player-update', scrubPlayers(game));
+                }
+                return;
+            }
+
             const result = await query('SELECT * FROM unit_quizzes WHERE id = $1', [quizId]);
             if (result.rowCount === 0) {
                 socket.emit('error', 'Unit Quiz not found');
@@ -2097,6 +2119,7 @@ io.on('connection', (socket) => {
             socket.emit('game-created', pin);
             console.log(`Unit Game created: ${pin} for group ${groupId}`);
         } catch (err) {
+            console.error('[host-create-unit-game] error:', err);
             socket.emit('error', 'Database error');
         }
     });
