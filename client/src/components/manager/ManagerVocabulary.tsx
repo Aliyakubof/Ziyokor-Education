@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api';
 import { BookOpen, Plus, Edit2, Trash2, Search, Filter, Clock, Book } from 'lucide-react';
 
@@ -12,6 +13,7 @@ interface Quiz {
 }
 
 export default function ManagerVocabulary() {
+    const navigate = useNavigate();
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -29,6 +31,21 @@ export default function ManagerVocabulary() {
             console.error(err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: string, title: string) => {
+        if (!window.confirm(`"${title}" lug'atini o'chirishga aminmisiz?`)) return;
+        try {
+            const res = await apiFetch(`/api/unit-quizzes/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                setQuizzes(quizzes.filter(q => q.id !== id));
+            } else {
+                alert("O'chirishda xatolik yuz berdi");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("O'chirishda xatolik yuz berdi");
         }
     };
 
@@ -50,10 +67,10 @@ export default function ManagerVocabulary() {
                     <p className="text-slate-500 font-medium text-sm mt-1 uppercase tracking-widest">Levelga mos lug'at va testlarni boshqarish</p>
                 </div>
                 <button
-                    disabled
-                    className="flex items-center gap-2 bg-slate-100 text-slate-400 px-4 py-2 rounded-xl font-bold text-sm cursor-not-allowed"
+                    onClick={() => navigate('/create')}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
                 >
-                    <Plus size={18} /> Yangi Test (Tez kunda)
+                    <Plus size={18} /> Yangi Test Qo'shish
                 </button>
             </div>
 
@@ -91,8 +108,18 @@ export default function ManagerVocabulary() {
                             <div className="flex items-center justify-between mb-4">
                                 <span className="text-[10px] font-black uppercase px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md tracking-wider">{quiz.level}</span>
                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-md transition-all"><Edit2 size={14} /></button>
-                                    <button className="p-1.5 text-slate-400 hover:text-red-500 rounded-md transition-all"><Trash2 size={14} /></button>
+                                    <button
+                                        onClick={() => navigate(`/edit-quiz/${quiz.id}`)}
+                                        className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-md transition-all"
+                                    >
+                                        <Edit2 size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(quiz.id, quiz.title)}
+                                        className="p-1.5 text-slate-400 hover:text-red-500 rounded-md transition-all"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
                                 </div>
                             </div>
                             <h3 className="font-bold text-slate-800 mb-4 line-clamp-2">{quiz.title}</h3>

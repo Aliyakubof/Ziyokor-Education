@@ -23,15 +23,18 @@ import BattleDetails from './pages/BattleDetails';
 import { AuthProvider, useAuth } from './AuthContext';
 import AppMonitor from './AppMonitor';
 
-const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' | 'manager' }) => {
+const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' | 'manager' | ('admin' | 'teacher' | 'student' | 'manager')[] }) => {
   const { isAuthenticated, role } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && role !== requiredRole && role !== 'admin') {
-    return <Navigate to="/" replace />;
+  if (requiredRole) {
+    const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!roles.includes(role as any) && role !== 'admin') {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <>{children}</>;
@@ -114,7 +117,7 @@ function App() {
               <Route
                 path="/create"
                 element={
-                  <ProtectedRoute requiredRole="teacher">
+                  <ProtectedRoute requiredRole={['teacher', 'manager']}>
                     <CreateQuiz />
                   </ProtectedRoute>
                 }
@@ -122,7 +125,7 @@ function App() {
               <Route
                 path="/edit-quiz/:id"
                 element={
-                  <ProtectedRoute requiredRole="teacher">
+                  <ProtectedRoute requiredRole={['teacher', 'manager']}>
                     <CreateQuiz />
                   </ProtectedRoute>
                 }

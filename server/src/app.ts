@@ -2090,11 +2090,24 @@ io.on('connection', (socket) => {
         try {
             const now = Date.now();
 
-            // REUSE: Check if there's already a LOBBY for this group and quiz
+            // 1. Clean up STALE lobbies for this group/quiz (older than 15 mins)
             const allGames = await store.getAllGames();
-            let existingPin: string | null = null;
             for (const p of Object.keys(allGames)) {
                 const g = allGames[p];
+                if (g && g.isUnitQuiz && g.groupId === groupId && g.quiz?.id === quizId && g.status === 'LOBBY') {
+                    const ageMs = now - (g.createdAt || 0);
+                    if (ageMs > 15 * 60 * 1000) { // 15 mins
+                        await store.deleteGame(p);
+                        console.log(`Unit Game STALE-CLEAN: ${p} for group ${groupId}`);
+                    }
+                }
+            }
+
+            // 2. REUSE: Check for a RECENT lobby to reuse (for PIN stability on refresh)
+            const gamesAfterClean = await store.getAllGames();
+            let existingPin: string | null = null;
+            for (const p of Object.keys(gamesAfterClean)) {
+                const g = gamesAfterClean[p];
                 if (g && g.isUnitQuiz && g.groupId === groupId && g.quiz?.id === quizId && g.status === 'LOBBY') {
                     existingPin = p;
                     break;
@@ -2235,6 +2248,13 @@ io.on('connection', (socket) => {
             if (player) {
                 if (player.status !== 'Cheating') {
                     player.status = 'Online';
+                }
+                // If it's a LOBBY, we MUST reset progress to avoid carry-over from previous sessions
+                if (metadata.status === 'LOBBY') {
+                    player.score = 0;
+                    player.answers = {};
+                    (player as any).partialScoreMap = {};
+                    (player as any).isFinished = false;
                 }
             } else {
                 player = {
