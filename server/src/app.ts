@@ -2254,6 +2254,7 @@ io.on('connection', (socket) => {
                     player.score = 0;
                     player.answers = {};
                     (player as any).partialScoreMap = {};
+                    (player as any).aiFeedbackMap = {};
                     (player as any).isFinished = false;
                 }
             } else {

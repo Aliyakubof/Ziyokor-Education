@@ -43,12 +43,7 @@ export default function PlayerGame() {
     const [isUnitMode, setIsUnitMode] = useState(false);
     const [unitQuestions, setUnitQuestions] = useState<QuestionData[]>([]);
     const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
-    const [unitAnswers, setUnitAnswers] = useState<Record<number, any>>(() => {
-        try {
-            const saved = localStorage.getItem('unit-answers');
-            return saved ? JSON.parse(saved) : {};
-        } catch { return {}; }
-    });
+    const [unitAnswers, setUnitAnswers] = useState<Record<number, any>>({});
     const [unitCorrectAnswers, setUnitCorrectAnswers] = useState<any[]>([]);
     const [unitAIFeedback, setUnitAIFeedback] = useState<Record<number, string>>({});
     const [globalEndTime, setGlobalEndTime] = useState<number | null>(null);
@@ -58,6 +53,17 @@ export default function PlayerGame() {
 
     const pinFromStore = localStorage.getItem('kahoot-pin');
     const idFromStore = localStorage.getItem('student-id');
+
+    // Initial load from PIN-specific localStorage
+    useEffect(() => {
+        if (pinFromStore) {
+            try {
+                const saved = localStorage.getItem(`unit-answers-${pinFromStore}`);
+                if (saved) setUnitAnswers(JSON.parse(saved));
+                else setUnitAnswers({});
+            } catch { setUnitAnswers({}); }
+        }
+    }, [pinFromStore]);
 
     useEffect(() => {
         const onConnect = () => setIsConnected(true);
@@ -92,15 +98,16 @@ export default function PlayerGame() {
             setGlobalEndTime(data.endTime);
             setQuizTitle(data.title);
 
-            // Restore saved answers from localStorage
-            const savedAnswersRaw = localStorage.getItem('unit-answers');
+            // Restore saved answers from PIN-specific localStorage
+            const pin = localStorage.getItem('kahoot-pin');
+            const savedAnswersRaw = pin ? localStorage.getItem(`unit-answers-${pin}`) : null;
             const savedAnswers = savedAnswersRaw ? JSON.parse(savedAnswersRaw) : {};
 
             setUnitAnswers(savedAnswers);
 
             // Sync answers back to the server so the Host's dashboard progress is correct
-            if (pinFromStore && Object.keys(savedAnswers).length > 0) {
-                socket.emit('player-sync-answers', { pin: pinFromStore, answers: savedAnswers }, (ack: { success: boolean }) => {
+            if (pin && Object.keys(savedAnswers).length > 0) {
+                socket.emit('player-sync-answers', { pin: pin, answers: savedAnswers }, (ack: { success: boolean }) => {
                     console.log('[Sync] Initial answers sync completed:', ack.success);
                 });
             }
@@ -123,6 +130,9 @@ export default function PlayerGame() {
 
         socket.on('unit-finished', (data: { score?: number, correctAnswers?: any[], aiFeedbackMap?: Record<number, string>, hidden?: boolean }) => {
             setIsSubmitting(false);
+            const pin = localStorage.getItem('kahoot-pin');
+            if (pin) localStorage.removeItem(`unit-answers-${pin}`);
+            // Also clean up generic legacy key if exists
             localStorage.removeItem('unit-answers');
             setView('FINISHED');
             if (data.hidden) {
@@ -174,12 +184,13 @@ export default function PlayerGame() {
     const saveUnitAnswer = (val: number | string) => {
         const newAnswers = { ...unitAnswers, [currentUnitIndex]: val };
         setUnitAnswers(newAnswers);
-        localStorage.setItem('unit-answers', JSON.stringify(newAnswers));
-
-        setSyncStatus(prev => ({ ...prev, [currentUnitIndex]: 'SAVING' }));
 
         const pin = localStorage.getItem('kahoot-pin');
         if (pin) {
+            localStorage.setItem(`unit-answers-${pin}`, JSON.stringify(newAnswers));
+
+            setSyncStatus(prev => ({ ...prev, [currentUnitIndex]: 'SAVING' }));
+
             socket.emit('player-answer',
                 { pin, answer: val, questionIndex: currentUnitIndex },
                 (ack: { success: boolean }) => {
