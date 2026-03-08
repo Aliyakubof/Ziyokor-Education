@@ -62,16 +62,7 @@ const UnitLobby = () => {
         navigate(`/host-game/${pin}`);
     };
 
-    const resetLobby = () => {
-        if (!pin) return;
-        if (window.confirm('Haqiqatdan ham ro\'yxatni tozalamoqchimisiz? Eski o\'quvchilar haydaladi va yangi PIN yaratiladi.')) {
-            socket.emit('host-reset-unit-lobby', { pin });
-            // Re-emit create to get a new session
-            setPin(null);
-            setPlayers([]);
-            socket.emit('host-create-unit-game', { quizId, groupId });
-        }
-    };
+
 
     const productionUrl = window.location.origin;
     const joinUrl = `${productionUrl}/unit-join/${pin}`;
@@ -82,6 +73,13 @@ const UnitLobby = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const goBack = () => {
+        if (pin) {
+            socket.emit('host-reset-unit-lobby', { pin });
+        }
+        navigate('/teacher');
+    };
+
     return (
         <div className="min-h-screen p-6 relative overflow-hidden bg-transparent font-sans">
 
@@ -90,23 +88,16 @@ const UnitLobby = () => {
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
                     <button
-                        onClick={() => navigate('/teacher')}
+                        onClick={goBack}
                         className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 transition-all font-bold"
                     >
                         <ArrowLeft size={24} /> Orqaga
                     </button>
 
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={resetLobby}
-                            className="bg-red-50 hover:bg-red-100 text-red-600 px-6 py-2 rounded-full border border-red-200 text-xs font-black uppercase tracking-widest transition-all active:scale-95"
-                        >
-                            Tozalash
-                        </button>
-                        <div className="bg-white px-8 py-3 rounded-full shadow-sm border border-slate-200 flex items-center gap-3">
-                            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                            <span className="text-slate-600 font-extrabold tracking-wider uppercase text-sm">Lobby Active</span>
-                        </div>
+
+                    <div className="bg-white px-8 py-3 rounded-full shadow-sm border border-slate-200 flex items-center gap-3">
+                        <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <span className="text-slate-600 font-extrabold tracking-wider uppercase text-sm">Lobby Active</span>
                     </div>
                 </div>
 
