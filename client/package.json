@@ -10,13 +10,20 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "cap:sync": "npx cap sync",
+    "cap:open": "npx cap open android",
+    "mobile:build": "npm run build && npx cap sync android",
+    "assets:generate": "npx @capacitor/assets generate --android --assetPath resources"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
+    "@capacitor/app": "^7.1.2",
     "@capacitor/cli": "^8.1.0",
     "@capacitor/core": "^8.1.0",
     "@capacitor/ios": "^8.1.0",
+    "@capacitor/splash-screen": "^7.0.5",
+    "@capacitor/status-bar": "^7.0.5",
     "browser-image-compression": "^2.0.2",
     "core-js": "^3.37.1",
     "framer-motion": "^12.35.0",

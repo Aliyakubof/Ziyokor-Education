@@ -22,6 +22,11 @@ import GroupDetails from './pages/GroupDetails';
 import BattleDetails from './pages/BattleDetails';
 import { AuthProvider, useAuth } from './AuthContext';
 import AppMonitor from './AppMonitor';
+import { useEffect } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
+import { useLocation } from 'react-router-dom';
 
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' | 'manager' | ('admin' | 'teacher' | 'student' | 'manager')[] }) => {
   const { isAuthenticated, role } = useAuth();
@@ -51,6 +56,31 @@ const RootRoute = () => {
 };
 
 function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Configure StatusBar
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setStyle({ style: Style.Light });
+      StatusBar.setBackgroundColor({ color: '#ffffff' });
+    }
+
+    // Handle Hardware Back Button
+    const backListener = CapacitorApp.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
+      if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/student/dashboard') {
+        CapacitorApp.exitApp();
+      } else if (canGoBack) {
+        window.history.back();
+      } else {
+        CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      backListener.then((l: any) => l.remove());
+    };
+  }, [location.pathname]);
+
   return (
     <AuthProvider>
       <AppMonitor>
