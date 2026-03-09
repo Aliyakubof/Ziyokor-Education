@@ -17,15 +17,24 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @CapacitorPlugin(name = "UsageStats")
 public class UsageStatsPlugin extends Plugin {
+
+    // Таълим ва мулоқот учун иловалар рўйхати (пакет номлари)
+    private static final List<String> EDUCATION_APPS = Arrays.asList(
+        "com.duolingo", 
+        "org.telegram.messenger", 
+        "com.whatsapp", 
+        "com.google.android.apps.classroom",
+        "com.ziyokor.education"
+    );
 
     @PluginMethod
     public void checkPermissions(PluginCall call) {
@@ -61,7 +70,9 @@ public class UsageStatsPlugin extends Plugin {
         PackageManager pm = context.getPackageManager();
 
         Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DAY_OF_YEAR, -1);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
         long start = cal.getTimeInMillis();
         long end = System.currentTimeMillis();
 
@@ -72,55 +83,38 @@ public class UsageStatsPlugin extends Plugin {
             return;
         }
 
-        // Aggregate by package
-        Map<String, UsageStats> aggregatedStats = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-             aggregatedStats = queryUsageStats.stream().collect(
-                    Collectors.toMap(UsageStats::getPackageName, stats -> stats, (stats1, stats2) -> {
-                        stats1.add(stats2);
-                        return stats1;
-                    }));
-             queryUsageStats = aggregatedStats.values().stream().collect(Collectors.toList());
+        Map<String, Long> appUsageMap = new HashMap<>();
+        for (UsageStats stats : queryUsageStats) {
+            String pkg = stats.getPackageName();
+            long time = stats.getTotalTimeInForeground();
+            if (time > 0) {
+                appUsageMap.put(pkg, appUsageMap.getOrDefault(pkg, 0L) + time);
+            }
         }
 
+        JSArray educationAppData = new JSArray();
+        long totalZiyokorTime = appUsageMap.getOrDefault("com.ziyokor.education", 0L);
 
-        queryUsageStats.sort((a, b) -> Long.compare(b.getTotalTimeInForeground(), a.getTotalTimeInForeground()));
-
-        long totalScreenTimeMs = 0;
-        JSArray topApps = new JSArray();
-
-        int count = 0;
-        for (UsageStats stats : queryUsageStats) {
-            long timeMs = stats.getTotalTimeInForeground();
-            if (timeMs > 0) {
-                totalScreenTimeMs += timeMs;
-
-                String packageName = stats.getPackageName();
-                
-                // Exclude system UI and launchers generally from being top offenders if desired
-                if (packageName.contains("launcher") || packageName.equals("android") || packageName.contains("systemui")) continue;
-
-                if (count < 5) {
-                    try {
-                        ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
-                        String appName = (String) pm.getApplicationLabel(appInfo);
-                        
-                        JSObject appData = new JSObject();
-                        appData.put("name", appName);
-                        appData.put("packageName", packageName);
-                        appData.put("timeMs", timeMs);
-                        topApps.put(appData);
-                        count++;
-                    } catch (PackageManager.NameNotFoundException e) {
-                        // Skip if name not found
-                    }
+        for (String pkg : EDUCATION_APPS) {
+            if (appUsageMap.containsKey(pkg)) {
+                try {
+                    ApplicationInfo appInfo = pm.getApplicationInfo(pkg, 0);
+                    String appName = (String) pm.getApplicationLabel(appInfo);
+                    
+                    JSObject appObj = new JSObject();
+                    appObj.put("name", appName);
+                    appObj.put("packageName", pkg);
+                    appObj.put("timeMs", appUsageMap.get(pkg));
+                    educationAppData.put(appObj);
+                } catch (PackageManager.NameNotFoundException e) {
+                    // Илова ўрнатилмаган бўлса ўтказиб юборамиз
                 }
             }
         }
 
         JSObject result = new JSObject();
-        result.put("totalScreenTimeMs", totalScreenTimeMs);
-        result.put("topApps", topApps);
+        result.put("ziyokorTimeMs", totalZiyokorTime);
+        result.put("educationApps", educationAppData);
         
         call.resolve(result);
     }
