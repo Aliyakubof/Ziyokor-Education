@@ -442,7 +442,7 @@ export default function PlayerGame() {
                                                 <button
                                                     onClick={() => handleBlankClick(i)}
                                                     disabled={isReview}
-                                                    className={`mx-2 px-3 py-1 rounded-xl border-2 font-bold transition-all
+                                                    className={`mx-2 px-3 py-1 rounded-xl border-2 font-bold transition-all align-middle
                                                         ${isReview
                                                             ? (currentAnswersList[i]?.toLowerCase().trim() === question.acceptedAnswers?.[i]?.toLowerCase().trim()
                                                                 ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
@@ -454,7 +454,7 @@ export default function PlayerGame() {
                                                     {currentAnswersList[i]}
                                                 </button>
                                             ) : (
-                                                <span className="mx-2 inline-block w-24 border-b-2 border-dashed border-slate-400 text-center text-slate-300 align-bottom">
+                                                <span className="mx-2 inline-block w-24 border-b-2 border-dashed border-slate-400 text-center text-slate-300 align-middle">
                                                     ?
                                                 </span>
                                             )
@@ -545,7 +545,7 @@ export default function PlayerGame() {
                                             const newAns = [...currentAnswersList];
                                             newAns[i] = val;
                                             setTextAnswer(newAns.join('+'));
-                                        }} onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)} className="mx-2 w-32 border-b-2 bg-slate-50 text-center font-bold outline-none" placeholder="..." />
+                                        }} onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)} className="mx-2 w-32 border-b-2 bg-slate-50 text-center font-bold outline-none align-middle" placeholder="..." />
                                     )}
                                 </span>
                             ))}
