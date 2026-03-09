@@ -549,6 +549,18 @@ app.post('/api/student/quiz/submit', async (req, res) => {
             let currentScore = 0;
             let isPending = false;
 
+            if (q.type === 'info-slide') {
+                results.push({
+                    question: q.text,
+                    studentAnswer: "",
+                    isCorrect: true,
+                    score: 0,
+                    feedback: "Ma'lumot",
+                    pending: false
+                });
+                continue;
+            }
+
             if (q.type === 'matching' || q.type === 'word-box') {
                 const partsCorrect = countCorrectParts(studentAns, q.acceptedAnswers || []);
                 const totalParts = q.acceptedAnswers ? q.acceptedAnswers.length : 1;
@@ -585,6 +597,7 @@ app.post('/api/student/quiz/submit', async (req, res) => {
         // Calculate max possible score
         let maxScore = 0;
         questions.forEach((question: any) => {
+            if (question.type === 'info-slide') return; // Skip info slides in max score
             if (question.type === 'matching' || question.type === 'word-box') {
                 maxScore += question.acceptedAnswers ? question.acceptedAnswers.length : 1;
             } else {
@@ -2458,6 +2471,9 @@ io.on('connection', (socket) => {
                 });
             }
             await broadcastPlayerUpdate(pin);
+        } else if (game.status === 'FINISHED') {
+            const leaderboard = [...game.players].sort((a, b) => b.score - a.score);
+            socket.emit('game-over', leaderboard);
         }
     });
 
@@ -2820,7 +2836,19 @@ async function finishGame(pin: string) {
     const leaderboard = [...game.players].sort((a, b) => b.score - a.score);
     if (game.isUnitQuiz) {
         const hiddenLeaderboard = leaderboard.map(p => ({ ...p, score: 0 }));
+
+        // Targeted delivery: Real to host, Hidden to room
+        if (game.hostId && game.hostId !== 'system') {
+            io.to(game.hostId).emit('game-over', leaderboard);
+        }
+
+        // Filter out host if possible, or just emit hidden to pin (host will get both, 
+        // but we'll emit real one after to be sure or assume host handles it)
+        // Actually, to be safe, emit hidden to everyone then real to host
         io.to(pin).emit('game-over', hiddenLeaderboard);
+        if (game.hostId && game.hostId !== 'system') {
+            io.to(game.hostId).emit('game-over', leaderboard);
+        }
     } else {
         io.to(pin).emit('game-over', leaderboard);
     }
@@ -2842,9 +2870,10 @@ async function finishGame(pin: string) {
     if (game.isUnitQuiz && game.groupId) {
         try {
             const resultId = uuidv4();
+            const totalQCount = game.quiz.questions.filter((q: any) => q.type !== 'info-slide').length;
             await query(
                 'INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results) VALUES ($1, $2, $3, $4, $5)',
-                [resultId, game.groupId, game.quiz.title, game.quiz.questions.length, JSON.stringify(game.players)]
+                [resultId, game.groupId, game.quiz.title, totalQCount, JSON.stringify(game.players)]
             );
 
             const groupRes = await query('SELECT name, teacher_id FROM groups WHERE id = $1', [game.groupId]);

@@ -17,10 +17,8 @@ interface QuestionData {
 
 const normalizeAnswer = (val: string | number): string => {
     let s = String(val).toLowerCase().trim();
-    s = s.replace(/[’‘‛ʻ´'`]/g, "");
-    s = s.replace(/[“”]/g, '"');
-    s = s.replace(/[.,!?;:]/g, " ");
-    s = s.replace(/\+/g, " ");
+    // Replace all non-alphanumeric characters with space to ignore symbols in scoring
+    s = s.replace(/[^a-z0-9]/g, " ");
     s = s.replace(/\s+/g, " ");
     return s.trim();
 };
@@ -190,7 +188,7 @@ export default function PlayerGame() {
             socket.off('error');
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, []); // RUN ONCE ON MOUNT
+    }, []);
 
     const saveUnitAnswer = (val: number | string) => {
         const newAnswers = { ...unitAnswers, [currentUnitIndex]: val };
@@ -358,11 +356,11 @@ export default function PlayerGame() {
         if (!question) return null;
         const isReview = view === 'UNIT_REVIEW';
         const correctInfo = isReview ? unitCorrectAnswers[currentUnitIndex] : null;
-        const playerAns = unitAnswers[currentUnitIndex];
+        const playerAns = unitAnswers[currentUnitIndex] || '';
 
         if (['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '')) {
             const isFillBlankMulti = question.type === 'fill-blank' && question.text.includes('[...]');
-            const normalizedPlayerAns = normalizeAnswer(playerAns || '');
+            const normalizedPlayerAns = normalizeAnswer(playerAns);
             const isCorrect = isReview && correctInfo?.acceptedAnswers?.some((a: string) => normalizeAnswer(a) === normalizedPlayerAns);
 
             if (isFillBlankMulti) {
@@ -378,7 +376,7 @@ export default function PlayerGame() {
                                     {part}
                                     {i < parts.length - 1 && (
                                         <input type="text" value={currentAnswersList[i] || ''} readOnly={isReview} onChange={(e) => {
-                                            const val = e.target.value.replace(/[^a-zA-Z0-9\s]/g, "");
+                                            const val = e.target.value;
                                             const newAns = [...currentAnswersList];
                                             newAns[i] = val;
                                             setTextAnswer(newAns.join('+'));
@@ -394,11 +392,11 @@ export default function PlayerGame() {
             const aiFeedback = isReview ? unitAIFeedback[currentUnitIndex] : null;
             return (
                 <div className="w-full max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200">
-                    {isReview && <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isCorrect ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{isCorrect ? 'TO\'G\'RI!' : 'XATO!'}</div>}
+                    {isReview && <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isCorrect ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{isCorrect ? "TO'G'RI!" : 'XATO!'}</div>}
                     <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">{question.type}</h2>
                     <div className="text-xl md:text-2xl font-bold text-center mb-10 leading-relaxed">{question.text}</div>
                     <textarea rows={2} value={isReview ? (playerAns || '') : textAnswer} readOnly={isReview} onChange={(e) => {
-                        const val = e.target.value.replace(/[^a-zA-Z0-9\s]/g, "");
+                        const val = e.target.value;
                         setTextAnswer(val);
                         e.target.style.height = 'auto';
                         e.target.style.height = `${e.target.scrollHeight}px`;
@@ -410,50 +408,74 @@ export default function PlayerGame() {
         }
 
         if (question.type === 'vocabulary') {
-            const isCorrect = isReview && playerAns === (correctInfo?.acceptedAnswers?.[0] || '');
-            const targetWord = (question.acceptedAnswers?.[0] || '').replace(/[^a-zA-Z0-9 ]/g, '');
+            const correctWord = correctInfo?.acceptedAnswers?.[0] || '';
+            const isCorrect = isReview && playerAns === correctWord;
+            const targetWord = question.acceptedAnswers?.[0] || '';
             const currentVal = (isReview ? playerAns : textAnswer) || '';
+            const displayChars = targetWord.split('');
+
             return (
                 <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
                     <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200">
                         <div className="text-center space-y-6">
                             <h2 className="text-3xl md:text-5xl font-black text-slate-800 leading-tight">{question.text}</h2>
                         </div>
-                        <div className="mt-12 flex flex-wrap justify-center gap-2">
-                            {Array.from({ length: targetWord.length }).map((_, i) => {
-                                if (targetWord[i] === ' ') {
-                                    return <div key={i} className="w-8 md:w-12 h-16 md:h-20" />; // Space gap
+                        <div className="mt-12 flex flex-nowrap justify-center gap-1 w-full overflow-hidden items-center">
+                            {displayChars.map((char, i) => {
+                                if (char === ' ') {
+                                    return <div key={i} className="flex-shrink-0" style={{ width: targetWord.length > 10 ? '0.5rem' : '1.5rem' }} />;
                                 }
+
+                                const isAlphaNum = /[a-zA-Z0-9]/.test(char);
+                                if (!isAlphaNum) {
+                                    return <span key={i} className="text-2xl md:text-4xl font-black text-slate-400 px-1">{char}</span>;
+                                }
+
+                                const boxWidth = targetWord.length > 15 ? 'w-6 md:w-8' : targetWord.length > 10 ? 'w-8 md:w-12' : 'w-12 md:w-16';
+                                const boxHeight = targetWord.length > 15 ? 'h-10 md:h-12' : targetWord.length > 10 ? 'h-12 md:h-16' : 'h-16 md:h-20';
+                                const fontSize = targetWord.length > 15 ? 'text-sm md:text-xl' : targetWord.length > 10 ? 'text-lg md:text-2xl' : 'text-2xl md:text-4xl';
+
                                 return (
-                                    <input key={i} id={`voc-box-${i}`} type="text" maxLength={1} value={currentVal[i] || ''} readOnly={isReview} autoFocus={!isReview && i === 0} autoComplete="off" onKeyDown={(e) => {
-                                        if (e.key === 'Backspace' && !currentVal[i] && i > 0) {
-                                            // Backspace skipping spaces
-                                            let prevIdx = i - 1;
-                                            while (prevIdx >= 0 && targetWord[prevIdx] === ' ') prevIdx--;
-                                            if (prevIdx >= 0) {
-                                                const prevBox = document.getElementById(`voc-box-${prevIdx}`) as HTMLInputElement;
-                                                prevBox?.focus();
+                                    <input key={i} id={`voc-box-${i}`} type="text" maxLength={1} value={currentVal[i] || ''}
+                                        readOnly={isReview}
+                                        autoFocus={!isReview && !displayChars.slice(0, i).some(c => /[a-zA-Z0-9]/.test(c))}
+                                        autoComplete="off"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Backspace' && !currentVal[i] && i > 0) {
+                                                let prevIdx = i - 1;
+                                                while (prevIdx >= 0 && !/[a-zA-Z0-9]/.test(targetWord[prevIdx])) prevIdx--;
+                                                if (prevIdx >= 0) {
+                                                    const prevBox = document.getElementById(`voc-box-${prevIdx}`) as HTMLInputElement;
+                                                    prevBox?.focus();
+                                                }
                                             }
-                                        }
-                                    }} onChange={(e) => {
-                                        const char = e.target.value.slice(-1).toLowerCase();
-                                        if (char && !/[a-z0-9]/i.test(char)) return;
-                                        const newChars = currentVal.split('');
-                                        while (newChars.length < targetWord.length) newChars.push('');
-                                        newChars[i] = char;
-                                        const finalVal = newChars.join('').slice(0, targetWord.length);
-                                        setTextAnswer(finalVal);
-                                        if (!isReview && isUnitMode) saveUnitAnswer(finalVal);
-                                        if (char && i < targetWord.length - 1) {
-                                            // Move to next, skipping spaces
-                                            let nextIdx = i + 1;
-                                            while (nextIdx < targetWord.length && targetWord[nextIdx] === ' ') nextIdx++;
-                                            if (nextIdx < targetWord.length) {
-                                                const nextBox = document.getElementById(`voc-box-${nextIdx}`) as HTMLInputElement;
-                                                nextBox?.focus();
+                                        }}
+                                        onChange={(e) => {
+                                            const val = e.target.value.slice(-1).toLowerCase();
+                                            if (val && !/[a-z0-9]/i.test(val)) return;
+
+                                            const newChars = currentVal.split('');
+                                            while (newChars.length < targetWord.length) newChars.push(targetWord[newChars.length] || '');
+                                            displayChars.forEach((c, idx) => {
+                                                if (!/[a-zA-Z0-9]/.test(c)) newChars[idx] = c;
+                                            });
+
+                                            newChars[i] = val;
+                                            const finalVal = newChars.join('');
+                                            setTextAnswer(finalVal);
+                                            if (!isReview && isUnitMode) saveUnitAnswer(finalVal);
+
+                                            if (val && i < targetWord.length - 1) {
+                                                let nextIdx = i + 1;
+                                                while (nextIdx < targetWord.length && !/[a-zA-Z0-9]/.test(targetWord[nextIdx])) nextIdx++;
+                                                if (nextIdx < targetWord.length) {
+                                                    const nextBox = document.getElementById(`voc-box-${nextIdx}`) as HTMLInputElement;
+                                                    nextBox?.focus();
+                                                }
                                             }
-                                        }
-                                    }} className={`w-12 h-16 md:w-16 md:h-20 text-2xl md:text-4xl font-black text-center rounded-2xl border-2 transition-all outline-none uppercase ${isReview ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-red-50 border-red-500 text-red-600') : (currentVal[i] ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'bg-slate-50 border-slate-200')}`} />
+                                        }}
+                                        className={`flex-shrink-0 ${boxWidth} ${boxHeight} ${fontSize} font-black text-center rounded-lg md:rounded-2xl border-2 transition-all outline-none uppercase ${isReview ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-red-50 border-red-500 text-red-600') : (currentVal[i] ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'bg-slate-50 border-slate-200')}`}
+                                    />
                                 );
                             })}
                         </div>
