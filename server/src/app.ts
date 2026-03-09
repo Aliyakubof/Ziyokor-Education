@@ -1395,8 +1395,8 @@ quiz_title,
     created_at,
     player ->> 'score' as score,
     total_questions,
-    (player ->> 'score'):: int * 100 / NULLIF(total_questions * 100, 0) as percentage,
-        player -> 'answers' as answers
+    CASE WHEN total_questions > 0 THEN (player ->> 'score')::float * 100 / total_questions ELSE 0 END as percentage,
+    player -> 'answers' as answers
             FROM game_results, jsonb_array_elements(player_results) as player
             WHERE player ->> 'id' = $1
             ORDER BY created_at DESC
@@ -2301,7 +2301,7 @@ io.on('connection', (socket) => {
                             text: q.text,
                             options: q.options,
                             type: q.type,
-                            acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
+                            acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary' || q.type === 'word-box') ? q.acceptedAnswers : undefined,
                             questionIndex: idx + 1,
                             totalQuestions: (questions as any[]).length
                         }));
@@ -2452,7 +2452,7 @@ io.on('connection', (socket) => {
                     text: q.text,
                     options: q.options,
                     type: q.type,
-                    acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
+                    acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary' || q.type === 'word-box') ? q.acceptedAnswers : undefined,
                     questionIndex: idx + 1,
                     totalQuestions: questions.length
                 }));
@@ -2516,7 +2516,7 @@ io.on('connection', (socket) => {
                         text: q.text,
                         options: q.options,
                         type: q.type,
-                        acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary') ? q.acceptedAnswers : undefined,
+                        acceptedAnswers: (q.type === 'matching' || q.type === 'vocabulary' || q.type === 'word-box') ? q.acceptedAnswers : undefined,
                         questionIndex: idx + 1,
                         totalQuestions: (questions as any[]).length
                     }));
@@ -2870,10 +2870,19 @@ async function finishGame(pin: string) {
     if (game.isUnitQuiz && game.groupId) {
         try {
             const resultId = uuidv4();
-            const totalQCount = game.quiz.questions.filter((q: any) => q.type !== 'info-slide').length;
+            const questions = game.quiz.questions || [];
+            let totalPossibleScore = 0;
+            questions.forEach((q: any) => {
+                if (q.type === 'info-slide') return;
+                if (q.type === 'matching' || q.type === 'word-box') {
+                    totalPossibleScore += q.acceptedAnswers?.length || 0;
+                } else {
+                    totalPossibleScore += 1;
+                }
+            });
             await query(
                 'INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results) VALUES ($1, $2, $3, $4, $5)',
-                [resultId, game.groupId, game.quiz.title, totalQCount, JSON.stringify(game.players)]
+                [resultId, game.groupId, game.quiz.title, totalPossibleScore, JSON.stringify(game.players)]
             );
 
             const groupRes = await query('SELECT name, teacher_id FROM groups WHERE id = $1', [game.groupId]);

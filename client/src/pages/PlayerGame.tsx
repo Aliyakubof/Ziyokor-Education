@@ -23,6 +23,19 @@ const normalizeAnswer = (val: string | number): string => {
     return s.trim();
 };
 
+const countCorrectParts = (studentAns: string | number, acceptedAnswers: string[]): number => {
+    if (!studentAns) return 0;
+    const sParts = String(studentAns).split('+').map(p => normalizeAnswer(p));
+    const aParts = acceptedAnswers.map(p => normalizeAnswer(p));
+    let count = 0;
+    for (let i = 0; i < aParts.length; i++) {
+        if (sParts[i] === aParts[i]) {
+            count++;
+        }
+    }
+    return count;
+};
+
 export default function PlayerGame() {
     const [view, setView] = useState<'WAITING' | 'PLAYING' | 'ANSWERED' | 'FINISHED' | 'UNIT_SUMMARY' | 'UNIT_REVIEW'>('WAITING');
     const viewRef = useRef(view);
@@ -358,6 +371,113 @@ export default function PlayerGame() {
         const correctInfo = isReview ? unitCorrectAnswers[currentUnitIndex] : null;
         const playerAns = unitAnswers[currentUnitIndex] || '';
 
+        if (question.type === 'word-box') {
+            const parts = question.text.split(/\[\d+\]/);
+            const placeholders = question.text.match(/\[\d+\]/g) || [];
+            const currentAnswersList = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
+            const isCorrect = isReview && countCorrectParts(playerAns, question.acceptedAnswers || []) === (question.acceptedAnswers?.length || 0);
+
+            return (
+                <div className="w-full max-w-4xl mx-auto space-y-6">
+                    <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
+                        {isReview && <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isCorrect ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{isCorrect ? "TO'G'RI!" : 'XATO!'}</div>}
+                        <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">Fill in the blanks from the box</h2>
+
+                        {/* Word Box */}
+                        <div className="flex flex-wrap justify-center gap-2 mb-10 p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                            {question.options.map((opt, i) => (
+                                <div key={i} className="bg-white px-4 py-2 rounded-xl border border-slate-200 font-bold text-indigo-600 shadow-sm">
+                                    {opt}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="text-xl md:text-2xl text-slate-800 leading-loose text-center">
+                            {parts.map((part, i) => (
+                                <span key={i}>
+                                    {part}
+                                    {i < parts.length - 1 && (
+                                        <input
+                                            type="text"
+                                            value={currentAnswersList[i] || ''}
+                                            readOnly={isReview}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                const newAns = [...currentAnswersList];
+                                                while (newAns.length < placeholders.length) newAns.push('');
+                                                newAns[i] = val;
+                                                const finalVal = newAns.join('+');
+                                                setTextAnswer(finalVal);
+                                            }}
+                                            onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)}
+                                            className={`mx-2 w-32 border-b-2 bg-slate-50 text-center font-bold outline-none transition-all focus:border-indigo-500 ${isReview ? (currentAnswersList[i]?.toLowerCase().trim() === question.acceptedAnswers?.[i]?.toLowerCase().trim() ? 'text-emerald-600' : 'text-red-600') : ''}`}
+                                            placeholder="..."
+                                        />
+                                    )}
+                                </span>
+                            ))}
+                        </div>
+                        {isReview && !isCorrect && (
+                            <div className="mt-8 p-4 bg-indigo-50 rounded-2xl text-indigo-600 font-bold text-center">
+                                To'g'ri: {question.acceptedAnswers?.join(', ')}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        if (question.type === 'matching') {
+            const currentAnswersList = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
+            const isCorrect = isReview && countCorrectParts(playerAns, question.acceptedAnswers || []) === (question.acceptedAnswers?.length || 0);
+
+            return (
+                <div className="w-full max-w-4xl mx-auto space-y-6">
+                    <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
+                        {isReview && <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isCorrect ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{isCorrect ? "TO'G'RI!" : 'XATO!'}</div>}
+                        <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">Match the items</h2>
+
+                        <div className="space-y-4">
+                            {question.options.map((opt, i) => (
+                                <div key={i} className="flex items-center gap-4">
+                                    <div className="flex-1 bg-slate-50 p-4 rounded-2xl font-bold text-slate-700 border border-slate-100">
+                                        {opt}
+                                    </div>
+                                    <div className="text-slate-300">→</div>
+                                    <div className="flex-1">
+                                        <input
+                                            type="text"
+                                            value={currentAnswersList[i] || ''}
+                                            readOnly={isReview}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                const newAns = [...currentAnswersList];
+                                                while (newAns.length < question.options.length) newAns.push('');
+                                                newAns[i] = val;
+                                                const finalVal = newAns.join('+');
+                                                setTextAnswer(finalVal);
+                                            }}
+                                            onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)}
+                                            className={`w-full p-4 rounded-2xl border-2 font-bold transition-all outline-none ${isReview
+                                                ? (normalizeAnswer(currentAnswersList[i]) === normalizeAnswer(question.acceptedAnswers?.[i] || '') ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-red-200 bg-red-50 text-red-600')
+                                                : 'bg-white border-slate-100 focus:border-indigo-500'
+                                                }`}
+                                            placeholder="Match..."
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {isReview && !isCorrect && (
+                            <div className="mt-8 p-4 bg-indigo-50 rounded-2xl text-indigo-600 font-bold text-center">
+                                To'g'ri tartib: {question.acceptedAnswers?.join(', ')}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
         if (['text-input', 'fill-blank', 'find-mistake', 'rewrite'].includes(question.type || '')) {
             const isFillBlankMulti = question.type === 'fill-blank' && question.text.includes('[...]');
             const normalizedPlayerAns = normalizeAnswer(playerAns);
@@ -549,7 +669,13 @@ export default function PlayerGame() {
                     <div className="bg-indigo-50 border border-indigo-100 px-4 py-1.5 rounded-xl">
                         <span className="text-[10px] font-black text-indigo-300 uppercase block">{isUnitMode ? 'Unit' : 'Savol'}</span>
                         <div className="text-lg font-black text-indigo-600">
-                            {isUnitMode ? `${unitQuestions.slice(0, currentUnitIndex + 1).length} / ${unitQuestions.length}` : `${question?.questionIndex} / ${question?.totalQuestions}`}
+                            {isUnitMode ? (
+                                (() => {
+                                    const nonInfoTotal = unitQuestions.filter(q => q.type !== 'info-slide').length;
+                                    const nonInfoCurrent = unitQuestions.slice(0, currentUnitIndex + 1).filter(q => q.type !== 'info-slide').length;
+                                    return `${nonInfoCurrent} / ${nonInfoTotal}`;
+                                })()
+                            ) : `${question?.questionIndex} / ${question?.totalQuestions}`}
                         </div>
                     </div>
                 </div>
@@ -565,7 +691,13 @@ export default function PlayerGame() {
             {isUnitMode && (view === 'PLAYING' || view === 'UNIT_REVIEW') && (
                 <footer className="p-4 bg-white/80 border-t border-slate-200 flex items-center justify-between shrink-0">
                     <button onClick={() => { if (currentUnitIndex > 0) goToQuestion(currentUnitIndex - 1); }} disabled={currentUnitIndex === 0} className="px-6 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold disabled:opacity-30">← Orqaga</button>
-                    <div className="flex-1 flex justify-center">{currentUnitIndex + 1} / {unitQuestions.length}</div>
+                    <div className="flex-1 flex justify-center">
+                        {(() => {
+                            const nonInfoTotal = unitQuestions.filter(q => q.type !== 'info-slide').length;
+                            const nonInfoCurrent = unitQuestions.slice(0, currentUnitIndex + 1).filter(q => q.type !== 'info-slide').length;
+                            return `${nonInfoCurrent} / ${nonInfoTotal}`;
+                        })()}
+                    </div>
                     {currentUnitIndex === unitQuestions.length - 1 ? (
                         <button onClick={() => setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY')} className="px-6 py-3 rounded-2xl font-black bg-indigo-600 text-white">SUBMIT</button>
                     ) : (
