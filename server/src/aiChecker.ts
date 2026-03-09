@@ -129,18 +129,16 @@ export async function checkAnswersWithAIBatch(
 
 MUHIM QOIDALAR:
 1. Agar "To'g'ri javob(lar)" ko'rsatilgan bo'lsa, o'quvchi javobi shu javob(lar) bilan MAZMUN jihatdan mos kelishini tekshiring.
-2. MA'NO va MAZMUN asosiy mezon. Yengil imlo xatolari yoki kichik grammatik kamchiliklar javobni noto'g'ri deyishga sabab bo'lmasligi kerak.
-3. Javob o'zbek yoki ingliz tilida bo'lishi mumkin.
-4. Agar javob to'g'ri javob bilan mazmunan bir xil yoki juda yaqin bo'lsa, TO'G'RI deb belgilang.
-5. Faqat savolga mutlaqo aloqasiz yoki teskari ma'noli javoblarni NOTO'G'RI deb belgilang.
-6. Har bir javob uchun contentScore (0-100) va grammarScore (0-100) bering.
-7. Har bir javob uchun o'zbek tilida juda qisqa, foydali feedback yozing (agar xato bo'lsa, to'g'ri javobni ham ko'rsat).
+2. MA'NO va MAZMUN asosiy mezon. Yengil imlo xatolari (typos, harf tushib qolishi yoki ortiqcha harf) yoki kichik grammatik kamchiliklar javobni noto'g'ri deyishga sabab bo'lmasligi kerak.
+3. Agar o'quvchi javobida 1-2 ta harf tushib qolgan yoki adashgan bo'lsa (typo), uni TO'G'RI deb hisoblang.
+4. Faqat savolga mutlaqo aloqasiz, teskari ma'noli yoki qo'pol xatoli javoblarni NOTO'G'RI deb belgilang.
+5. Har bir javob uchun contentScore (0-100) va grammarScore (0-100) bering. Kichik typo bo'lsa, contentScore 100 bo'lishi mumkin.
+6. Har bir javob uchun o'zbek tilida juda qisqa, foydali feedback yozing (agar typo bo'lsa, to'g'ri yozilishini eslatib o'ting).
 
 Faqat quyidagi JSON formatida javob bering:
 {
   "results": [
-    {"isCorrect": true, "grammarScore": 95, "contentScore": 100, "feedback": "Juda yaxshi!"},
-    ... (jami ${chunk.length} ta element)
+    {"isCorrect": true, "grammarScore": 95, "contentScore": 100, "feedback": "..."}
   ]
 }
 
