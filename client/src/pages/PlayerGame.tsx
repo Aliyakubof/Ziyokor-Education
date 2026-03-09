@@ -374,8 +374,35 @@ export default function PlayerGame() {
         if (question.type === 'word-box') {
             const parts = question.text.split(/\[\d+\]/);
             const placeholders = question.text.match(/\[\d+\]/g) || [];
-            const currentAnswersList = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
+            const currentAnswersList: string[] = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
+            // Pad to full length
+            while (currentAnswersList.length < placeholders.length) currentAnswersList.push('');
             const isCorrect = isReview && countCorrectParts(playerAns, question.acceptedAnswers || []) === (question.acceptedAnswers?.length || 0);
+
+            // Which words are already used in blanks
+            const usedWords = new Set(currentAnswersList.filter(Boolean));
+
+            const handleWordClick = (word: string) => {
+                if (isReview) return;
+                // Find first empty slot
+                const newAns = [...currentAnswersList];
+                while (newAns.length < placeholders.length) newAns.push('');
+                const emptyIdx = newAns.findIndex(v => !v);
+                if (emptyIdx === -1) return; // all filled
+                newAns[emptyIdx] = word;
+                const finalVal = newAns.join('+');
+                setTextAnswer(finalVal);
+                if (isUnitMode) saveUnitAnswer(finalVal);
+            };
+
+            const handleBlankClick = (idx: number) => {
+                if (isReview) return;
+                const newAns = [...currentAnswersList];
+                newAns[idx] = '';
+                const finalVal = newAns.join('+');
+                setTextAnswer(finalVal);
+                if (isUnitMode) saveUnitAnswer(finalVal);
+            };
 
             return (
                 <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -383,36 +410,54 @@ export default function PlayerGame() {
                         {isReview && <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isCorrect ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{isCorrect ? "TO'G'RI!" : 'XATO!'}</div>}
                         <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">Fill in the blanks from the box</h2>
 
-                        {/* Word Box */}
+                        {/* Word Box - clickable words */}
                         <div className="flex flex-wrap justify-center gap-2 mb-10 p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                            {question.options.map((opt, i) => (
-                                <div key={i} className="bg-white px-4 py-2 rounded-xl border border-slate-200 font-bold text-indigo-600 shadow-sm">
-                                    {opt}
-                                </div>
-                            ))}
+                            {question.options.map((opt, i) => {
+                                const isUsed = usedWords.has(opt);
+                                return (
+                                    <button
+                                        key={i}
+                                        onClick={() => !isUsed && handleWordClick(opt)}
+                                        disabled={isReview || isUsed}
+                                        className={`px-4 py-2 rounded-xl border font-bold shadow-sm transition-all
+                                            ${isUsed
+                                                ? 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through'
+                                                : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 active:scale-95 cursor-pointer'
+                                            }`}
+                                    >
+                                        {opt}
+                                    </button>
+                                );
+                            })}
                         </div>
 
+                        {/* Question text with blank slots */}
                         <div className="text-xl md:text-2xl text-slate-800 leading-loose text-center">
                             {parts.map((part, i) => (
                                 <span key={i}>
                                     {part}
                                     {i < parts.length - 1 && (
-                                        <input
-                                            type="text"
-                                            value={currentAnswersList[i] || ''}
-                                            readOnly={isReview}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                const newAns = [...currentAnswersList];
-                                                while (newAns.length < placeholders.length) newAns.push('');
-                                                newAns[i] = val;
-                                                const finalVal = newAns.join('+');
-                                                setTextAnswer(finalVal);
-                                            }}
-                                            onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)}
-                                            className={`mx-2 w-32 border-b-2 bg-slate-50 text-center font-bold outline-none transition-all focus:border-indigo-500 ${isReview ? (currentAnswersList[i]?.toLowerCase().trim() === question.acceptedAnswers?.[i]?.toLowerCase().trim() ? 'text-emerald-600' : 'text-red-600') : ''}`}
-                                            placeholder="..."
-                                        />
+                                        currentAnswersList[i]
+                                            ? (
+                                                <button
+                                                    onClick={() => handleBlankClick(i)}
+                                                    disabled={isReview}
+                                                    className={`mx-2 px-3 py-1 rounded-xl border-2 font-bold transition-all
+                                                        ${isReview
+                                                            ? (currentAnswersList[i]?.toLowerCase().trim() === question.acceptedAnswers?.[i]?.toLowerCase().trim()
+                                                                ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
+                                                                : 'bg-red-50 border-red-400 text-red-700')
+                                                            : 'bg-indigo-50 border-indigo-400 text-indigo-700 hover:bg-red-50 hover:border-red-300 hover:text-red-600'
+                                                        }`}
+                                                    title={!isReview ? "O'chirish uchun bosing" : undefined}
+                                                >
+                                                    {currentAnswersList[i]}
+                                                </button>
+                                            ) : (
+                                                <span className="mx-2 inline-block w-24 border-b-2 border-dashed border-slate-400 text-center text-slate-300 align-bottom">
+                                                    ?
+                                                </span>
+                                            )
                                     )}
                                 </span>
                             ))}
