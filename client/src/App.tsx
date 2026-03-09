@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import CreateQuiz from './pages/CreateQuiz';
 import HostLobby from './pages/HostLobby';
@@ -84,150 +84,148 @@ function App() {
   return (
     <AuthProvider>
       <AppMonitor>
-        <BrowserRouter>
-          <div className="min-h-[100dvh] w-full overflow-x-hidden font-sans flex flex-col"
-            style={{
-              paddingTop: 'env(safe-area-inset-top)',
-              paddingBottom: 'env(safe-area-inset-bottom)',
-              paddingLeft: 'env(safe-area-inset-left)',
-              paddingRight: 'env(safe-area-inset-right)'
-            }}>
-            <Routes>
-              <Route path="/" element={<RootRoute />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/student/login" element={<StudentLogin />} />
-              <Route
-                path="/student/dashboard"
-                element={
-                  <ProtectedRoute requiredRole="student">
-                    <StudentDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/student/leaderboard"
-                element={
-                  <ProtectedRoute requiredRole="student">
-                    <Leaderboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/student/shop"
-                element={
-                  <ProtectedRoute requiredRole="student">
-                    <Shop />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/student/practice"
-                element={
-                  <ProtectedRoute requiredRole="student">
-                    <SoloQuiz />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/student/duels"
-                element={
-                  <ProtectedRoute requiredRole="student">
-                    <DuelLobby />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/student/battle/:id"
-                element={
-                  <ProtectedRoute>
-                    <BattleDetails />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/create"
-                element={
-                  <ProtectedRoute requiredRole={['teacher', 'manager']}>
-                    <CreateQuiz />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/edit-quiz/:id"
-                element={
-                  <ProtectedRoute requiredRole={['teacher', 'manager']}>
-                    <CreateQuiz />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/host/:quizId" element={<HostLobby />} />
-              <Route path="/host-game/:pin" element={<HostGame />} />
-              <Route path="/join" element={<PlayerJoin />} />
-              <Route path="/play" element={<PlayerGame />} />
+        <div className="min-h-[100dvh] w-full overflow-x-hidden font-sans flex flex-col"
+          style={{
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            paddingLeft: 'env(safe-area-inset-left)',
+            paddingRight: 'env(safe-area-inset-right)'
+          }}>
+          <Routes>
+            <Route path="/" element={<RootRoute />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/student/login" element={<StudentLogin />} />
+            <Route
+              path="/student/dashboard"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/leaderboard"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <Leaderboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/shop"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <Shop />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/practice"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <SoloQuiz />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/duels"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <DuelLobby />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/battle/:id"
+              element={
+                <ProtectedRoute>
+                  <BattleDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create"
+              element={
+                <ProtectedRoute requiredRole={['teacher', 'manager']}>
+                  <CreateQuiz />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit-quiz/:id"
+              element={
+                <ProtectedRoute requiredRole={['teacher', 'manager']}>
+                  <CreateQuiz />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/host/:quizId" element={<HostLobby />} />
+            <Route path="/host-game/:pin" element={<HostGame />} />
+            <Route path="/join" element={<PlayerJoin />} />
+            <Route path="/play" element={<PlayerGame />} />
 
-              {/* Restricted Unit Quiz Routes */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminPanel />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/manager"
-                element={
-                  <ProtectedRoute requiredRole="manager">
-                    <ManagerDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/group/:groupId"
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <GroupDetails />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/groups"
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <TeacherDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/teacher"
-                element={
-                  <ProtectedRoute requiredRole="teacher">
-                    <TeacherDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/teacher/group/:groupId"
-                element={
-                  <ProtectedRoute requiredRole="teacher">
-                    <GroupDetails />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/unit-lobby/:quizId/:groupId"
-                element={
-                  <ProtectedRoute>
-                    <UnitLobby />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/unit-join/:pin" element={<UnitJoin />} />
-            </Routes>
-          </div>
-        </BrowserRouter>
+            {/* Restricted Unit Quiz Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminPanel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager"
+              element={
+                <ProtectedRoute requiredRole="manager">
+                  <ManagerDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/group/:groupId"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <GroupDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/groups"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher"
+              element={
+                <ProtectedRoute requiredRole="teacher">
+                  <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/group/:groupId"
+              element={
+                <ProtectedRoute requiredRole="teacher">
+                  <GroupDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/unit-lobby/:quizId/:groupId"
+              element={
+                <ProtectedRoute>
+                  <UnitLobby />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/unit-join/:pin" element={<UnitJoin />} />
+          </Routes>
+        </div>
       </AppMonitor>
-    </AuthProvider >
+    </AuthProvider>
   );
 }
 
