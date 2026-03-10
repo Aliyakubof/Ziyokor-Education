@@ -80,6 +80,18 @@ CREATE TABLE IF NOT EXISTS student_purchases (
     purchased_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Shop Items Table
+CREATE TABLE IF NOT EXISTS shop_items (
+    id UUID PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL, -- 'avatar', 'theme', 'unlock'
+    price INT NOT NULL DEFAULT 100,
+    url TEXT,
+    color TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Duels Table
 CREATE TABLE IF NOT EXISTS duels (
     id UUID PRIMARY KEY,
