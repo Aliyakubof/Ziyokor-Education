@@ -23,6 +23,8 @@ interface GameState {
     teamScores: { Red: number, Blue: number };
     mainMessageId?: number;
     timer?: NodeJS.Timeout;
+    joinTimerInterval?: NodeJS.Timeout;
+    joinSecondsLeft?: number;
     questionStartTime?: number;
     totalCoinPool?: number;
 }
@@ -47,6 +49,9 @@ class GameSessionManager {
         const state = this.sessions.get(chatId);
         if (state && state.timer) {
             clearTimeout(state.timer);
+        }
+        if (state && state.joinTimerInterval) {
+            clearInterval(state.joinTimerInterval);
         }
         this.sessions.delete(chatId);
     }
