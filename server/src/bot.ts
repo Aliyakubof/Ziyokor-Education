@@ -151,9 +151,7 @@ bot.hears('📊 Haftalik Hisobot', async (ctx) => {
         const teachers = await query(`
             SELECT id, name 
             FROM teachers 
-            WHERE id NOT IN ($1, $2)
-            ORDER BY name ASC`,
-            ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']
+            ORDER BY name ASC`
         );
 
 
@@ -188,9 +186,7 @@ bot.hears('📉 Potentional fail', async (ctx) => {
         const teachers = await query(`
             SELECT id, name 
             FROM teachers 
-            WHERE id NOT IN ($1, $2)
-            ORDER BY name ASC`,
-            ['00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001']
+            ORDER BY name ASC`
         );
 
 
