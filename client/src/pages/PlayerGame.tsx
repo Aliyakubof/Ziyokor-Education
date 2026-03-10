@@ -601,12 +601,12 @@ export default function PlayerGame() {
                                 const fontSize = targetWord.length > 15 ? 'text-sm md:text-xl' : targetWord.length > 10 ? 'text-lg md:text-2xl' : 'text-2xl md:text-4xl';
 
                                 return (
-                                    <input key={i} id={`voc-box-${i}`} type="text" maxLength={1} value={currentVal[i] || ''}
+                                    <input key={i} id={`voc-box-${i}`} type="text" maxLength={1} value={currentVal[i] === ' ' ? '' : (currentVal[i] || '')}
                                         readOnly={isReview}
                                         autoFocus={!isReview && !displayChars.slice(0, i).some(c => /[a-zA-Z0-9]/.test(c))}
                                         autoComplete="off"
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Backspace' && !currentVal[i] && i > 0) {
+                                            if (e.key === 'Backspace' && (!currentVal[i] || currentVal[i] === ' ') && i > 0) {
                                                 let prevIdx = i - 1;
                                                 while (prevIdx >= 0 && !/[a-zA-Z0-9]/.test(targetWord[prevIdx])) prevIdx--;
                                                 if (prevIdx >= 0) {
@@ -616,11 +616,12 @@ export default function PlayerGame() {
                                             }
                                         }}
                                         onChange={(e) => {
-                                            const val = e.target.value.slice(-1).toLowerCase();
-                                            if (val && !/[a-z0-9]/i.test(val)) return;
+                                            let val = e.target.value.slice(-1).toLowerCase();
+                                            if (!val) val = ' ';
+                                            if (val !== ' ' && !/[a-z0-9]/i.test(val)) return;
 
                                             const newChars = currentVal.split('');
-                                            while (newChars.length < targetWord.length) newChars.push(targetWord[newChars.length] || '');
+                                            while (newChars.length < targetWord.length) newChars.push(' ');
                                             displayChars.forEach((c, idx) => {
                                                 if (!/[a-zA-Z0-9]/.test(c)) newChars[idx] = c;
                                             });
