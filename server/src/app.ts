@@ -400,6 +400,39 @@ app.delete('/api/admin/teachers/:id', requireRole('admin'), async (req, res) => 
     }
 });
 
+// Dashboard Stats Endpoints
+app.get('/api/admin/stats', requireRole('admin'), async (req, res) => {
+    try {
+        const t = await query('SELECT COUNT(*) FROM teachers');
+        const g = await query('SELECT COUNT(*) FROM groups');
+        const q = await query('SELECT COUNT(*) FROM unit_quizzes');
+        res.json({
+            teachers: parseInt(t.rows[0].count),
+            groups: parseInt(g.rows[0].count),
+            quizzes: parseInt(q.rows[0].count)
+        });
+    } catch (err) {
+        console.error('Error fetching admin stats:', err);
+        res.status(500).json({ error: 'Error fetching admin stats' });
+    }
+});
+
+app.get('/api/teacher/:id/stats', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const g = await query('SELECT COUNT(*) FROM groups WHERE teacher_id = $1', [id]);
+        const q = await query('SELECT COUNT(*) FROM unit_quizzes');
+        res.json({
+            teachers: 0, // Teachers don't see teacher count
+            groups: parseInt(g.rows[0].count),
+            quizzes: parseInt(q.rows[0].count)
+        });
+    } catch (err) {
+        console.error('Error fetching teacher stats:', err);
+        res.status(500).json({ error: 'Error fetching teacher stats' });
+    }
+});
+
 // Manager Dashboard API Endpoints
 app.get('/api/manager/teachers', requireRole('admin', 'manager'), async (req, res) => {
     try {
