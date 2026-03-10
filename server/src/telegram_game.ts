@@ -401,9 +401,7 @@ export function setupTelegramGame(bot: Telegraf) {
         // Animated join timer
         state.joinTimerInterval = setInterval(async () => {
             if (state.joinSecondsLeft && state.joinSecondsLeft > 0) {
-                // Update every 1s if <= 10s, else every 5s
-                const decrement = (state.joinSecondsLeft <= 10) ? 1 : 5;
-                state.joinSecondsLeft -= decrement;
+                state.joinSecondsLeft -= 1;
 
                 if (state.joinSecondsLeft <= 0) {
                     clearInterval(state.joinTimerInterval);
@@ -411,20 +409,18 @@ export function setupTelegramGame(bot: Telegraf) {
                     return;
                 }
 
-                // Update message
-                if (state.joinSecondsLeft % 5 === 0 || state.joinSecondsLeft <= 5) {
-                    try {
-                        await bot.telegram.editMessageText(chatId, state.mainMessageId, undefined, renderJoinMsg(state.joinSecondsLeft), {
-                            parse_mode: 'HTML',
-                            reply_markup: {
-                                inline_keyboard: [
-                                    [{ text: "✋ Qatnashish", callback_data: "tg_join" }],
-                                    [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
-                                ]
-                            }
-                        });
-                    } catch (e) { }
-                }
+                // Update message every second for a smooth countdown
+                try {
+                    await bot.telegram.editMessageText(chatId, state.mainMessageId, undefined, renderJoinMsg(state.joinSecondsLeft), {
+                        parse_mode: 'HTML',
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: "✋ Qatnashish", callback_data: "tg_join" }],
+                                [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
+                            ]
+                        }
+                    });
+                } catch (e) { }
             }
         }, 1000);
 
@@ -504,7 +500,7 @@ export function setupTelegramGame(bot: Telegraf) {
             await ctx.editMessageText(
                 `🎉 <b>${state.quizTitle}</b> o'yini ochilyapti!\n` +
                 `Format: ${state.gameMode === 'SOLO' ? '👤 Solo' : '👥 Team Battle'}\n\n` +
-                `⏳ Qatnashish uchun vaqt ketyapti...\n` +
+                `⏳ Qatnashish vaqti ketyapti...\n` +
                 `💰 Kirish to'lovi: ${entryFee} coin\n\n` +
                 `Qatnashuvchilar (${state.players.length}):\n${playerNames}`,
                 {
@@ -554,27 +550,24 @@ export function setupTelegramGame(bot: Telegraf) {
 
         state.joinTimerInterval = setInterval(async () => {
             if (state.joinSecondsLeft && state.joinSecondsLeft > 0) {
-                const decrement = (state.joinSecondsLeft <= 10) ? 1 : 5;
-                state.joinSecondsLeft -= decrement;
+                state.joinSecondsLeft -= 1;
 
                 if (state.joinSecondsLeft <= 0) {
                     clearInterval(state.joinTimerInterval);
                     startGamePlay(bot, chatId);
                     return;
                 }
-                if (state.joinSecondsLeft % 5 === 0 || state.joinSecondsLeft <= 5) {
-                    try {
-                        await bot.telegram.editMessageText(chatId, state.mainMessageId, undefined, renderJoinMsg(state.joinSecondsLeft), {
-                            parse_mode: 'HTML',
-                            reply_markup: {
-                                inline_keyboard: [
-                                    [{ text: "✋ Qatnashish", callback_data: "tg_join" }],
-                                    [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
-                                ]
-                            }
-                        });
-                    } catch (e) { }
-                }
+                try {
+                    await bot.telegram.editMessageText(chatId, state.mainMessageId, undefined, renderJoinMsg(state.joinSecondsLeft), {
+                        parse_mode: 'HTML',
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: "✋ Qatnashish", callback_data: "tg_join" }],
+                                [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
+                            ]
+                        }
+                    });
+                } catch (e) { }
             }
         }, 1000);
 
@@ -714,13 +707,12 @@ async function startDuelPlay(bot: Telegraf, inlineMsgId: string) {
 
 function buildDuelKeyboard(q: Question) {
     const buttons: any[][] = [];
-    const emojis = ["🔴", "🔵", "🟢", "🟡"];
     if (q.options) {
         for (let i = 0; i < q.options.length; i += 2) {
             const row = [];
-            row.push({ text: `${emojis[i] || '🔸'} ${q.options[i]}`, callback_data: `tg_duel_ans_${i}` });
+            row.push({ text: q.options[i], callback_data: `tg_duel_ans_${i}` });
             if (i + 1 < q.options.length) {
-                row.push({ text: `${emojis[i + 1] || '🔸'} ${q.options[i + 1]}`, callback_data: `tg_duel_ans_${i + 1}` });
+                row.push({ text: q.options[i + 1], callback_data: `tg_duel_ans_${i + 1}` });
             }
             buttons.push(row);
         }
@@ -841,14 +833,13 @@ async function sendCurrentQuestion(bot: Telegraf, chatId: string) {
     text += `${q.text}\n`;
 
     const buttons: any[][] = [];
-    const emojis = ["🔴", "🔵", "🟢", "🟡"];
     if (q.options) {
         // Layout buttons in 2x2 grid if 4 options
         for (let i = 0; i < q.options.length; i += 2) {
             const row = [];
-            row.push({ text: `${emojis[i] || '🔸'} ${q.options[i]}`, callback_data: `tg_ans_${i}` });
+            row.push({ text: q.options[i], callback_data: `tg_ans_${i}` });
             if (i + 1 < q.options.length) {
-                row.push({ text: `${emojis[i + 1] || '🔸'} ${q.options[i + 1]}`, callback_data: `tg_ans_${i + 1}` });
+                row.push({ text: q.options[i + 1], callback_data: `tg_ans_${i + 1}` });
             }
             buttons.push(row);
         }
@@ -892,7 +883,9 @@ async function moveNext(bot: Telegraf, chatId: string) {
     if (state.gameMode === 'TEAM') {
         const red = state.teamScores.Red;
         const blue = state.teamScores.Blue;
-        nextText += `\n\n🔴 Qizillar: ${red} XP | 🔵 Ko'klar: ${blue} XP`;
+        const winner = red > blue ? '🔴 QIZILLAR' : blue > red ? '🔵 KO\'KLAR' : '🤝 DURANG';
+        nextText += `\n\n🏆 <b>G'OLIB: ${winner}</b>\n`;
+        nextText += `📊 Jamoalar: 🔴 ${red} - 🔵 ${blue}`;
     }
 
     try {
@@ -1014,9 +1007,6 @@ async function finishGame(bot: Telegraf, chatId: string, isDuel = false) {
             await limiter.schedule(() => bot.telegram.editMessageText(undefined, undefined, chatId, board, { parse_mode: 'HTML' }));
         } else {
             await limiter.schedule(() => bot.telegram.sendMessage(chatId, board, { parse_mode: 'HTML' }));
-            const stickers = await SettingsService.get('tg_game_stickers', ['CAACAgIAAxkBAAELzxhlyO-Yw-', 'CAACAgIAAxkBAAELzxplyO-mRQ']);
-            const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
-            await limiter.schedule(() => bot.telegram.sendSticker(chatId, randomSticker)).catch(() => { });
         }
     } catch (err) {
         gameLogger.error('Finish game error:', err);
