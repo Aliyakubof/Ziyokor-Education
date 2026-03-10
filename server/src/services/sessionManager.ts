@@ -24,6 +24,7 @@ interface GameState {
     mainMessageId?: number;
     timer?: NodeJS.Timeout;
     questionStartTime?: number;
+    totalCoinPool?: number;
 }
 
 /**

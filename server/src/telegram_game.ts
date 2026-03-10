@@ -249,6 +249,9 @@ export function setupTelegramGame(bot: Telegraf) {
 
             // Deduct coins
             await query('UPDATE students SET coins = coins - $1 WHERE id = $2', [entryFee, student.id]);
+
+            // Track total pool
+            state.totalCoinPool = (state.totalCoinPool || 0) + entryFee;
             // ------------------------
 
             // Assign team if in team mode (alternate)
@@ -390,12 +393,7 @@ export function setupTelegramGame(bot: Telegraf) {
 
         let totalPoints = 0;
         if (isCorrect) {
-            // Speed bonus scoring with dynamic multiplier
-            const multiplier = await SettingsService.get('tg_reward_multiplier', 1.0);
-            const timeTaken = Date.now() - (state.questionStartTime || Date.now());
-            const maxPoints = 1000;
-            const deduction = Math.min((timeTaken / 30000) * 500, 500);
-            totalPoints = Math.round((maxPoints - deduction) * multiplier);
+            totalPoints = 1; // 1 XP per correct question
             player.score += totalPoints;
             player.streak++;
 
@@ -615,26 +613,59 @@ async function finishGame(bot: Telegraf, chatId: string) {
         board += `🏆 <b>NATIJALAR:</b>\n`;
     }
 
-    const playerResultsMap: any[] = [];
+    // Find winners based on score > 0
+    const winningPlayers = state.players.filter(p => p.score > 0);
+    const totalPool = state.totalCoinPool || 0;
+    let distributedReward = 0;
 
-    for (let i = 0; i < state.players.length; i++) {
-        const p = state.players[i];
-        const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🎀";
+    if (winningPlayers.length > 0 && totalPool > 0) {
+        // Distribute pool fairly among those who scored at least 1 correct answer (can be proportional to score or even)
+        // Opting for even division among winners based on the user request "yutqazganlarning puli ularga qoshilishi kerak javobga qarab"
+        // Let's make it proportional to their score:
+        const totalWinningScore = winningPlayers.reduce((sum, p) => sum + p.score, 0);
 
-        let rewardText = "";
-        if (i < 3) {
-            const rewards = await SettingsService.get('tg_final_rewards', [50, 30, 10]);
-            const multiplier = await SettingsService.get('tg_reward_multiplier', 1.0);
-            const reward = Math.round((rewards[i] || 0) * multiplier);
-            rewardText = ` (+${reward} 🪙)`;
+        for (const p of winningPlayers) {
+            // Proportion of the pool based on their contribution to the total winning score
+            const pReward = Math.floor((p.score / totalWinningScore) * totalPool);
             try {
-                await query('UPDATE students SET coins = coins + $1 WHERE id = $2', [reward, p.id]);
+                if (pReward > 0) {
+                    await query('UPDATE students SET coins = coins + $1 WHERE id = $2', [pReward, p.id]);
+                }
             } catch (e) {
                 gameLogger.error(`Error giving reward to ${p.name}:`, e);
             }
+            // Temporarily store reward on the player object to display it
+            (p as any).rewardEarned = pReward;
         }
+    } else {
+        // If everyone scored 0, the pool is burned (no refunds).
+        board += `<i>💔 Hech kim to'g'ri javob topmadi. Barcha tangalar kuydi!</i>\n\n`;
+    }
 
-        board += `${medal} ${p.name} — ${p.score} XP${rewardText}\n`;
+    const playerResultsMap: any[] = [];
+
+    if (winningPlayers.length > 0) {
+        board += `<b>🏆 G'OLIBLAR:</b>\n`;
+        state.players.filter(p => p.score > 0).forEach((p, i) => {
+            const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🎖";
+            const rewardText = (p as any).rewardEarned > 0 ? ` (+${(p as any).rewardEarned} 🪙)` : '';
+            board += `${medal} <b>${p.name}</b> — ${p.score} XP${rewardText}\n`;
+        });
+        board += `\n`;
+    }
+
+    const losingPlayers = state.players.filter(p => p.score === 0);
+    if (losingPlayers.length > 0) {
+        board += `<b>💔 YUTQAZGANLAR:</b>\n`;
+        losingPlayers.forEach(p => {
+            // Everyone paid the entry fee, so display loss (-X coins) if they didn't win anything back.
+            // Estimate entry fee since we have totalPool / num_players roughly
+            const assumedFee = Math.floor(totalPool / state.players.length);
+            board += `💀 ${p.name} — ${p.score} XP <i>(-${assumedFee} 🪙)</i>\n`;
+        });
+    }
+
+    for (const p of state.players) {
         playerResultsMap.push({
             id: p.id,
             name: p.name,
