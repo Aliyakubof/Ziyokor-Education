@@ -462,9 +462,16 @@ const GroupDetails = () => {
                                                                         <span className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter">Ota-ona ID: {student.parent_id}</span>
                                                                     </div>
                                                                     <div className="flex items-center gap-2 mt-1">
-                                                                        <span className="text-xs text-slate-500 flex items-center gap-1"><Phone size={10} /> {student.phone || '-'}</span>
+                                                                        <a href={student.phone ? `tel:${student.phone}` : '#'} className="text-xs text-slate-500 flex items-center gap-1 hover:text-indigo-600 transition-colors">
+                                                                            <Phone size={10} /> {student.phone || '-'}
+                                                                        </a>
                                                                         <span className="text-slate-200 text-[10px]">•</span>
-                                                                        <span className="text-xs text-slate-400 font-medium">{student.parent_name || 'Ota-ona'}: {student.parent_phone || '-'}</span>
+                                                                        <span className="text-xs text-slate-400 font-medium">
+                                                                            {student.parent_name || 'Ota-ona'}:{' '}
+                                                                            <a href={student.parent_phone ? `tel:${student.parent_phone}` : '#'} className="hover:text-indigo-600 transition-colors">
+                                                                                {student.parent_phone || '-'}
+                                                                            </a>
+                                                                        </span>
                                                                     </div>
                                                                 </div>
                                                             </td>
@@ -597,11 +604,11 @@ const GroupDetails = () => {
                                                     <div className="grid grid-cols-2 gap-2 mb-4">
                                                         <div className="bg-white p-2.5 rounded-xl border border-slate-100/50">
                                                             <p className="text-[10px] text-slate-400 font-black uppercase mb-1 tracking-widest">O'QUVCHI</p>
-                                                            <p className="text-[11px] font-bold text-slate-600 flex items-center gap-1 truncate"><Phone size={10} /> {student.phone || '-'}</p>
+                                                            <a href={student.phone ? `tel:${student.phone}` : '#'} className="text-[11px] font-bold text-slate-600 flex items-center gap-1 truncate hover:text-indigo-600 transition-colors"><Phone size={10} /> {student.phone || '-'}</a>
                                                         </div>
                                                         <div className="bg-white p-2.5 rounded-xl border border-slate-100/50">
                                                             <p className="text-[10px] text-slate-400 font-black uppercase mb-1 tracking-widest">{student.parent_name || 'OTA-ONA'}</p>
-                                                            <p className="text-[11px] font-bold text-slate-600 flex items-center gap-1 truncate"><Phone size={10} /> {student.parent_phone || '-'}</p>
+                                                            <a href={student.parent_phone ? `tel:${student.parent_phone}` : '#'} className="text-[11px] font-bold text-slate-600 flex items-center gap-1 truncate hover:text-indigo-600 transition-colors"><Phone size={10} /> {student.parent_phone || '-'}</a>
                                                         </div>
                                                     </div>
 
