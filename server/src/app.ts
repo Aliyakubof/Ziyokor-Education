@@ -77,20 +77,32 @@ const io = new Server(httpServer, {
 
 // Redis Adapter for PM2 Cluster scaling
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-const pubClient = createClient({ url: redisUrl });
+const pubClient = createClient({
+    url: redisUrl,
+    socket: {
+        reconnectStrategy: false // Disable reconnection attempts to stop endless error loops
+    }
+});
 const subClient = pubClient.duplicate();
 
-pubClient.on('error', (err: any) => console.warn('[Redis] Pub Error:', err.message));
-subClient.on('error', (err: any) => console.warn('[Redis] Sub Error:', err.message));
+let useRedisIo = false;
+
+pubClient.on('error', (err: any) => {
+    if (useRedisIo) console.warn('[Redis] Pub Error:', err.message);
+});
+subClient.on('error', (err: any) => {
+    if (useRedisIo) console.warn('[Redis] Sub Error:', err.message);
+});
 
 Promise.all([pubClient.connect(), subClient.connect()])
     .then(() => {
+        useRedisIo = true;
         io.adapter(createAdapter(pubClient, subClient));
         console.log(`[Socket.io] Redis adapter connected to ${redisUrl}`);
     })
     .catch((err: any) => {
+        useRedisIo = false;
         console.warn('[Socket.io] Fallback to in-memory adapter (Redis connection failed).');
-        console.warn('Reason:', err.message);
     });
 
 const ADMIN_ID = '00000000-0000-0000-0000-000000000000';
@@ -140,6 +152,8 @@ async function initDb() {
         // Ensure students table has contact info columns
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS last_contacted_relative TEXT;');
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS last_contacted_at TIMESTAMPTZ;');
+        await query('ALTER TABLE teachers ADD COLUMN IF NOT EXISTS plain_password TEXT;');
+        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS plain_password TEXT;');
 
         await query(`
             CREATE TABLE IF NOT EXISTS contact_logs (
@@ -228,8 +242,8 @@ async function ensureAdminExists() {
             const adminPassword = process.env.ADMIN_PASSWORD || '4567';
             const hashedPassword = await bcrypt.hash(adminPassword, 10);
             await query(
-                'INSERT INTO teachers (id, name, phone, password) VALUES ($1, $2, $3, $4)',
-                [ADMIN_ID, 'Admin', adminPhone, hashedPassword]
+                'INSERT INTO teachers (id, name, phone, password, plain_password) VALUES ($1, $2, $3, $4, $5)',
+                [ADMIN_ID, 'Admin', adminPhone, hashedPassword, adminPassword]
             );
             console.log('Admin teacher record created');
         }
@@ -246,8 +260,8 @@ async function ensureManagerExists() {
             const managerPassword = process.env.MANAGER_PASSWORD || '2531';
             const hashedPassword = await bcrypt.hash(managerPassword, 10);
             await query(
-                'INSERT INTO teachers (id, name, phone, password) VALUES ($1, $2, $3, $4)',
-                [MANAGER_ID, 'Menejer', managerPhone, hashedPassword]
+                'INSERT INTO teachers (id, name, phone, password, plain_password) VALUES ($1, $2, $3, $4, $5)',
+                [MANAGER_ID, 'Menejer', managerPhone, hashedPassword, managerPassword]
             );
             console.log('Manager record created in teachers table');
         }
@@ -335,10 +349,10 @@ app.post('/api/admin/teachers', requireRole('admin'), async (req, res) => {
         const hashedPassword = await bcrypt.hash(rawPassword, 10);
         const id = uuidv4();
         await query(
-            'INSERT INTO teachers (id, name, phone, password) VALUES ($1, $2, $3, $4)',
-            [id, name, phone, hashedPassword]
+            'INSERT INTO teachers (id, name, phone, password, plain_password) VALUES ($1, $2, $3, $4, $5)',
+            [id, name, phone, hashedPassword, rawPassword]
         );
-        res.json({ id, name, phone, password: hashedPassword });
+        res.json({ id, name, phone, password: rawPassword });
     } catch (err) {
         console.error('Error creating teacher:', err);
         res.status(500).json({ error: 'Error creating teacher' });
@@ -354,13 +368,21 @@ app.put('/api/admin/teachers/:id', requireRole('admin'), async (req, res) => {
         // For simplicity, we expect all fields or at least some. 
         // Let's update all provided fields.
         const finalPassword = password?.startsWith('$2') ? password : await bcrypt.hash(password, 10);
+        const plainPass = password?.startsWith('$2') ? null : password;
 
-        await query(
-            'UPDATE teachers SET name = $1, phone = $2, password = $3 WHERE id = $4',
-            [name, phone, finalPassword, id]
-        );
+        if (plainPass) {
+            await query(
+                'UPDATE teachers SET name = $1, phone = $2, password = $3, plain_password = $4 WHERE id = $5',
+                [name, phone, finalPassword, plainPass, id]
+            );
+        } else {
+            await query(
+                'UPDATE teachers SET name = $1, phone = $2 WHERE id = $3',
+                [name, phone, id]
+            );
+        }
 
-        res.json({ id, name, phone, password: finalPassword });
+        res.json({ id, name, phone, password: plainPass || password });
     } catch (err) {
         console.error('Error updating teacher:', err);
         res.status(500).json({ error: 'Error updating teacher' });
@@ -449,7 +471,7 @@ app.get('/api/manager/groups/:groupId/students', async (req, res) => {
 app.get('/api/admin/teachers', async (req, res) => {
     try {
         const result = await query('SELECT * FROM teachers');
-        res.json(result.rows);
+        res.json(result.rows.map(row => ({ ...row, password: row.plain_password || row.password })));
     } catch (err: any) {
         console.error('Error fetching teachers:', err);
         res.status(500).json({ error: 'Error fetching teachers', details: err.message });
@@ -480,7 +502,7 @@ app.get('/api/admin/students', async (req, res) => {
             LEFT JOIN teachers t ON g.teacher_id = t.id
             ORDER BY s.name ASC
             `);
-        res.json(result.rows);
+        res.json(result.rows.map(row => ({ ...row, password: row.plain_password || row.password })));
     } catch (err: any) {
         console.error('Error fetching admin students:', err);
         res.status(500).json({ error: 'Error fetching students', details: err.message });
@@ -492,8 +514,8 @@ app.put('/api/admin/students/:id/password', async (req, res) => {
         const { password } = req.body;
         const { id } = req.params;
         const hashedPassword = await bcrypt.hash(password, 10);
-        await query('UPDATE students SET password = $1 WHERE id = $2', [hashedPassword, id]);
-        res.json({ success: true, id, password: hashedPassword });
+        await query('UPDATE students SET password = $1, plain_password = $2 WHERE id = $3', [hashedPassword, password, id]);
+        res.json({ success: true, id, password });
     } catch (err: any) {
         console.error('Error updating student password:', err);
         res.status(500).json({ error: 'Error updating student password' });
@@ -722,13 +744,16 @@ app.get('/api/student/vocab-battle/generate', async (req, res) => {
         const result = await query('SELECT questions FROM unit_quizzes WHERE level = $1', [level]);
         const allQuestions: Question[] = result.rows.flatMap(r => r.questions);
 
-        // Filter: Only text-input and short vocabulary (exclude sentences)
+        // Helper to strip HTML tags safely
+        const stripHtml = (html?: string) => (html || '').replace(/<[^>]*>?/gm, '');
+
+        // Filter: Only vocabulary type (exclude sentences and generic text-input)
         const vocabQuestions = allQuestions.filter(q =>
-            q.type === 'text-input' &&
+            q.type === 'vocabulary' &&
             q.acceptedAnswers &&
             q.acceptedAnswers.length > 0 &&
-            q.text.length < 30 &&
-            q.text.trim().split(/\s+/).length <= 3
+            stripHtml(q.text).length < 50 &&
+            stripHtml(q.text).trim().split(/\s+/).length <= 5
         );
 
         if (vocabQuestions.length === 0) {
@@ -754,20 +779,20 @@ app.get('/api/student/vocab-battle/generate', async (req, res) => {
         // Build synonym map to avoid duplicate correct answers in options
         const synonymMap = new Map<string, Set<string>>();
         selectedGroup.forEach(q => {
-            const key = q.text.toLowerCase().trim();
+            const key = stripHtml(q.text).toLowerCase().trim();
             if (!synonymMap.has(key)) synonymMap.set(key, new Set());
-            q.acceptedAnswers?.forEach(a => synonymMap.get(key)!.add(a.toLowerCase().trim()));
+            q.acceptedAnswers?.forEach(a => synonymMap.get(key)!.add(stripHtml(a).toLowerCase().trim()));
         });
 
         const transformed = selectedGroup.map(q => {
-            const correct = q.acceptedAnswers![0].trim();
-            const synonyms = synonymMap.get(q.text.toLowerCase().trim()) || new Set();
+            const correct = stripHtml(q.acceptedAnswers![0]).trim();
+            const synonyms = synonymMap.get(stripHtml(q.text).toLowerCase().trim()) || new Set();
 
             // Distractors: Must be from target pool, but NOT the correct answer or any of its synonyms
             let distractors = targetPool.filter(ans => {
-                const a = ans.toLowerCase().trim();
+                const a = stripHtml(ans).toLowerCase().trim();
                 return a !== correct.toLowerCase() && !synonyms.has(a);
-            });
+            }).map(a => stripHtml(a).trim());
 
             // Fill with generic words if pool is too small
             if (distractors.length < 3) {
@@ -780,7 +805,7 @@ app.get('/api/student/vocab-battle/generate', async (req, res) => {
             const options = [correct, ...distractors].sort(() => 0.5 - Math.random());
 
             return {
-                text: q.text,
+                text: stripHtml(q.text),
                 options,
                 correctIndex: options.indexOf(correct)
             };

@@ -54,7 +54,8 @@ export default function ManagerVocabulary() {
     const filteredQuizzes = quizzes.filter(q => {
         const matchesSearch = q.title.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesLevel = selectedLevel === 'All' || q.level === selectedLevel;
-        return matchesSearch && matchesLevel;
+        const hasVocabulary = q.questions.some(question => question.type === 'vocabulary');
+        return matchesSearch && matchesLevel && hasVocabulary;
     });
 
     return (
@@ -109,7 +110,9 @@ export default function ManagerVocabulary() {
                                 <span className="text-[10px] font-black uppercase px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md tracking-wider">{quiz.level}</span>
                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
-                                        onClick={() => navigate(`/edit-quiz/${quiz.id}`)}
+                                        onClick={() => {
+                                            alert("Lug'at testini qisman o'zgartirish tez orada qo'shiladi. (Hozircha faqat Unit Test tahrirlash orqali o'zgartirish mumkin)");
+                                        }}
                                         className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-md transition-all"
                                     >
                                         <Edit2 size={14} />

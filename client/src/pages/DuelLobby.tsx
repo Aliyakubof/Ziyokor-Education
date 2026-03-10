@@ -1,16 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { apiFetch } from '../api';
 import { socket } from '../socket';
-import { Swords, ChevronLeft, Search, UserPlus, X, Check, Loader2, AlertCircle } from 'lucide-react';
+import { Swords, ChevronLeft, X, Check, Loader2, AlertCircle } from 'lucide-react';
 
 export default function DuelLobby() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<any[]>([]);
-    const [searching, setSearching] = useState(false);
     const [invitations, setInvitations] = useState<any[]>([]);
     const [socketConnected, setSocketConnected] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
@@ -64,33 +60,6 @@ export default function DuelLobby() {
         };
     }, []);
 
-    const handleSearch = async () => {
-        if (!searchQuery.trim()) return;
-        setSearching(true);
-        try {
-            const res = await apiFetch(`/api/students/search?q=${searchQuery}`);
-            if (res.ok) {
-                const results = await res.json();
-                setSearchResults(results.filter((s: any) => s.id !== user?.id));
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setSearching(false);
-        }
-    };
-
-    const sendInvite = (targetStudent: any) => {
-        if (!socketConnected) {
-            setStatus("Socket ulanmagan");
-            return;
-        }
-        socket.emit('duel-invite', {
-            targetStudentId: targetStudent.id,
-            studentName: user?.name
-        });
-        setStatus(`${targetStudent.name}ga taklif yuborildi`);
-    };
 
     const acceptInvite = (invitation: any) => {
         socket.emit('duel-accept', { fromId: invitation.fromId });
@@ -168,57 +137,14 @@ export default function DuelLobby() {
                 )}
 
                 {/* Search Player Card */}
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-                    <h2 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
-                        <Search className="text-rose-600" size={20} />
-                        Raqibni izlash
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center justify-center py-12">
+                    <Loader2 className="animate-spin text-rose-300 mb-4" size={48} />
+                    <h2 className="text-xl font-black text-slate-800 mb-2">
+                        Duellar tez orada ishga tushadi!
                     </h2>
-                    <div className="flex gap-2 mb-4">
-                        <div className="relative flex-1">
-                            <input
-                                type="text"
-                                placeholder="ID yoki ism..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:border-rose-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                        <button
-                            onClick={handleSearch}
-                            disabled={searching}
-                            className="bg-rose-600 text-white p-3 rounded-2xl hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200 flex items-center justify-center min-w-[50px]"
-                        >
-                            {searching ? <Loader2 className="animate-spin" size={24} /> : <Search size={22} />}
-                        </button>
-                    </div>
-
-                    {/* Search Results */}
-                    <div className="space-y-2">
-                        {searchResults.length > 0 ? (
-                            searchResults.map((player) => (
-                                <div key={player.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-slate-200 font-bold text-rose-600">
-                                            {player.name.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-slate-800 text-sm">{player.name}</h4>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase">{player.group_name}</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => sendInvite(player)}
-                                        className="bg-white text-rose-600 p-2 rounded-xl border border-rose-100 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
-                                    >
-                                        <UserPlus size={20} />
-                                    </button>
-                                </div>
-                            ))
-                        ) : searching ? null : searchQuery ? (
-                            <p className="text-center py-4 text-slate-400 text-sm font-medium">Hech kim topilmadi</p>
-                        ) : null}
-                    </div>
+                    <p className="text-sm font-bold text-slate-500 text-center max-w-sm">
+                        Hozirda duellar uchun savollar bazasi tayyorlanmoqda. Tez orada do'stlaringiz bilan bellashishingiz mumkin bo'ladi.
+                    </p>
                 </div>
 
                 {/* Info Card */}

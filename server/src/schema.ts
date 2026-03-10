@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS teachers (
     name TEXT NOT NULL,
     phone TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
+    plain_password TEXT,
     telegram_chat_id TEXT
 );
 
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS students (
     group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
     phone TEXT,
     password TEXT,
+    plain_password TEXT,
     parent_name TEXT, -- 'Otasi', 'Onasi', etc.
     parent_phone TEXT,
     last_contacted_at TIMESTAMP,
