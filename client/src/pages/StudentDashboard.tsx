@@ -7,7 +7,7 @@ import {
     LogOut, History, Calendar,
     Gamepad2, Zap,
     LayoutDashboard, UserCircle, ChevronRight,
-    Trophy, ShoppingBag, Swords, BookOpen, Flame, Coins, Lock, Camera
+    Trophy, ShoppingBag, Swords, BookOpen, Coins, Lock, Camera
 } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import logo from '../assets/logo.jpeg';
@@ -313,13 +313,16 @@ export default function StudentDashboard() {
                                 <span className="text-2xl font-black text-slate-800">{stats.coins.toLocaleString()}</span>
                                 <span className="text-xs font-bold text-slate-400">Tangalar</span>
                             </div>
-                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
-                                <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-2">
-                                    <Flame size={20} />
+                            <button
+                                onClick={() => navigate('/student/vocab-battles')}
+                                className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center hover:bg-purple-50 transition-colors group"
+                            >
+                                <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                    <BookOpen size={20} />
                                 </div>
-                                <span className="text-2xl font-black text-slate-800">{stats.streakCount}</span>
-                                <span className="text-xs font-bold text-slate-400">Kunlik Streak</span>
-                            </div>
+                                <span className="text-lg font-black text-slate-800 leading-none">Vocab Battle</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">O'ynash</span>
+                            </button>
                         </div>
 
                         {/* Gamification Navigation Grid */}

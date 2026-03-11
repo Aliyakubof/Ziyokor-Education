@@ -55,6 +55,16 @@ CREATE TABLE IF NOT EXISTS unit_quizzes (
     questions JSONB NOT NULL
 );
 
+-- Vocabulary Battles Table
+CREATE TABLE IF NOT EXISTS vocabulary_battles (
+    id UUID PRIMARY KEY,
+    daraja TEXT NOT NULL, -- e.g., 'Beginner', 'Elementary'
+    level INT NOT NULL, -- 1 to 30
+    title TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    questions JSONB NOT NULL
+);
+
 -- Student Telegram Subscriptions
 CREATE TABLE IF NOT EXISTS student_telegram_subscriptions (
     student_id TEXT REFERENCES students(id) ON DELETE CASCADE,

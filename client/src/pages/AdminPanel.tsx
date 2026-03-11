@@ -342,6 +342,25 @@ const AdminPanel = () => {
                                     <Plus size={20} />
                                 </div>
                             </button>
+
+                            {/* Vocabulary Battles Card */}
+                            <button
+                                onClick={() => navigate('/admin/vocab-battles')}
+                                className="w-full bg-white border-2 border-slate-100 hover:border-purple-200 p-6 rounded-2xl flex items-center justify-between group transition-all shadow-sm mt-4"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform font-bold text-xl">
+                                        V
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-lg font-black text-slate-800">Vocabulary Battles</p>
+                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Lug'at musobaqalari (30 bosqich)</p>
+                                    </div>
+                                </div>
+                                <div className="text-purple-300 group-hover:text-purple-500 transition-colors bg-purple-50 p-2 rounded-lg">
+                                    <ArrowLeft className="rotate-180" size={20} />
+                                </div>
+                            </button>
                         </section>
 
                         {/* Unit Quiz List */}

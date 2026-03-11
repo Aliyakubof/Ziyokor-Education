@@ -9,6 +9,8 @@ import AdminPanel from './pages/AdminPanel';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 import StudentLogin from './pages/StudentLogin';
+import AdminVocabBattles from './pages/AdminVocabBattles';
+import CreateVocabBattle from './pages/CreateVocabBattle';
 
 import StudentDashboard from './pages/StudentDashboard';
 import Leaderboard from './pages/Leaderboard';
@@ -20,6 +22,8 @@ import UnitJoin from './pages/UnitJoin';
 import Login from './pages/Login';
 import GroupDetails from './pages/GroupDetails';
 import BattleDetails from './pages/BattleDetails';
+import VocabularyBattleLevels from './pages/VocabularyBattleLevels';
+import VocabularyBattleGame from './pages/VocabularyBattleGame';
 import { AuthProvider, useAuth } from './AuthContext';
 import AppMonitor from './AppMonitor';
 import { useEffect } from 'react';
@@ -136,10 +140,26 @@ function App() {
               }
             />
             <Route
+              path="/student/vocab-battles"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <VocabularyBattleLevels />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/student/battle/:id"
               element={
                 <ProtectedRoute>
                   <BattleDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/vocab-battle/play/:id"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <VocabularyBattleGame />
                 </ProtectedRoute>
               }
             />
@@ -186,6 +206,30 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <GroupDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vocab-battles"
+              element={
+                <ProtectedRoute requiredRole={['admin', 'manager']}>
+                  <AdminVocabBattles />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vocab-battles/create"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <CreateVocabBattle />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vocab-battles/edit/:id"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <CreateVocabBattle />
                 </ProtectedRoute>
               }
             />

@@ -181,6 +181,17 @@ async function initDb() {
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS weekly_battle_score INT DEFAULT 0;');
 
         await query(`
+            CREATE TABLE IF NOT EXISTS vocabulary_battles (
+                id UUID PRIMARY KEY,
+                daraja TEXT NOT NULL,
+                level INT NOT NULL,
+                title TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                questions JSONB NOT NULL
+            );
+        `);
+
+        await query(`
             CREATE TABLE IF NOT EXISTS group_battles(
             id UUID PRIMARY KEY,
             group_a_id UUID REFERENCES groups(id) ON DELETE CASCADE,
@@ -558,6 +569,69 @@ app.put('/api/admin/students/:id/password', async (req, res) => {
 
 // Admin: Unit Quizzes (Routes moved/consolidated below)
 
+// Admin: Vocabulary Battles
+app.get('/api/admin/vocab-battles', requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM vocabulary_battles ORDER BY daraja, level');
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error fetching vocab battles:', err);
+        res.status(500).json({ error: 'Error fetching vocab battles', details: err.message });
+    }
+});
+
+app.post('/api/admin/vocab-battles', requireRole('admin'), async (req, res) => {
+    try {
+        const { daraja, level, title, questions } = req.body;
+        const id = uuidv4();
+        await query(
+            'INSERT INTO vocabulary_battles (id, daraja, level, title, questions) VALUES ($1, $2, $3, $4, $5)',
+            [id, daraja, level, title, JSON.stringify(questions)]
+        );
+        res.json({ id, daraja, level, title });
+    } catch (err: any) {
+        console.error('Error creating vocab battle:', err);
+        res.status(500).json({ error: 'Error creating vocab battle', details: err.message });
+    }
+});
+
+app.put('/api/admin/vocab-battles/:id', requireRole('admin'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { daraja, level, title, questions } = req.body;
+        await query(
+            'UPDATE vocabulary_battles SET daraja = $1, level = $2, title = $3, questions = $4 WHERE id = $5',
+            [daraja, level, title, JSON.stringify(questions), id]
+        );
+        res.json({ id, daraja, level, title });
+    } catch (err: any) {
+        console.error('Error updating vocab battle:', err);
+        res.status(500).json({ error: 'Error updating vocab battle', details: err.message });
+    }
+});
+
+app.get('/api/admin/vocab-battles/:id', requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await query('SELECT * FROM vocabulary_battles WHERE id = $1', [id]);
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Topilmadi' });
+        res.json(result.rows[0]);
+    } catch (err: any) {
+        console.error('Error fetching vocab battle:', err);
+        res.status(500).json({ error: 'Xatolik', details: err.message });
+    }
+});
+
+app.delete('/api/admin/vocab-battles/:id', requireRole('admin'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM vocabulary_battles WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err: any) {
+        console.error('Error deleting vocab battle:', err);
+        res.status(500).json({ error: 'Error deleting vocab battle', details: err.message });
+    }
+});
 
 app.get('/api/student/quizzes', async (req, res) => {
     try {
@@ -757,120 +831,138 @@ async function notifyTeacherOfVocabBattleResult(studentId: string, xp: number, c
     }
 }
 
-// --- Web Vocab Battle APIs ---
-app.get('/api/student/vocab-battle/generate', async (req, res) => {
+// --- Web Vocab Battle APIs (Level Based) ---
+app.get('/api/student/vocab-battles/levels', async (req, res) => {
     try {
-        const { studentId, count = 15 } = req.query;
+        const { studentId } = req.query;
         if (!studentId) return res.status(400).json({ error: 'Student ID missing' });
 
-        // Get student's group level
+        // Get student's group level (daraja)
         const studentRes = await query(`
-            SELECT g.level 
+            SELECT g.level as daraja 
             FROM students s 
             JOIN groups g ON s.group_id = g.id 
             WHERE s.id = $1
         `, [studentId]);
 
         if (studentRes.rowCount === 0) return res.status(404).json({ error: 'Student or group not found' });
-        const level = studentRes.rows[0].level;
+        const daraja = studentRes.rows[0].daraja;
 
-        // Fetch all questions for this level
-        const result = await query('SELECT questions FROM unit_quizzes WHERE level = $1', [level]);
-        const allQuestions: Question[] = result.rows.flatMap(r => r.questions);
-
-        // Helper to strip HTML tags safely
-        const stripHtml = (html?: string) => (html || '').replace(/<[^>]*>?/gm, '');
-
-        // Filter: Only vocabulary type (exclude sentences and generic text-input)
-        const vocabQuestions = allQuestions.filter(q =>
-            q.type === 'vocabulary' &&
-            q.acceptedAnswers &&
-            q.acceptedAnswers.length > 0 &&
-            stripHtml(q.text).length < 50 &&
-            stripHtml(q.text).trim().split(/\s+/).length <= 5
+        // Fetch all levels for this daraja
+        const result = await query(
+            'SELECT id, daraja, level, title, questions FROM vocabulary_battles WHERE daraja = $1 ORDER BY level ASC',
+            [daraja]
         );
 
-        if (vocabQuestions.length === 0) {
-            return res.status(404).json({ error: 'Bu daraja uchun Lug\'at savollari topilmadi.' });
-        }
+        // Fetch student's past results for these levels to calculate progress
+        const historyRes = await query(`
+            SELECT quiz_title, (player_results->$1->>'score')::int as score, total_questions
+            FROM game_results
+            WHERE quiz_title LIKE $2 AND player_results->$1 IS NOT NULL
+        `, [studentId, `Vocab Battle: ${daraja} - Level %`]);
 
-        // Separate by direction to prevent mixing languages in options
-        const enToUz: Question[] = [];
-        const uzToEn: Question[] = [];
+        const levelScores: Record<number, number> = {}; // Best percentage per level
 
-        vocabQuestions.forEach(q => {
-            const isUzbekSource = /[o'o'g'g'O'O'G'G'ʻ]/.test(q.text) || /[^\x00-\x7F]/.test(q.text);
-            if (isUzbekSource) uzToEn.push(q);
-            else enToUz.push(q);
-        });
-
-        // Use the direction that has more questions for this session
-        const selectedGroup = enToUz.length >= uzToEn.length ? enToUz : uzToEn;
-
-        // Target language distractor pool (all accepted answers of the same direction)
-        const targetPool = Array.from(new Set(selectedGroup.flatMap(q => q.acceptedAnswers || []).map(a => a.trim())));
-
-        // Build synonym map to avoid duplicate correct answers in options
-        const synonymMap = new Map<string, Set<string>>();
-        selectedGroup.forEach(q => {
-            const key = stripHtml(q.text).toLowerCase().trim();
-            if (!synonymMap.has(key)) synonymMap.set(key, new Set());
-            q.acceptedAnswers?.forEach(a => synonymMap.get(key)!.add(stripHtml(a).toLowerCase().trim()));
-        });
-
-        const transformed = selectedGroup.map(q => {
-            const correct = stripHtml(q.acceptedAnswers![0]).trim();
-            const synonyms = synonymMap.get(stripHtml(q.text).toLowerCase().trim()) || new Set();
-
-            // Distractors: Must be from target pool, but NOT the correct answer or any of its synonyms
-            let distractors = targetPool.filter(ans => {
-                const a = stripHtml(ans).toLowerCase().trim();
-                return a !== correct.toLowerCase() && !synonyms.has(a);
-            }).map(a => stripHtml(a).trim());
-
-            // Fill with generic words if pool is too small
-            if (distractors.length < 3) {
-                distractors.push(...['narsa', 'joy', 'odam', 'vaqt', 'is', 'are', 'thing', 'people'].filter(w => w !== correct.toLowerCase()));
+        historyRes.rows.forEach(row => {
+            const match = row.quiz_title.match(/Level (\d+)/);
+            if (match) {
+                const levelNum = parseInt(match[1]);
+                const perc = row.total_questions > 0 ? (row.score / row.total_questions) * 100 : 0;
+                if (!levelScores[levelNum] || perc > levelScores[levelNum]) {
+                    levelScores[levelNum] = perc;
+                }
             }
+        });
 
-            // Shuffle and pick 3
-            distractors = distractors.sort(() => 0.5 - Math.random()).slice(0, 3);
+        // Calculate stars and locks
+        let previousUnlockedComplete = true; // Level 1 is always accessible
 
-            const options = [correct, ...distractors].sort(() => 0.5 - Math.random());
+        const enrichedLevels = result.rows.map(battle => {
+            const levelNum = battle.level;
+            const perc = levelScores[levelNum] || 0;
+            
+            // Determine Stars
+            let stars = 0;
+            if (perc >= 90) stars = 3;
+            else if (perc >= 70) stars = 2;
+            else if (perc >= 50) stars = 1;
+
+            const isLocked = !previousUnlockedComplete && levelNum > 1;
+
+            // Prepare for next level: must have >= 60%
+            previousUnlockedComplete = perc >= 60;
 
             return {
-                text: stripHtml(q.text),
-                options,
-                correctIndex: options.indexOf(correct)
+                id: battle.id,
+                daraja: battle.daraja,
+                level: battle.level,
+                title: battle.title,
+                isLocked,
+                stars,
+                maxPercentage: perc
             };
         });
 
-        // Shuffle all questions and pick requested count
-        const selected = transformed.sort(() => 0.5 - Math.random()).slice(0, Number(count));
-
-        res.json({ questions: selected });
+        res.json(enrichedLevels);
     } catch (err) {
-        console.error('Error generating vocab battle:', err);
-        res.status(500).json({ error: 'Failed to generate battle' });
+        console.error('Error fetching vocab battle levels:', err);
+        res.status(500).json({ error: 'Failed to fetch levels' });
     }
 });
 
-app.post('/api/student/vocab-battle/submit', async (req, res) => {
+app.get('/api/student/vocab-battles/:id', async (req, res) => {
     try {
-        const { studentId, totalXp } = req.body;
-        if (!studentId || typeof totalXp !== 'number') {
+        const { id } = req.params;
+        const result = await query('SELECT * FROM vocabulary_battles WHERE id = $1', [id]);
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Topilmadi' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error fetching vocab battle:', err);
+        res.status(500).json({ error: 'Failed to fetch battle' });
+    }
+});
+
+app.post('/api/student/vocab-battles/submit', async (req, res) => {
+    try {
+        const { studentId, battleId, score, total } = req.body;
+        if (!studentId || score === undefined || !total) {
             return res.status(400).json({ error: 'Invalid data' });
         }
 
-        const coinsEarned = Math.max(1, Math.round(totalXp * 0.05)); // 5% of XP as coins
+        const battleRes = await query('SELECT * FROM vocabulary_battles WHERE id = $1', [battleId]);
+        if (battleRes.rowCount === 0) return res.status(404).json({ error: 'Battle topilmadi' });
+        const battle = battleRes.rows[0];
 
-        await query('UPDATE students SET total_score = total_score + $1, coins = coins + $2 WHERE id = $3', [totalXp, coinsEarned, studentId]);
+        // Coins = Score (1 tanga har to'g'ri javobga)
+        const coinsEarned = score;
 
-        // Send notification to teacher
-        await notifyTeacherOfVocabBattleResult(studentId, totalXp, coinsEarned);
+        await query('UPDATE students SET coins = coins + $1 WHERE id = $2', [coinsEarned, studentId]);
 
-        // Hide specifics from student UI
-        res.json({ success: true, hidden: true });
+        // Send generic History record
+        const historyId = uuidv4();
+        const studentGroupIdRes = await query('SELECT group_id FROM students WHERE id = $1', [studentId]);
+        if ((studentGroupIdRes.rowCount ?? 0) > 0) {
+            const groupId = studentGroupIdRes.rows[0].group_id;
+            const historyTitle = `Vocab Battle: ${battle.daraja} - Level ${battle.level}`;
+            const playerResults = {
+                [studentId]: {
+                    id: studentId,
+                    name: 'Student', // Can fetch name if needed, or UI will ignore it since it's just history
+                    score: score,
+                    status: 'completed',
+                    answers: [] // No answers saved!
+                }
+            };
+            await query(
+                'INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results) VALUES ($1, $2, $3, $4, $5)',
+                [historyId, groupId, historyTitle, total, JSON.stringify(playerResults)]
+            );
+        }
+
+        // Notify Teacher
+        await notifyTeacherOfVocabBattleResult(studentId, score * 10, coinsEarned); // XP = score * 10
+
+        res.json({ success: true, coins: coinsEarned });
     } catch (err) {
         console.error('Error submitting vocab battle:', err);
         res.status(500).json({ error: 'Failed to submit battle' });
