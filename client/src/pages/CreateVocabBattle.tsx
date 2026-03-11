@@ -4,10 +4,13 @@ import { apiFetch } from '../api';
 import { PlusCircle, Edit2, Trash2, ArrowLeft, Save, FileQuestion, Clock } from 'lucide-react';
 
 interface VocabQuestion {
+    info?: string;
     text: string;
     options: string[];
     correctIndex: number;
     timeLimit: number;
+    type?: 'multiple-choice' | 'vocabulary';
+    acceptedAnswers?: string[];
 }
 
 export default function CreateVocabBattle() {
@@ -21,9 +24,11 @@ export default function CreateVocabBattle() {
     const [isSaving, setIsSaving] = useState(false);
 
     // Form states
+    const [qType, setQType] = useState<'multiple-choice' | 'vocabulary'>('multiple-choice');
     const [qText, setQText] = useState('');
     const [opts, setOpts] = useState(['', '', '', '']);
     const [correctIdx, setCorrectIdx] = useState(0);
+    const [acceptedAnswers, setAcceptedAnswers] = useState('');
     const [qTimeLimit, setQTimeLimit] = useState(15); // Default 15 sec per word
     const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
@@ -48,22 +53,33 @@ export default function CreateVocabBattle() {
 
     const editQuestion = (index: number) => {
         const q = questions[index];
+        setQType(q.type || 'multiple-choice');
         setQText(q.text || '');
         setOpts(q.options && q.options.length ? q.options : ['', '', '', '']);
         setCorrectIdx(q.correctIndex || 0);
+        setAcceptedAnswers(q.acceptedAnswers ? q.acceptedAnswers.join('+') : '');
         setQTimeLimit(q.timeLimit || 15);
         setEditingIdx(index);
     };
 
     const addQuestion = () => {
         if (!qText.trim()) return alert("So'zni kiriting");
-        if (opts.some(o => !o.trim())) return alert("Barcha variantlarni to'ldiring");
+        
+        if (qType === 'multiple-choice') {
+            if (opts.some(o => !o.trim())) return alert("Barcha variantlarni to'ldiring");
+        } else if (qType === 'vocabulary') {
+            if (!acceptedAnswers.trim()) return alert("To'g'ri so'zni kiriting");
+        }
+
+        const answersList = acceptedAnswers.split('+').map(a => a.trim()).filter(a => a);
 
         const newQuestion: VocabQuestion = {
             text: qText,
-            options: [...opts],
-            correctIndex: correctIdx,
-            timeLimit: Number(qTimeLimit) || 15
+            options: qType === 'multiple-choice' ? [...opts] : [],
+            correctIndex: qType === 'multiple-choice' ? correctIdx : -1,
+            timeLimit: Number(qTimeLimit) || 15,
+            type: qType,
+            acceptedAnswers: qType === 'vocabulary' ? answersList : []
         };
 
         if (editingIdx !== null) {
@@ -76,9 +92,11 @@ export default function CreateVocabBattle() {
         }
 
         // Reset
+        setQType('multiple-choice');
         setQText('');
         setOpts(['', '', '', '']);
         setCorrectIdx(0);
+        setAcceptedAnswers('');
         setQTimeLimit(15);
     };
 
@@ -185,6 +203,21 @@ export default function CreateVocabBattle() {
                                         {editingIdx !== null ? 'Savolni Tahrirlash' : 'So\'z Qo\'shish'}
                                     </h3>
 
+                                    <div className="flex bg-white rounded-xl p-1 border border-slate-200">
+                                        <button
+                                            onClick={() => setQType('multiple-choice')}
+                                            className={`p-2 px-4 rounded-lg transition-all font-bold text-sm ${qType === 'multiple-choice' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                        >
+                                            Test (4 variant)
+                                        </button>
+                                        <button
+                                            onClick={() => setQType('vocabulary')}
+                                            className={`p-2 px-4 rounded-lg transition-all font-bold text-sm ${qType === 'vocabulary' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                        >
+                                            Yozish (Kataklar)
+                                        </button>
+                                    </div>
+
                                     <div className="space-y-4">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">So'z (Masalan: Apple)</label>
@@ -210,37 +243,51 @@ export default function CreateVocabBattle() {
                                             <p className="text-xs text-slate-500 ml-4">Ushbu savol uchun qancha vaqt beriladi?</p>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {opts.map((opt, i) => (
-                                                <div key={i} className="relative flex items-center">
-                                                    <input
-                                                        className={`w-full bg-white border-2 rounded-2xl px-6 py-4 text-slate-900 font-medium focus:outline-none pr-14
-                                                            ${correctIdx === i ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'}
-                                                        `}
-                                                        placeholder={`Variant ${i + 1}`}
-                                                        value={opt}
-                                                        onChange={e => {
-                                                            const newOpts = [...opts];
-                                                            newOpts[i] = e.target.value;
-                                                            setOpts(newOpts);
-                                                        }}
-                                                    />
-                                                    <button
-                                                        onClick={() => setCorrectIdx(i)}
-                                                        className={`absolute right-4 p-2 rounded-lg font-bold text-xs ${correctIdx === i ? 'text-emerald-600 bg-emerald-200' : 'text-slate-400 hover:bg-slate-100'}`}
-                                                    >
-                                                        TO'G'RI
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        {qType === 'multiple-choice' && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {opts.map((opt, i) => (
+                                                    <div key={i} className="relative flex items-center">
+                                                        <input
+                                                            className={`w-full bg-white border-2 rounded-2xl px-6 py-4 text-slate-900 font-medium focus:outline-none pr-14
+                                                                ${correctIdx === i ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'}
+                                                            `}
+                                                            placeholder={`Variant ${i + 1}`}
+                                                            value={opt}
+                                                            onChange={e => {
+                                                                const newOpts = [...opts];
+                                                                newOpts[i] = e.target.value;
+                                                                setOpts(newOpts);
+                                                            }}
+                                                        />
+                                                        <button
+                                                            onClick={() => setCorrectIdx(i)}
+                                                            className={`absolute right-4 p-2 rounded-lg font-bold text-xs ${correctIdx === i ? 'text-emerald-600 bg-emerald-200' : 'text-slate-400 hover:bg-slate-100'}`}
+                                                        >
+                                                            TO'G'RI
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {qType === 'vocabulary' && (
+                                            <div className="space-y-2 mt-4">
+                                                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-4">To'g'ri so'z</label>
+                                                <input
+                                                    className="w-full bg-emerald-50 border-2 border-emerald-200 rounded-2xl px-6 py-4 text-emerald-900 font-bold focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20"
+                                                    placeholder="Masalan: apple (Ingliz tilida, bo'sh joysiz bo'lishi tavsiya qilinadi)"
+                                                    value={acceptedAnswers}
+                                                    onChange={e => setAcceptedAnswers(e.target.value)}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="flex justify-end gap-2 mt-4">
                                         {editingIdx !== null && (
                                             <button
                                                 onClick={() => {
-                                                    setEditingIdx(null); setQText(''); setOpts(['', '', '', '']); setQTimeLimit(15);
+                                                    setEditingIdx(null); setQType('multiple-choice'); setQText(''); setOpts(['', '', '', '']); setAcceptedAnswers(''); setQTimeLimit(15);
                                                 }}
                                                 className="px-6 py-3 font-bold text-slate-500 hover:bg-slate-200 rounded-xl"
                                             >
@@ -273,8 +320,13 @@ export default function CreateVocabBattle() {
                                 {questions.map((q, i) => (
                                     <div key={i} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:border-indigo-200 transition-colors group">
                                         <div className="flex-1 min-w-0 pr-4">
-                                            <div className="text-xs font-bold text-slate-400 mb-1">{i + 1}. ({q.timeLimit}s)</div>
+                                            <div className="text-xs font-bold text-slate-400 mb-1">
+                                                {i + 1}. ({q.timeLimit}s) - <span className="text-indigo-400">{q.type === 'vocabulary' ? 'Yozish' : 'Test'}</span>
+                                            </div>
                                             <div className="font-bold text-slate-800 truncate">{q.text}</div>
+                                            {q.type === 'vocabulary' && q.acceptedAnswers && q.acceptedAnswers.length > 0 && (
+                                                <div className="text-xs font-bold text-emerald-500 mt-1">Javob: {q.acceptedAnswers[0]}</div>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                             <button onClick={() => editQuestion(i)} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg">

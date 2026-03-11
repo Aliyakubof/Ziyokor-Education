@@ -212,7 +212,7 @@ function App() {
             <Route
               path="/admin/vocab-battles"
               element={
-                <ProtectedRoute requiredRole={['admin', 'manager']}>
+                <ProtectedRoute requiredRole={['admin', 'manager', 'teacher']}>
                   <AdminVocabBattles />
                 </ProtectedRoute>
               }
@@ -220,7 +220,7 @@ function App() {
             <Route
               path="/admin/vocab-battles/create"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute requiredRole={['admin', 'teacher']}>
                   <CreateVocabBattle />
                 </ProtectedRoute>
               }
@@ -228,7 +228,7 @@ function App() {
             <Route
               path="/admin/vocab-battles/edit/:id"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute requiredRole={['admin', 'teacher']}>
                   <CreateVocabBattle />
                 </ProtectedRoute>
               }

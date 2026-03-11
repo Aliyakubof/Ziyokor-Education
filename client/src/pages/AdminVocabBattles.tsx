@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api';
 import { PlusCircle, Search, Edit2, Trash2, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../AuthContext';
 
 export default function AdminVocabBattles() {
     const navigate = useNavigate();
+    const { role } = useAuth();
     const [battles, setBattles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -43,7 +45,7 @@ export default function AdminVocabBattles() {
             <div className="max-w-6xl mx-auto space-y-8">
                 <header className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => navigate('/admin')} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
+                        <button onClick={() => navigate(role === 'admin' ? '/admin' : '/teacher')} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
                             <ArrowLeft size={20} className="text-slate-600" />
                         </button>
                         <div>

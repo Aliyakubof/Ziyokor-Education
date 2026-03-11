@@ -814,6 +814,13 @@ const TeacherDashboard = () => {
                                 <FilePlus size={18} />
                                 Test yaratish
                             </button>
+                            <button
+                                onClick={() => navigate('/admin/vocab-battles')}
+                                className="hidden md:flex items-center gap-2 px-4 py-2 bg-pink-50 text-pink-600 hover:bg-pink-100 rounded-xl transition-all font-bold text-sm border border-pink-100 shadow-sm active:scale-95"
+                            >
+                                <Plus size={18} />
+                                Vocab Battle
+                            </button>
                             <div className="text-right">
                                 <p className="text-sm font-bold text-slate-800 leading-tight">{user?.name}</p>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">

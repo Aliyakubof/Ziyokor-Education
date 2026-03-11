@@ -244,6 +244,20 @@ export default function Home() {
                         </Link>
                     )}
 
+                    {/* Vocab Battles Create - For Admin or Teacher */}
+                    {(role === 'admin' || role === 'teacher') && (
+                        <Link to="/admin/vocab-battles" className="w-full md:w-[280px] group bg-slate-50 hover:bg-white border border-slate-200 hover:border-pink-200 rounded-2xl p-8 transition-all hover:shadow-xl hover:shadow-pink-500/10 flex flex-col items-center relative overflow-hidden">
+                            <div className="bg-pink-100 text-pink-600 p-4 rounded-xl mb-6 group-hover:scale-110 transition-transform">
+                                <PlusCircle size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 mb-2">Vocab Battle yaratish</h3>
+                            <p className="text-slate-500 text-sm font-medium mb-4">Lug'at musobaqalari</p>
+                            <span className="inline-flex items-center justify-center bg-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                                Yaratish & Boshqarish
+                            </span>
+                        </Link>
+                    )}
+
                     {/* Unit Entry (Input) - ONLY FOR STUDENTS OR GUESTS (NOT TEACHERS/ADMINS) */}
                     {(role === 'student' || !isAuthenticated) && (
                         <div className="w-full md:w-[320px] bg-indigo-600 rounded-2xl p-8 text-white flex flex-col items-center relative overflow-hidden shadow-xl shadow-indigo-600/20">

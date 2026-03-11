@@ -10,6 +10,8 @@ interface VocabQuestion {
     options: string[];
     correctIndex: number;
     timeLimit: number;
+    type?: 'multiple-choice' | 'vocabulary';
+    acceptedAnswers?: string[];
 }
 
 export default function VocabularyBattleGame() {
@@ -31,6 +33,7 @@ export default function VocabularyBattleGame() {
 
     // Results tracking
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
+    const [textAnswer, setTextAnswer] = useState('');
     const [results, setResults] = useState<{ qText: string, correct: boolean, expected: string, given: string }[]>([]);
     const [consecutiveCorrects, setConsecutiveCorrects] = useState(0);
 
@@ -101,7 +104,7 @@ export default function VocabularyBattleGame() {
         const newRes = {
             qText: currentQ.text,
             correct: false,
-            expected: currentQ.options[currentQ.correctIndex],
+            expected: currentQ.type === 'vocabulary' ? (currentQ.acceptedAnswers?.[0] || '') : currentQ.options[currentQ.correctIndex],
             given: "Vaqt tugadi"
         };
         setResults(prev => [...prev, newRes]);
@@ -142,8 +145,45 @@ export default function VocabularyBattleGame() {
         }, 1500); // Wait to show red/green color
     };
 
+    const handleVocabularySubmit = () => {
+        if (selectedOption !== null) return; // Prevent double sub
+        setSelectedOption(-1); // To disable further input
+        if (timerRef.current) clearInterval(timerRef.current);
+
+        const currentQ = questions[qIndex];
+        const correctAns = (currentQ.acceptedAnswers?.[0] || '').toLowerCase().trim();
+        const studentAns = textAnswer.toLowerCase().trim();
+        const isCorrect = correctAns === studentAns;
+
+        if (isCorrect) {
+            setConsecutiveCorrects(prev => prev + 1);
+            confetti({
+                particleCount: 50,
+                spread: 40,
+                origin: { y: 0.8 },
+                colors: ['#22c55e', '#10b981', '#4ade80']
+            });
+        } else {
+            setConsecutiveCorrects(0);
+        }
+
+        const newRes = {
+            qText: currentQ.text,
+            correct: isCorrect,
+            expected: currentQ.acceptedAnswers?.[0] || '',
+            given: textAnswer || "Bo'sh"
+        };
+
+        setResults(prev => [...prev, newRes]);
+
+        setTimeout(() => {
+            moveToNext();
+        }, 1500);
+    };
+
     const moveToNext = () => {
         setSelectedOption(null);
+        setTextAnswer('');
         if (qIndex < questions.length - 1) {
             setQIndex(qIndex + 1);
         } else {
@@ -161,7 +201,9 @@ export default function VocabularyBattleGame() {
         setSubmitting(true);
         try {
             // Recalculate based on state (React batched updates safety)
-            const finalScore = results.filter(r => r.correct).length + (selectedOption === questions[qIndex]?.correctIndex ? 1 : 0);
+            const finalScore = results.filter(r => r.correct).length 
+                + (selectedOption !== null && questions[qIndex]?.type === 'multiple-choice' && selectedOption === questions[qIndex]?.correctIndex ? 1 : 0)
+                + (selectedOption !== null && questions[qIndex]?.type === 'vocabulary' && textAnswer.toLowerCase().trim() === (questions[qIndex]?.acceptedAnswers?.[0] || '').toLowerCase().trim() ? 1 : 0);
             const verifiedScore = Math.min(finalScore, questions.length); // Sanity check
 
             await apiFetch('/api/student/vocab-battles/submit', {
@@ -293,39 +335,138 @@ export default function VocabularyBattleGame() {
                     </h2>
                 </div>
 
-                {/* Options Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {currentQ.options.map((opt, i) => {
-                        let btnClass = "bg-white border-2 border-slate-200 text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 shadow-sm";
-                        let icon = null;
+                {/* Vocabulary UI */}
+                {currentQ.type === 'vocabulary' ? (
+                    (() => {
+                        const targetWord = currentQ.acceptedAnswers?.[0] || '';
+                        const currentVal = textAnswer || '';
+                        const displayChars = targetWord.split('');
 
+                        // Correctness checks for post-submit feedback
+                        let isCorrect = false;
                         if (selectedOption !== null) {
-                            if (i === currentQ.correctIndex) {
-                                btnClass = "bg-emerald-500 border-emerald-600 text-white shadow-emerald-500/40 z-10 scale-105"; // Highlight correct answer always when revealed
-                                icon = <CheckCircle2 size={24} />;
-                            } else if (i === selectedOption) {
-                                btnClass = "bg-rose-500 border-rose-600 text-white shadow-rose-500/40 opacity-90"; // Highlight wrong choice
-                                icon = <XCircle size={24} />;
-                            } else {
-                                btnClass = "bg-slate-100 border-slate-200 text-slate-400 opacity-50"; // Fade others
-                            }
+                            isCorrect = targetWord.toLowerCase().trim() === textAnswer.toLowerCase().trim();
                         }
 
                         return (
-                            <button
-                                key={i}
-                                disabled={selectedOption !== null}
-                                onClick={() => handleOptionSelect(i)}
-                                className={`
-                                    relative p-6 rounded-[2rem] text-xl font-bold transition-all duration-300 flex items-center justify-center text-center leading-tight min-h-[100px] hover:-translate-y-1 active:scale-95 shadow-lg ${btnClass}
-                                `}
-                            >
-                                {opt}
-                                {icon && <div className="absolute right-4">{icon}</div>}
-                            </button>
+                            <div className="w-full space-y-8 animate-in fade-in duration-500">
+                                <div className="mt-4 flex flex-wrap justify-center gap-1.5 w-full">
+                                    {displayChars.map((char, i) => {
+                                        if (char === ' ') {
+                                            return <div key={i} className="flex-shrink-0" style={{ width: targetWord.length > 10 ? '0.5rem' : '1.5rem' }} />;
+                                        }
+
+                                        const isAlphaNum = /[a-zA-Z0-9]/.test(char);
+                                        if (!isAlphaNum) {
+                                            return <span key={i} className="text-2xl md:text-3xl font-black text-slate-400 px-1">{char}</span>;
+                                        }
+
+                                        const boxWidth = targetWord.length > 12 ? 'w-8 sm:w-10' : 'w-10 sm:w-14';
+                                        const boxHeight = targetWord.length > 12 ? 'h-10 sm:h-12' : 'h-12 sm:h-16';
+                                        const fontSize = targetWord.length > 12 ? 'text-lg sm:text-2xl' : 'text-xl sm:text-3xl';
+
+                                        return (
+                                            <input key={i} id={`voc-box-${i}`} type="text" maxLength={1} value={currentVal[i] === ' ' ? '' : (currentVal[i] || '')}
+                                                readOnly={selectedOption !== null}
+                                                autoFocus={selectedOption === null && !displayChars.slice(0, i).some(c => /[a-zA-Z0-9]/.test(c))}
+                                                autoComplete="off"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Backspace' && (!currentVal[i] || currentVal[i] === ' ') && i > 0) {
+                                                        let prevIdx = i - 1;
+                                                        while (prevIdx >= 0 && !/[a-zA-Z0-9]/.test(targetWord[prevIdx])) prevIdx--;
+                                                        if (prevIdx >= 0) {
+                                                            const prevBox = document.getElementById(`voc-box-${prevIdx}`) as HTMLInputElement;
+                                                            prevBox?.focus();
+                                                        }
+                                                    }
+                                                    if (e.key === 'Enter') {
+                                                        handleVocabularySubmit();
+                                                    }
+                                                }}
+                                                onChange={(e) => {
+                                                    let val = e.target.value.slice(-1).toLowerCase();
+                                                    if (!val) val = ' ';
+                                                    if (val !== ' ' && !/[a-z0-9]/i.test(val)) return;
+
+                                                    const newChars = currentVal.split('');
+                                                    while (newChars.length < targetWord.length) newChars.push(' ');
+                                                    displayChars.forEach((c, idx) => {
+                                                        if (!/[a-zA-Z0-9]/.test(c)) newChars[idx] = c;
+                                                    });
+
+                                                    newChars[i] = val;
+                                                    const finalVal = newChars.join('');
+                                                    setTextAnswer(finalVal);
+
+                                                    if (val && i < targetWord.length - 1) {
+                                                        let nextIdx = i + 1;
+                                                        while (nextIdx < targetWord.length && !/[a-zA-Z0-9]/.test(targetWord[nextIdx])) nextIdx++;
+                                                        if (nextIdx < targetWord.length) {
+                                                            const nextBox = document.getElementById(`voc-box-${nextIdx}`) as HTMLInputElement;
+                                                            nextBox?.focus();
+                                                        }
+                                                    }
+                                                }}
+                                                className={`flex-shrink-0 ${boxWidth} ${boxHeight} ${fontSize} font-black text-center rounded-lg sm:rounded-2xl border-2 transition-all outline-none uppercase shadow-sm
+                                                    ${selectedOption !== null 
+                                                        ? (isCorrect ? 'bg-emerald-500 border-emerald-600 text-white shadow-emerald-500/40 z-10 scale-105' : 'bg-rose-500 border-rose-600 text-white shadow-rose-500/40 opacity-90') 
+                                                        : (currentVal[i] ? 'bg-indigo-50 border-indigo-400 text-indigo-700' : 'bg-white border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20')}
+                                                `}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                                {selectedOption !== null && !isCorrect && (
+                                    <div className="mt-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-center font-black animate-bounce">
+                                        To'g'ri: {targetWord}
+                                    </div>
+                                )}
+                                <div className="mt-8 flex justify-center">
+                                    <button 
+                                        onClick={handleVocabularySubmit} 
+                                        disabled={selectedOption !== null || !textAnswer.trim() || textAnswer.length < targetWord.length}
+                                        className="px-8 py-4 bg-indigo-600 disabled:bg-slate-300 disabled:text-slate-500 text-white font-black rounded-2xl text-lg shadow-xl shadow-indigo-500/40 transition-all hover:-translate-y-1 active:scale-95 w-full sm:w-auto"
+                                    >
+                                        TASDIQLASH
+                                    </button>
+                                </div>
+                            </div>
                         );
-                    })}
-                </div>
+                    })()
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {currentQ.options.map((opt, i) => {
+                            let btnClass = "bg-white border-2 border-slate-200 text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 shadow-sm";
+                            let icon = null;
+
+                            if (selectedOption !== null) {
+                                if (i === currentQ.correctIndex) {
+                                    btnClass = "bg-emerald-500 border-emerald-600 text-white shadow-emerald-500/40 z-10 scale-105"; // Highlight correct answer always when revealed
+                                    icon = <CheckCircle2 size={24} />;
+                                } else if (i === selectedOption) {
+                                    btnClass = "bg-rose-500 border-rose-600 text-white shadow-rose-500/40 opacity-90"; // Highlight wrong choice
+                                    icon = <XCircle size={24} />;
+                                } else {
+                                    btnClass = "bg-slate-100 border-slate-200 text-slate-400 opacity-50"; // Fade others
+                                }
+                            }
+
+                            return (
+                                <button
+                                    key={i}
+                                    disabled={selectedOption !== null}
+                                    onClick={() => handleOptionSelect(i)}
+                                    className={`
+                                        relative p-6 rounded-[2rem] text-xl font-bold transition-all duration-300 flex items-center justify-center text-center leading-tight min-h-[100px] hover:-translate-y-1 active:scale-95 shadow-lg ${btnClass}
+                                    `}
+                                >
+                                    {opt}
+                                    {icon && <div className="absolute right-4">{icon}</div>}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     );

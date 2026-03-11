@@ -1070,14 +1070,7 @@ app.put('/api/groups/:id', async (req, res) => {
     }
 });
 
-app.get('/api/groups/:teacherId', async (req, res) => {
-    try {
-        const result = await query('SELECT * FROM groups WHERE teacher_id = $1', [req.params.teacherId]);
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: 'Error fetching groups' });
-    }
-});
+
 
 app.get('/api/battles/:id/details', async (req, res) => {
     try {
