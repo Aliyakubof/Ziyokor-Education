@@ -398,8 +398,7 @@ const GroupDetails = () => {
                             <ArrowLeft size={24} />
                         </button>
                         <div>
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Guruh Tafsilotlari</h1>
-                            <p className="text-slate-500">O'quvchilar ro'yxati va test natijalari</p>
+                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">{groupName || 'Yuklanmoqda...'}</h1>
                         </div>
                     </div>
 

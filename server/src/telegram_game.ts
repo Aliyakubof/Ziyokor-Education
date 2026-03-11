@@ -398,7 +398,7 @@ export function setupTelegramGame(bot: Telegraf) {
             state.mainMessageId = msg.message_id;
         }
 
-        // Animated join timer
+        // Animated join timer without editing telegram message every second
         state.joinTimerInterval = setInterval(async () => {
             if (state.joinSecondsLeft && state.joinSecondsLeft > 0) {
                 state.joinSecondsLeft -= 1;
@@ -408,19 +408,6 @@ export function setupTelegramGame(bot: Telegraf) {
                     startGamePlay(bot, chatId);
                     return;
                 }
-
-                // Update message every second for a smooth countdown
-                try {
-                    await bot.telegram.editMessageText(chatId, state.mainMessageId, undefined, renderJoinMsg(state.joinSecondsLeft), {
-                        parse_mode: 'HTML',
-                        reply_markup: {
-                            inline_keyboard: [
-                                [{ text: "✋ Qatnashish", callback_data: "tg_join" }],
-                                [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
-                            ]
-                        }
-                    });
-                } catch (e) { }
             }
         }, 1000);
 
@@ -557,17 +544,6 @@ export function setupTelegramGame(bot: Telegraf) {
                     startGamePlay(bot, chatId);
                     return;
                 }
-                try {
-                    await bot.telegram.editMessageText(chatId, state.mainMessageId, undefined, renderJoinMsg(state.joinSecondsLeft), {
-                        parse_mode: 'HTML',
-                        reply_markup: {
-                            inline_keyboard: [
-                                [{ text: "✋ Qatnashish", callback_data: "tg_join" }],
-                                [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
-                            ]
-                        }
-                    });
-                } catch (e) { }
             }
         }, 1000);
 
@@ -799,26 +775,15 @@ async function startGamePlay(bot: Telegraf, chatId: string) {
 }
 
 async function sendCountdown(bot: Telegraf, chatId: string, msgId: number | undefined, callback: () => void) {
-    const numbers = ["3️⃣", "2️⃣", "1️⃣", "🚀 BOSHIDIK!"];
-    let i = 0;
-
-    const tick = async () => {
-        if (i < numbers.length) {
-            try {
-                if (msgId) {
-                    await limiter.schedule(() => bot.telegram.editMessageText(chatId, msgId, undefined, `Tayyorlaning...\n\n${numbers[i]}`));
-                } else {
-                    const m = await limiter.schedule(() => bot.telegram.sendMessage(chatId, `Tayyorlaning...\n\n${numbers[i]}`));
-                    msgId = m.message_id;
-                }
-            } catch (e) { } // ignore message not modified errors
-            i++;
-            setTimeout(tick, 1000);
+    try {
+        if (msgId) {
+            await limiter.schedule(() => bot.telegram.editMessageText(chatId, msgId, undefined, `Tayyorlaning...\n\n🚀 BOSHLADIK!`));
         } else {
-            callback();
+            const m = await limiter.schedule(() => bot.telegram.sendMessage(chatId, `Tayyorlaning...\n\n🚀 BOSHLADIK!`));
+            msgId = m.message_id;
         }
-    }
-    tick();
+    } catch (e) { } // ignore message not modified errors
+    callback();
 }
 
 async function sendCurrentQuestion(bot: Telegraf, chatId: string) {

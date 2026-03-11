@@ -80,7 +80,15 @@ export default function PlayerGame() {
     }, [pinFromStore]);
 
     useEffect(() => {
-        const onConnect = () => setIsConnected(true);
+        const onConnect = () => {
+            setIsConnected(true);
+            const pin = localStorage.getItem('kahoot-pin');
+            const studentId = localStorage.getItem('student-id');
+            if (pin) {
+                console.log('[Socket] Reconnected, requesting game status for pin:', pin);
+                socket.emit('player-get-status', { pin, studentId: studentId || undefined });
+            }
+        };
         const onDisconnect = () => setIsConnected(false);
 
         socket.on('connect', onConnect);
