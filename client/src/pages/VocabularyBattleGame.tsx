@@ -108,8 +108,9 @@ export default function VocabularyBattleGame() {
             expected: currentQ.type === 'vocabulary' ? (currentQ.acceptedAnswers?.[0] || '') : currentQ.options[currentQ.correctIndex],
             given: "Vaqt tugadi"
         };
-        setResults(prev => [...prev, newRes]);
-        moveToNext();
+        const updatedResults = [...results, newRes];
+        setResults(updatedResults);
+        moveToNext(updatedResults);
     };
 
     const handleOptionSelect = (optIndex: number) => {
@@ -139,10 +140,11 @@ export default function VocabularyBattleGame() {
             given: currentQ.options[optIndex]
         };
 
-        setResults(prev => [...prev, newRes]);
+        const updatedResults = [...results, newRes];
+        setResults(updatedResults);
 
         setTimeout(() => {
-            moveToNext();
+            moveToNext(updatedResults);
         }, 1500); // Wait to show red/green color
     };
 
@@ -175,37 +177,34 @@ export default function VocabularyBattleGame() {
             given: textAnswer || "Bo'sh"
         };
 
-        setResults(prev => [...prev, newRes]);
+        const updatedResults = [...results, newRes];
+        setResults(updatedResults);
 
         setTimeout(() => {
-            moveToNext();
+            moveToNext(updatedResults);
         }, 1500);
     };
 
-    const moveToNext = () => {
+    const moveToNext = (updatedResults: any[]) => {
         setSelectedOption(null);
         setTextAnswer('');
         if (qIndex < questions.length - 1) {
             setQIndex(qIndex + 1);
         } else {
-            finishGame();
+            finishGame(updatedResults);
         }
     };
 
-    const finishGame = () => {
+    const finishGame = (updatedResults: any[]) => {
         setIsFinished(true);
-        submitScore();
+        submitScore(updatedResults);
     };
 
-    const submitScore = async () => {
+    const submitScore = async (finalResults: any[]) => {
         if (submitting) return;
         setSubmitting(true);
         try {
-            // Recalculate based on state (React batched updates safety)
-            const finalScore = results.filter(r => r.correct).length 
-                + (selectedOption !== null && questions[qIndex]?.type === 'multiple-choice' && selectedOption === questions[qIndex]?.correctIndex ? 1 : 0)
-                + (selectedOption !== null && questions[qIndex]?.type === 'vocabulary' && textAnswer.toLowerCase().trim() === (questions[qIndex]?.acceptedAnswers?.[0] || '').toLowerCase().trim() ? 1 : 0);
-            const verifiedScore = Math.min(finalScore, questions.length); // Sanity check
+            const verifiedScore = finalResults.filter(r => r.correct).length;
 
             await apiFetch('/api/student/vocab-battles/submit', {
                 method: 'POST',
