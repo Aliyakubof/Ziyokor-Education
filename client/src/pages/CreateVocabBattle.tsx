@@ -58,7 +58,7 @@ export default function CreateVocabBattle() {
         setOpts(q.options && q.options.length ? q.options : ['', '', '', '']);
         setCorrectIdx(q.correctIndex || 0);
         setAcceptedAnswers(q.acceptedAnswers ? q.acceptedAnswers.join('+') : '');
-        setQTimeLimit(q.timeLimit || 15);
+        setQTimeLimit(q.timeLimit ?? 15);
         setEditingIdx(index);
     };
 
@@ -77,7 +77,7 @@ export default function CreateVocabBattle() {
             text: qText,
             options: qType === 'multiple-choice' ? [...opts] : [],
             correctIndex: qType === 'multiple-choice' ? correctIdx : -1,
-            timeLimit: Number(qTimeLimit) || 15,
+            timeLimit: isNaN(Number(qTimeLimit)) ? 15 : Number(qTimeLimit),
             type: qType,
             acceptedAnswers: qType === 'vocabulary' ? answersList : []
         };
