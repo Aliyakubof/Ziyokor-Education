@@ -128,14 +128,17 @@ export default function StudentDashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-24 md:pb-0 relative overflow-hidden">
+        <div className="min-h-screen bg-slate-50 font-sans pb-24 md:pb-12 relative overflow-hidden">
             {/* Background Gradients */}
-            <div className="absolute top-0 left-0 w-full h-[300px] bg-gradient-to-b from-indigo-900 via-indigo-800 to-transparent z-0"></div>
-            <div className="absolute top-[-50px] right-[-50px] w-64 h-64 bg-violet-600 rounded-full blur-3xl opacity-30 z-0"></div>
-            <div className="absolute top-[100px] left-[-30px] w-40 h-40 bg-blue-500 rounded-full blur-3xl opacity-20 z-0"></div>
+            <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-indigo-950 via-indigo-900 to-transparent z-0 opacity-100"></div>
+            <div className="absolute top-[-100px] right-[-100px] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] z-0"></div>
+            <div className="absolute top-[200px] left-[-100px] w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] z-0"></div>
 
-            {/* Header Section */}
-            <header className="relative z-10 px-6 pt-8 pb-6 text-white">
+            <div className="max-w-7xl mx-auto md:px-8 relative z-10">
+                <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-8 lg:pt-12">
+
+                    {/* Left Column / Header Section (Mobile: Top, Laptop: Aside) */}
+                    <header className="lg:col-span-4 px-6 pt-8 pb-6 text-white h-fit lg:sticky lg:top-8">
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-3">
                         <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border-2 border-white/30 shadow-lg overflow-hidden relative">
@@ -277,9 +280,10 @@ export default function StudentDashboard() {
                         </div>
                     </motion.div>
                 )}
-            </header>
+                    </header>
 
-            <main className="relative z-10 px-4 -mt-4 space-y-4">
+                    {/* Right Column / Main Content Area */}
+                    <main className="lg:col-span-8 px-4 -mt-4 lg:mt-0 space-y-6">
 
                 {activeTab === 'home' && (
                     <>
@@ -511,11 +515,12 @@ export default function StudentDashboard() {
                         </button>
                     </div>
                 )}
+                    </main>
+                </div>
+            </div>
 
-            </main>
-
-            {/* Bottom Navigation */}
-            <div className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 px-6 py-2 z-50 pb-safe md:pb-2">
+            {/* Bottom Navigation (Mobile Only) */}
+            <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-slate-200 px-6 py-2 z-50 pb-safe md:hidden">
                 <div className="max-w-md mx-auto flex justify-between items-center">
                     <button
                         onClick={() => setActiveTab('home')}

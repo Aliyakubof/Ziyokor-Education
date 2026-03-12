@@ -285,47 +285,52 @@ export default function VocabularyBattleGame() {
     const timePercentage = (timeLeft / (currentQ.timeLimit || 1)) * 100;
 
     return (
-        <div className="min-h-[100dvh] bg-gradient-to-b from-sky-400 via-indigo-500 to-purple-600 flex flex-col font-sans max-w-xl mx-auto w-full relative overflow-hidden">
+        <div className="min-h-[100dvh] bg-[#020617] flex flex-col font-sans max-w-xl mx-auto w-full relative overflow-hidden text-slate-100">
             {/* Animated Background Elements */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-20 -left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute bottom-40 -right-20 w-80 h-80 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-700" />
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px] animate-pulse" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/10 rounded-full blur-[100px] animate-pulse delay-1000" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.05)_0%,transparent_70%)]" />
             </div>
             {/* Combo Streak Notification */}
             {consecutiveCorrects >= 3 && !isFinished && (
-                <div className="absolute top-24 right-4 sm:top-28 sm:right-10 bg-gradient-to-tr from-orange-500 to-rose-500 text-white px-4 py-2 rounded-2xl font-black text-xl shadow-2xl shadow-orange-500/40 animate-bounce flex items-center gap-2 z-50 transform rotate-12 border-2 border-orange-300">
+                <motion.div 
+                    initial={{ scale: 0, rotate: -20 }}
+                    animate={{ scale: 1, rotate: 12 }}
+                    className="absolute top-24 right-4 sm:top-28 sm:right-10 bg-gradient-to-tr from-cyan-500 to-blue-600 text-white px-5 py-2.5 rounded-2xl font-black text-xl shadow-[0_0_30px_rgba(6,182,212,0.4)] animate-bounce flex items-center gap-2 z-50 border-2 border-white/20"
+                >
                     🔥 Combo x{consecutiveCorrects}
-                </div>
+                </motion.div>
             )}
 
             {/* Header / Top Bar */}
             <div className="flex items-center justify-between p-6 pb-2 relative z-20">
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl font-black text-white tracking-widest text-sm shadow-lg">
-                    {qIndex + 1} / {questions.length}
+                <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-2xl font-black text-blue-400 tracking-widest text-sm shadow-xl">
+                    <span className="text-white/50">{qIndex + 1}</span> / {questions.length}
                 </div>
 
                 {currentQ.timeLimit > 0 ? (
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-lg bg-white/10 backdrop-blur-md border-white/20 text-white">
-                        <Clock size={18} className="animate-pulse" />
-                        {timeLeft}s
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-xl bg-slate-900/40 backdrop-blur-xl border-white/10 text-white">
+                        <Clock size={16} className="text-cyan-400 animate-pulse" />
+                        <span className="tabular-nums">{timeLeft}s</span>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-lg bg-black/20 backdrop-blur-md border-white/10 text-white/50">
-                        <TimerOff size={18} />
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-xl bg-slate-900/20 backdrop-blur-xl border-white/5 text-white/30">
+                        <TimerOff size={16} />
                         ∞
                     </div>
                 )}
             </div>
 
-            {/* Timer Bar (Only show if enabled) */}
+            {/* Timer Bar */}
             {currentQ.timeLimit > 0 && (
                 <div className="px-6 mb-8 mt-2 relative z-20">
-                    <div className="h-2.5 w-full bg-black/20 rounded-full overflow-hidden shadow-inner flex relative border border-white/5">
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden flex relative">
                         <motion.div
                             initial={{ width: '100%' }}
                             animate={{ width: `${timePercentage}%` }}
                             transition={{ duration: 1, ease: "linear" }}
-                            className={`h-full rounded-full ${timeLeft <= 3 ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]' : timeLeft <= 7 ? 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]' : 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]'}`}
+                            className={`h-full rounded-full ${timeLeft <= 3 ? 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]' : timeLeft <= 7 ? 'bg-amber-400' : 'bg-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.6)]'}`}
                         />
                     </div>
                 </div>
@@ -334,15 +339,15 @@ export default function VocabularyBattleGame() {
             {/* Main Question Area */}
             <div className="flex-1 flex flex-col justify-center px-6 pb-12 relative z-20">
                 <motion.div 
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl p-8 rounded-[3rem] text-center transform transition-all mb-12 relative overflow-hidden"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="bg-slate-900/50 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] p-10 rounded-[3rem] text-center mb-12 relative overflow-hidden"
                 >
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-                    <div className="text-[10px] font-black tracking-widest uppercase text-white/50 mb-4">
+                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
+                    <div className="text-[10px] font-black tracking-[0.2em] uppercase text-cyan-500/60 mb-6">
                         TARJIMA QILING
                     </div>
-                    <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-tight drop-shadow-lg">
+                    <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-tight">
                         {currentQ.text}
                     </h2>
                 </motion.div>
@@ -428,10 +433,10 @@ export default function VocabularyBattleGame() {
                                                         }
                                                     }
                                                 }}
-                                                className={`flex-shrink-0 ${boxWidth} ${boxHeight} ${fontSize} font-black text-center rounded-lg sm:rounded-2xl border-2 transition-all outline-none uppercase shadow-sm
+                                                className={`flex-shrink-0 ${boxWidth} ${boxHeight} ${fontSize} font-black text-center rounded-lg sm:rounded-2xl border-2 transition-all outline-none uppercase shadow-lg
                                                     ${selectedOption !== null 
-                                                        ? (isCorrect ? 'bg-emerald-500 border-emerald-600 text-white shadow-emerald-500/40 z-10 scale-105' : 'bg-rose-500 border-rose-600 text-white shadow-rose-500/40 opacity-90') 
-                                                        : (currentVal[i] ? 'bg-indigo-50 border-indigo-400 text-indigo-700' : 'bg-white border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20')}
+                                                        ? (isCorrect ? 'bg-emerald-500 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] z-10 scale-105' : 'bg-rose-500 border-rose-400 text-white shadow-none opacity-50') 
+                                                        : (currentVal[i] ? 'bg-blue-900/30 border-blue-500 text-cyan-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-slate-900/40 border-white/10 text-white focus:border-cyan-500 focus:bg-slate-900/80')}
                                                 `}
                                             />
                                         );
@@ -446,7 +451,7 @@ export default function VocabularyBattleGame() {
                                     <button 
                                         onClick={handleVocabularySubmit} 
                                         disabled={selectedOption !== null || !textAnswer.trim()}
-                                        className="px-8 py-5 bg-white text-indigo-600 disabled:bg-white/10 disabled:text-white/30 font-black rounded-[2rem] text-xl shadow-2xl transition-all hover:-translate-y-1 active:scale-95 w-full shadow-indigo-900/40"
+                                        className="px-8 py-5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 font-black rounded-3xl text-xl shadow-[0_10px_30px_rgba(37,99,235,0.3)] transition-all hover:shadow-[0_15px_40px_rgba(37,99,235,0.5)] hover:-translate-y-1 active:scale-95 w-full uppercase tracking-widest"
                                     >
                                         TASDIQLASH
                                     </button>
@@ -457,18 +462,18 @@ export default function VocabularyBattleGame() {
                 ) : (
                     <div className="grid grid-cols-1 gap-4">
                         {currentQ.options.map((opt: string, i: number) => {
-                            let btnClass = "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 shadow-xl";
+                            let btnClass = "bg-slate-900/40 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-800/60 hover:border-cyan-500/50 hover:text-white shadow-xl";
                             let icon = null;
 
                             if (selectedOption !== null) {
                                 if (i === currentQ.correctIndex) {
-                                    btnClass = "bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/50 z-10 scale-105 ring-4 ring-emerald-500/20";
-                                    icon = <CheckCircle2 size={24} />;
+                                    btnClass = "bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.2)] z-10 scale-105";
+                                    icon = <CheckCircle2 size={24} className="text-emerald-400" />;
                                 } else if (i === selectedOption) {
-                                    btnClass = "bg-rose-500 border-rose-400 text-white shadow-rose-500/50 opacity-90 scale-95";
-                                    icon = <XCircle size={24} />;
+                                    btnClass = "bg-rose-500/20 border-rose-500 text-rose-400 opacity-90 scale-95";
+                                    icon = <XCircle size={24} className="text-rose-400" />;
                                 } else {
-                                    btnClass = "bg-black/20 border-white/5 text-white/30 opacity-50";
+                                    btnClass = "bg-slate-950/40 border-white/5 text-slate-600 opacity-40";
                                 }
                             }
 
@@ -481,11 +486,11 @@ export default function VocabularyBattleGame() {
                                     disabled={selectedOption !== null}
                                     onClick={() => handleOptionSelect(i)}
                                     className={`
-                                        relative p-6 rounded-[2.5rem] text-xl font-bold transition-all duration-300 flex items-center justify-center text-center leading-tight min-h-[90px] hover:-translate-y-1 active:scale-95 ${btnClass}
+                                        relative p-6 rounded-[2rem] text-xl font-bold transition-all duration-300 flex items-center justify-center text-center leading-tight min-h-[90px] border-2 shadow-2xl hover:-translate-y-1 active:scale-95 ${btnClass}
                                     `}
                                 >
-                                    {opt}
-                                    {icon && <div className="absolute right-6">{icon}</div>}
+                                    <span className="relative z-10">{opt}</span>
+                                    {icon && <div className="absolute right-6 z-20">{icon}</div>}
                                 </motion.button>
                             );
                         })}
