@@ -186,3 +186,83 @@ export const generateQuizResultPDF = (
         doc.end();
     });
 };
+
+export const generateGroupContactPDF = (
+    groupName: string,
+    students: any[]
+): Promise<Buffer> => {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 40 });
+        const buffers: Buffer[] = [];
+
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+        doc.on('error', reject);
+
+        const path = require('path');
+        const fs = require('fs');
+        const regularFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf'))
+            ? path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf')
+            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Regular.ttf');
+
+        const boldFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf'))
+            ? path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf')
+            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Bold.ttf');
+
+        const hasRegular = fs.existsSync(regularFontPath);
+        const hasBold = fs.existsSync(boldFontPath);
+
+        if (hasRegular) doc.registerFont('CustomRegular', regularFontPath);
+        if (hasBold) doc.registerFont('CustomBold', boldFontPath);
+
+        const fontRegular = hasRegular ? 'CustomRegular' : 'Helvetica';
+        const fontBold = hasBold ? 'CustomBold' : 'Helvetica-Bold';
+
+        doc.fontSize(20).font(fontBold).text('Ziyokor Education', { align: 'center' });
+        doc.fontSize(14).font(fontRegular).text('Guruh o\'quvchilari kontakt ma\'lumotlari', { align: 'center' });
+        doc.moveDown();
+
+        doc.fontSize(12).font(fontBold).text(`Guruh: ${groupName}`);
+        doc.fontSize(10).font(fontRegular).text(`Sana: ${new Date().toLocaleDateString('uz-UZ')}`);
+        doc.moveDown();
+
+        // Table Header
+        const tableTop = doc.y;
+        const col1 = 40;
+        const col2 = 60;
+        const col3 = 240;
+        const col4 = 340;
+        const col5 = 440;
+
+        doc.font(fontBold).fontSize(9);
+        doc.text('#', col1, tableTop);
+        doc.text('F.I.SH', col2, tableTop);
+        doc.text('O\'quvchi Tel', col3, tableTop);
+        doc.text('Ota-ona', col4, tableTop);
+        doc.text('Ota-ona Tel', col5, tableTop);
+
+        doc.moveTo(col1, tableTop + 12).lineTo(560, tableTop + 12).stroke();
+        doc.font(fontRegular);
+
+        let y = tableTop + 20;
+
+        students.forEach((s, index) => {
+            if (y > 700) {
+                doc.addPage();
+                y = 40;
+            }
+
+            doc.text((index + 1).toString(), col1, y);
+            doc.text(s.name, col2, y, { width: 170 });
+            doc.text(s.phone || '-', col3, y);
+            doc.text(s.parent_name || '-', col4, y, { width: 90 });
+            doc.text(s.parent_phone || '-', col5, y);
+
+            y += 25;
+            doc.moveTo(40, y - 5).lineTo(560, y - 5).strokeColor('#eeeeee').lineWidth(0.5).stroke();
+            doc.strokeColor('black');
+        });
+
+        doc.end();
+    });
+};

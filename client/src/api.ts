@@ -1,4 +1,5 @@
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
+export const API_URL = import.meta.env.VITE_BACKEND_URL || "";
+const BACKEND_URL = API_URL;
 
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     const url = endpoint.startsWith('http') ? endpoint : `${BACKEND_URL}${endpoint}`;

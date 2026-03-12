@@ -19,7 +19,7 @@ import { query } from './db';
 import { schema } from './schema';
 import { Player, Question } from './types';
 import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyReports, sendBattleAlert } from './bot';
-import { generateQuizResultPDF } from './pdfGenerator';
+import { generateQuizResultPDF, generateGroupContactPDF } from './pdfGenerator';
 import { normalizeAnswer, checkAnswer, countCorrectParts } from './utils';
 import { checkAnswerWithAI, checkAnswersWithAIBatch } from './aiChecker';
 import { startCronJobs } from './cron';
@@ -537,6 +537,34 @@ app.get('/api/admin/groups', async (req, res) => {
     }
 });
 
+app.get('/api/groups/:groupId/contact-info-pdf', async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        
+        // Fetch group name
+        const groupRes = await query('SELECT name FROM groups WHERE id = $1', [groupId]);
+        if (groupRes.rowCount === 0) return res.status(404).json({ error: 'Guruh topilmadi' });
+        const groupName = groupRes.rows[0].name;
+
+        // Fetch students
+        const studentsRes = await query(`
+            SELECT name, phone, parent_name, parent_phone 
+            FROM students 
+            WHERE group_id = $1 
+            ORDER BY name ASC
+        `, [groupId]);
+
+        const pdfBuffer = await generateGroupContactPDF(groupName, studentsRes.rows);
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="Contacts_${groupName.replace(/\s+/g, '_')}.pdf"`);
+        res.send(pdfBuffer);
+    } catch (err: any) {
+        console.error('Error generating contact PDF:', err);
+        res.status(500).json({ error: 'PDF yaratishda xatolik', details: err.message });
+    }
+});
+
 // Admin: Students
 app.get('/api/admin/students', async (req, res) => {
     try {
@@ -580,7 +608,7 @@ app.get('/api/admin/vocab-battles', requireRole('admin', 'manager'), async (req,
     }
 });
 
-app.post('/api/admin/vocab-battles', requireRole('admin'), async (req, res) => {
+app.post('/api/admin/vocab-battles', requireRole('admin', 'teacher'), async (req, res) => {
     try {
         const { daraja, level, title, questions } = req.body;
         const id = uuidv4();
@@ -595,7 +623,7 @@ app.post('/api/admin/vocab-battles', requireRole('admin'), async (req, res) => {
     }
 });
 
-app.put('/api/admin/vocab-battles/:id', requireRole('admin'), async (req, res) => {
+app.put('/api/admin/vocab-battles/:id', requireRole('admin', 'teacher'), async (req, res) => {
     try {
         const { id } = req.params;
         const { daraja, level, title, questions } = req.body;
@@ -610,7 +638,7 @@ app.put('/api/admin/vocab-battles/:id', requireRole('admin'), async (req, res) =
     }
 });
 
-app.get('/api/admin/vocab-battles/:id', requireRole('admin', 'manager'), async (req, res) => {
+app.get('/api/admin/vocab-battles/:id', requireRole('admin', 'manager', 'teacher'), async (req, res) => {
     try {
         const { id } = req.params;
         const result = await query('SELECT * FROM vocabulary_battles WHERE id = $1', [id]);
@@ -622,7 +650,7 @@ app.get('/api/admin/vocab-battles/:id', requireRole('admin', 'manager'), async (
     }
 });
 
-app.delete('/api/admin/vocab-battles/:id', requireRole('admin'), async (req, res) => {
+app.delete('/api/admin/vocab-battles/:id', requireRole('admin', 'teacher'), async (req, res) => {
     try {
         const { id } = req.params;
         await query('DELETE FROM vocabulary_battles WHERE id = $1', [id]);

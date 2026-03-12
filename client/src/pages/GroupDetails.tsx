@@ -5,6 +5,10 @@ import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capawesome-team/capacitor-file-opener';
+import { Capacitor } from '@capacitor/core';
+import { API_URL } from '../api';
 
 interface GameResult {
     id: string;
@@ -375,12 +379,79 @@ const GroupDetails = () => {
             }
 
             const safeGroupName = gName.replace(/[^a-zA-Z0-9_]/g, '_');
-            doc.save(`Aloqa_${safeGroupName}_${filter}_${Date.now()}.pdf`);
+            const fileName = `Aloqa_${safeGroupName}_${filter}_${Date.now()}.pdf`;
+
+            if (Capacitor.isNativePlatform()) {
+                const pdfBase64 = doc.output('datauristring').split(',')[1];
+                const savedFile = await Filesystem.writeFile({
+                    path: fileName,
+                    data: pdfBase64,
+                    directory: Directory.Documents,
+                });
+                await FileOpener.openFile({
+                    path: savedFile.uri,
+                });
+            } else {
+                doc.save(fileName);
+            }
         } catch (err) {
             console.error('PDF export error:', err);
             alert("PDF yaratishda xatolik yuz berdi");
         } finally {
             setPdfLoading(false);
+        }
+    };
+
+    const downloadContactListPdf = async () => {
+        setPdfLoading(true);
+        try {
+            const fileName = `Contacts_${groupName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+            const url = `${API_URL}/api/groups/${groupId}/contact-info-pdf`;
+
+            if (Capacitor.isNativePlatform()) {
+                // For APK: Download via blob and save to filesystem
+                const response = await fetch(url, {
+                    headers: {
+                        'x-user-role': role || '',
+                        'x-user-phone': localStorage.getItem('userPhone') || ''
+                    }
+                });
+                const blob = await response.blob();
+                
+                // Convert blob to base64
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = async () => {
+                    const base64data = (reader.result as string).split(',')[1];
+                    
+                    const savedFile = await Filesystem.writeFile({
+                        path: fileName,
+                        data: base64data,
+                        directory: Directory.Documents,
+                    });
+
+                    await FileOpener.openFile({
+                        path: savedFile.uri,
+                    });
+                };
+            } else {
+                // Web download
+                const response = await apiFetch(url);
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.setAttribute('download', fileName);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            }
+        } catch (err) {
+            console.error('Contact PDF error:', err);
+            alert("PDF yuklab olishda xatolik");
+        } finally {
+            setPdfLoading(false);
+            setIsPdfModalOpen(false);
         }
     };
 
@@ -960,6 +1031,21 @@ const GroupDetails = () => {
                                     <p className="text-xs text-slate-400">Barcha bog'lanishlar tarixi</p>
                                 </div>
                             </button>
+
+                            <div className="pt-4 border-t border-slate-100 mt-2">
+                                <button
+                                    onClick={downloadContactListPdf}
+                                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-lg shadow-indigo-200 group"
+                                >
+                                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                                        <Download size={20} className="text-white" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="font-bold text-sm">📋 To'liq kontaktlar</p>
+                                        <p className="text-xs text-white/70">Guruh o'quvchilari ma'lumotlari</p>
+                                    </div>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

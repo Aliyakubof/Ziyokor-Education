@@ -90,9 +90,10 @@ export default function VocabularyBattleLevels() {
                         </div>
 
                         {/* Staggered nodes */}
-                        <div className="flex flex-col-reverse w-full relative z-10 space-y-reverse space-y-10 sm:space-y-12 pb-16 pt-8">
+                        <div className="flex flex-col w-full relative z-10 space-y-10 sm:space-y-12 pb-16 pt-8">
                             {mapNodes.map((node, i) => {
-                                const offsetClass = i % 2 === 0 ? 'mr-auto ml-8 sm:ml-16' : 'ml-auto mr-8 sm:mr-16';
+                                // Reverse direction for staggering if needed, since i is now 0-29 (top to bottom)
+                                const offsetClass = i % 2 !== 0 ? 'mr-auto ml-8 sm:ml-16' : 'ml-auto mr-8 sm:mr-16';
                                 return (
                                     <div key={node.levelNumber} className={`relative group w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 ${offsetClass}`}>
                                         <button
