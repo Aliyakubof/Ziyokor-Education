@@ -18,7 +18,12 @@ export const checkAnswer = (studentAns: string | number, acceptedAnswers: string
     const joinedSequence = normalizeAnswer(acceptedAnswers.join(" "));
     const isSequenceMatch = acceptedAnswers.length > 1 && joinedSequence === normalized;
 
-    return isSynonymMatch || isSequenceMatch;
+    // 3. Spaceless Check: Does input (without spaces) match any accepted answer (without spaces)?
+    // This handles cases like "apple pie" vs "applepie"
+    const spacelessNormalized = normalized.replace(/\s/g, "");
+    const isSpacelessMatch = acceptedAnswers.some((ans: string) => normalizeAnswer(ans).replace(/\s/g, "") === spacelessNormalized);
+
+    return isSynonymMatch || isSequenceMatch || isSpacelessMatch;
 };
 
 export const countCorrectParts = (studentAns: string | number, acceptedAnswers: string[]): number => {

@@ -130,10 +130,11 @@ export async function checkAnswersWithAIBatch(
 MUHIM QOIDALAR:
 1. Agar "To'g'ri javob(lar)" ko'rsatilgan bo'lsa, o'quvchi javobi shu javob(lar) bilan MAZMUN jihatdan mos kelishini tekshiring.
 2. MA'NO va MAZMUN asosiy mezon. Yengil imlo xatolari (typos, harf tushib qolishi yoki ortiqcha harf) yoki kichik grammatik kamchiliklar javobni noto'g'ri deyishga sabab bo'lmasligi kerak.
-3. Agar o'quvchi javobida 1-2 ta harf tushib qolgan yoki adashgan bo'lsa (typo), uni TO'G'RI deb hisoblang.
-4. Faqat savolga mutlaqo aloqasiz, teskari ma'noli yoki qo'pol xatoli javoblarni NOTO'G'RI deb belgilang.
-5. Har bir javob uchun contentScore (0-100) va grammarScore (0-100) bering. Kichik typo bo'lsa, contentScore 100 bo'lishi mumkin.
-6. Har bir javob uchun o'zbek tilida juda qisqa, foydali feedback yozing (agar typo bo'lsa, to'g'ri yozilishini eslatib o'ting).
+3. Agar o'quvchi javobida 1-2 ta harf tushib qolgan, adashgan (typo) yoki bo'shliqlar (spaces) noto'g'ri qo'yilgan bo'lsa ham (masalan, "applepie" vs "apple pie"), uni TO'G'RI deb hisoblang.
+4. Bo'shliqlar, tinish belgilari va harflarning katta-kichikligi (case-sensitivity) baholashga ta'sir qilmasligi kerak.
+5. Faqat savolga mutlaqo aloqasiz, teskari ma'noli yoki qo'pol xatoli javoblarni NOTO'G'RI deb belgilang.
+6. Har bir javob uchun contentScore (0-100) va grammarScore (0-100) bering. Kichik typo yoki bo'shliq xatosi bo'lsa ham, agar ma'no to'g'ri bo'lsa, isCorrect har doim TRUE va contentScore 100 bo'lishi kerak.
+7. Har bir javob uchun o'zbek tilida juda qisqa, foydali feedback yozing (agar typo yoki bo'shliq xatosi bo'lsa, to'g'ri ko'rinishini eslatib o'ting).
 
 Faqat quyidagi JSON formatida javob bering:
 {
