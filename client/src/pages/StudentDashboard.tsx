@@ -287,8 +287,7 @@ export default function StudentDashboard() {
                         <div className="bg-white rounded-3xl p-6 shadow-xl shadow-indigo-900/5 border border-white relative overflow-hidden group">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
                             <h2 className="text-lg font-black text-slate-900 mb-4 relative z-10 flex items-center gap-2">
-                                <Gamepad2 className="text-indigo-600" />
-                                O'yinga Kirish
+                                Testga Kirish
                             </h2>
                             <form onSubmit={handleJoinGame} className="relative z-10">
                                 <input

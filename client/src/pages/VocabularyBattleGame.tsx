@@ -281,10 +281,16 @@ export default function VocabularyBattleGame() {
     }
 
     const currentQ = questions[qIndex];
-    const timePercentage = (timeLeft / currentQ.timeLimit) * 100;
+    if (!currentQ) return null;
+    const timePercentage = (timeLeft / (currentQ.timeLimit || 1)) * 100;
 
     return (
-        <div className="min-h-[100dvh] bg-slate-50 flex flex-col font-sans max-w-xl mx-auto w-full relative overflow-hidden">
+        <div className="min-h-[100dvh] bg-gradient-to-b from-sky-400 via-indigo-500 to-purple-600 flex flex-col font-sans max-w-xl mx-auto w-full relative overflow-hidden">
+            {/* Animated Background Elements */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute top-20 -left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse" />
+                <div className="absolute bottom-40 -right-20 w-80 h-80 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-700" />
+            </div>
             {/* Combo Streak Notification */}
             {consecutiveCorrects >= 3 && !isFinished && (
                 <div className="absolute top-24 right-4 sm:top-28 sm:right-10 bg-gradient-to-tr from-orange-500 to-rose-500 text-white px-4 py-2 rounded-2xl font-black text-xl shadow-2xl shadow-orange-500/40 animate-bounce flex items-center gap-2 z-50 transform rotate-12 border-2 border-orange-300">
@@ -293,47 +299,53 @@ export default function VocabularyBattleGame() {
             )}
 
             {/* Header / Top Bar */}
-            <div className="flex items-center justify-between p-6 pb-2 relative z-10">
-                <div className="bg-white/80 backdrop-blur border border-slate-200 px-4 py-2 rounded-2xl font-black text-slate-800 tracking-widest text-sm shadow-sm">
+            <div className="flex items-center justify-between p-6 pb-2 relative z-20">
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl font-black text-white tracking-widest text-sm shadow-lg">
                     {qIndex + 1} / {questions.length}
                 </div>
 
                 {currentQ.timeLimit > 0 ? (
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-sm bg-white border-slate-200 text-slate-600">
-                        <Clock size={18} />
-                        Taymer
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-lg bg-white/10 backdrop-blur-md border-white/20 text-white">
+                        <Clock size={18} className="animate-pulse" />
+                        {timeLeft}s
                     </div>
                 ) : (
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-sm bg-slate-800 border-slate-700 text-white">
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-lg bg-black/20 backdrop-blur-md border-white/10 text-white/50">
                         <TimerOff size={18} />
-                        Taymer: Yo'q
+                        ∞
                     </div>
                 )}
             </div>
 
             {/* Timer Bar (Only show if enabled) */}
             {currentQ.timeLimit > 0 && (
-                <div className="px-6 mb-8 mt-2">
-                    <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden shadow-inner flex relative">
-                        <div
-                            className={`h-full rounded-full transition-all duration-1000 ease-linear ${timeLeft <= 3 ? 'bg-rose-500' : timeLeft <= 7 ? 'bg-amber-400' : 'bg-emerald-500'}`}
-                            style={{ width: `${timePercentage}%` }}
+                <div className="px-6 mb-8 mt-2 relative z-20">
+                    <div className="h-2.5 w-full bg-black/20 rounded-full overflow-hidden shadow-inner flex relative border border-white/5">
+                        <motion.div
+                            initial={{ width: '100%' }}
+                            animate={{ width: `${timePercentage}%` }}
+                            transition={{ duration: 1, ease: "linear" }}
+                            className={`h-full rounded-full ${timeLeft <= 3 ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]' : timeLeft <= 7 ? 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]' : 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]'}`}
                         />
                     </div>
-                    <div className="text-center mt-2 font-black text-slate-400 text-sm">{timeLeft}s</div>
                 </div>
             )}
 
             {/* Main Question Area */}
-            <div className="flex-1 flex flex-col justify-center px-6 pb-12">
-                <div className="bg-white border-2 border-slate-100 shadow-xl shadow-indigo-100/50 p-8 rounded-[3rem] text-center transform transition-all mb-12 relative">
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-black tracking-widest uppercase px-4 py-1.5 rounded-full shadow-md">
+            <div className="flex-1 flex flex-col justify-center px-6 pb-12 relative z-20">
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl p-8 rounded-[3rem] text-center transform transition-all mb-12 relative overflow-hidden"
+                >
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                    <div className="text-[10px] font-black tracking-widest uppercase text-white/50 mb-4">
                         TARJIMA QILING
                     </div>
-                    <h2 className="text-4xl sm:text-5xl font-black text-slate-800 tracking-tight leading-tight mt-4">
+                    <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-tight drop-shadow-lg">
                         {currentQ.text}
                     </h2>
-                </div>
+                </motion.div>
 
                 {/* Vocabulary UI */}
                 {currentQ.type === 'vocabulary' ? (
@@ -352,10 +364,10 @@ export default function VocabularyBattleGame() {
                             <motion.div 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="w-full space-y-8 animate-in fade-in duration-500"
+                                className="w-full space-y-8"
                             >
-                                <div className="mt-4 flex flex-nowrap justify-start md:justify-center gap-2 w-full overflow-x-auto pb-4 scroll-hide items-center touch-pan-x">
-                                    {displayChars.map((char, i) => {
+                                <div className="mt-4 flex flex-wrap justify-center gap-2 w-full pb-4 items-center">
+                                    {displayChars.map((char: string, i: number) => {
                                         if (char === ' ') {
                                             return <div key={i} className="flex-shrink-0" style={{ width: targetWord.length > 10 ? '0.5rem' : '1.5rem' }} />;
                                         }
@@ -399,7 +411,7 @@ export default function VocabularyBattleGame() {
 
                                                     const newChars = currentVal.split('');
                                                     while (newChars.length < targetWord.length) newChars.push(' ');
-                                                    displayChars.forEach((c, idx) => {
+                                                    displayChars.forEach((c: string, idx: number) => {
                                                         if (!/[a-zA-Z0-9]/.test(c)) newChars[idx] = c;
                                                     });
 
@@ -433,8 +445,8 @@ export default function VocabularyBattleGame() {
                                 <div className="mt-8 flex justify-center">
                                     <button 
                                         onClick={handleVocabularySubmit} 
-                                        disabled={selectedOption !== null || !textAnswer.trim() || textAnswer.length < targetWord.length}
-                                        className="px-8 py-4 bg-indigo-600 disabled:bg-slate-300 disabled:text-slate-500 text-white font-black rounded-2xl text-lg shadow-xl shadow-indigo-500/40 transition-all hover:-translate-y-1 active:scale-95 w-full sm:w-auto"
+                                        disabled={selectedOption !== null || !textAnswer.trim()}
+                                        className="px-8 py-5 bg-white text-indigo-600 disabled:bg-white/10 disabled:text-white/30 font-black rounded-[2rem] text-xl shadow-2xl transition-all hover:-translate-y-1 active:scale-95 w-full shadow-indigo-900/40"
                                     >
                                         TASDIQLASH
                                     </button>
@@ -443,35 +455,38 @@ export default function VocabularyBattleGame() {
                         );
                     })()
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {currentQ.options.map((opt, i) => {
-                            let btnClass = "bg-white border-2 border-slate-200 text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 shadow-sm";
+                    <div className="grid grid-cols-1 gap-4">
+                        {currentQ.options.map((opt: string, i: number) => {
+                            let btnClass = "bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 shadow-xl";
                             let icon = null;
 
                             if (selectedOption !== null) {
                                 if (i === currentQ.correctIndex) {
-                                    btnClass = "bg-emerald-500 border-emerald-600 text-white shadow-emerald-500/40 z-10 scale-105"; // Highlight correct answer always when revealed
+                                    btnClass = "bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/50 z-10 scale-105 ring-4 ring-emerald-500/20";
                                     icon = <CheckCircle2 size={24} />;
                                 } else if (i === selectedOption) {
-                                    btnClass = "bg-rose-500 border-rose-600 text-white shadow-rose-500/40 opacity-90"; // Highlight wrong choice
+                                    btnClass = "bg-rose-500 border-rose-400 text-white shadow-rose-500/50 opacity-90 scale-95";
                                     icon = <XCircle size={24} />;
                                 } else {
-                                    btnClass = "bg-slate-100 border-slate-200 text-slate-400 opacity-50"; // Fade others
+                                    btnClass = "bg-black/20 border-white/5 text-white/30 opacity-50";
                                 }
                             }
 
                             return (
-                                <button
+                                <motion.button
                                     key={i}
+                                    initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: i * 0.1 }}
                                     disabled={selectedOption !== null}
                                     onClick={() => handleOptionSelect(i)}
                                     className={`
-                                        relative p-6 rounded-[2rem] text-xl font-bold transition-all duration-300 flex items-center justify-center text-center leading-tight min-h-[100px] hover:-translate-y-1 active:scale-95 shadow-lg ${btnClass}
+                                        relative p-6 rounded-[2.5rem] text-xl font-bold transition-all duration-300 flex items-center justify-center text-center leading-tight min-h-[90px] hover:-translate-y-1 active:scale-95 ${btnClass}
                                     `}
                                 >
                                     {opt}
-                                    {icon && <div className="absolute right-4">{icon}</div>}
-                                </button>
+                                    {icon && <div className="absolute right-6">{icon}</div>}
+                                </motion.button>
                             );
                         })}
                     </div>
