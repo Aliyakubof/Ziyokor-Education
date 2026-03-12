@@ -386,7 +386,10 @@ export default function PlayerGame() {
             const currentAnswersList: string[] = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
             // Pad to full length
             while (currentAnswersList.length < placeholders.length) currentAnswersList.push('');
-            const isCorrect = isReview && countCorrectParts(playerAns, question.acceptedAnswers || []) === (question.acceptedAnswers?.length || 0);
+            
+            const earned = countCorrectParts(playerAns, question.acceptedAnswers || []);
+            const total = question.acceptedAnswers?.length || 0;
+            const isAllCorrect = earned === total && total > 0;
 
             // Which words are already used in blanks
             const usedWords = new Set(currentAnswersList.filter(Boolean));
@@ -416,7 +419,12 @@ export default function PlayerGame() {
             return (
                 <div className="w-full max-w-4xl mx-auto space-y-6">
                     <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
-                        {isReview && <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isCorrect ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{isCorrect ? "TO'G'RI!" : 'XATO!'}</div>}
+                        {isReview && (
+                            <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isAllCorrect ? 'bg-emerald-50 text-emerald-600' : (earned > 0 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600')}`}>
+                                NATIJA: {earned}/{total}
+                            </div>
+                        )}
+
                         <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">Fill in the blanks from the box</h2>
 
                         {/* Word Box - clickable words */}
@@ -480,7 +488,7 @@ export default function PlayerGame() {
                                 </span>
                             ))}
                         </div>
-                        {isReview && !isCorrect && (
+                        {isReview && !isAllCorrect && (
                             <div className="mt-8 p-4 bg-indigo-50 rounded-2xl text-indigo-600 font-bold text-center">
                                 To'g'ri: {question.acceptedAnswers?.join(', ')}
                             </div>
@@ -492,12 +500,19 @@ export default function PlayerGame() {
 
         if (question.type === 'matching') {
             const currentAnswersList = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
-            const isCorrect = isReview && countCorrectParts(playerAns, question.acceptedAnswers || []) === (question.acceptedAnswers?.length || 0);
+            const earned = countCorrectParts(playerAns, question.acceptedAnswers || []);
+            const total = question.acceptedAnswers?.length || 0;
+            const isAllCorrect = earned === total && total > 0;
 
             return (
                 <div className="w-full max-w-4xl mx-auto space-y-6">
                     <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
-                        {isReview && <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isCorrect ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{isCorrect ? "TO'G'RI!" : 'XATO!'}</div>}
+                        {isReview && (
+                            <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isAllCorrect ? 'bg-emerald-50 text-emerald-600' : (earned > 0 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600')}`}>
+                                NATIJA: {earned}/{total}
+                            </div>
+                        )}
+
                         <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">Match the items</h2>
 
                         <div className="space-y-4">
@@ -531,7 +546,7 @@ export default function PlayerGame() {
                                 </div>
                             ))}
                         </div>
-                        {isReview && !isCorrect && (
+                        {isReview && !isAllCorrect && (
                             <div className="mt-8 p-4 bg-indigo-50 rounded-2xl text-indigo-600 font-bold text-center">
                                 To'g'ri tartib: {question.acceptedAnswers?.join(', ')}
                             </div>

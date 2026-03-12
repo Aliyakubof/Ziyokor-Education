@@ -742,15 +742,23 @@ app.post('/api/student/quiz/submit', async (req, res) => {
                 }
             }
 
+            let feedback = isPending ? "AI tekshirmoqda..." : (isCorrect ? "Barakalla! To'g'ri." : "Afsuski, noto'g'ri.");
+            
+            if (!isPending && (q.type === 'matching' || q.type === 'word-box')) {
+                const totalParts = q.acceptedAnswers ? q.acceptedAnswers.length : 0;
+                feedback = `${currentScore}/${totalParts} to'g'ri topildi.`;
+            }
+
             results.push({
                 question: q.text,
                 studentAnswer: studentAns,
                 isCorrect,
                 score: currentScore,
-                feedback: isPending ? "AI tekshirmoqda..." : (isCorrect ? "Barakalla! To'g'ri." : "Afsuski, noto'g'ri."),
+                feedback,
                 pending: isPending
             });
         }
+
 
         // Calculate max possible score
         let maxScore = 0;
@@ -799,12 +807,14 @@ app.post('/api/student/quiz/submit', async (req, res) => {
                 }
             })().catch(e => console.error('[Background Solo Task] Error:', e));
 
-            // Return immediate results to student without score details
-            res.json({ results: results.map(r => ({ ...r, score: 0, isCorrect: false })), pending: true, hidden: true });
+            // Return immediate results to student
+            const percentage = maxScore > 0 ? Math.round((immediateScore / maxScore) * 100) : 0;
+            res.json({ results, pending: true, hidden: false, immediateScore, maxScore, percentage });
         } else {
             // NO AI checks needed: finish immediately
             await notifyTeacherOfSoloResult(studentId, quiz.title, immediateScore, maxScore);
-            res.json({ results: results.map(r => ({ ...r, score: 0, isCorrect: false })), pending: false, hidden: true });
+            const percentage = maxScore > 0 ? Math.round((immediateScore / maxScore) * 100) : 0;
+            res.json({ results, pending: false, hidden: false, immediateScore, maxScore, percentage });
         }
 
     } catch (err) {

@@ -236,7 +236,9 @@ export default function SoloQuiz() {
                                     <Zap size={40} className="fill-indigo-600" />
                                 </div>
                                 <h2 className="text-2xl font-black text-slate-800 mb-1">Natija</h2>
-                                <div className="text-5xl font-black text-indigo-600 mb-2">{results.score} XP</div>
+                                <div className="text-5xl font-black text-indigo-600 mb-2">
+                                    {results.immediateScore} / {results.maxScore}
+                                </div>
                                 <div className={`inline-block px-4 py-2 rounded-2xl text-sm font-black uppercase tracking-widest mb-6 ${results.percentage > 59
                                     ? 'bg-emerald-100 text-emerald-600'
                                     : 'bg-red-100 text-red-600'}`}>
@@ -263,11 +265,19 @@ export default function SoloQuiz() {
                             <h3 className="font-bold text-slate-400 uppercase text-xs tracking-widest pl-2">Savollar tahlili</h3>
                             {results.results.map((r: any, i: number) => (
                                 <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 flex gap-3">
-                                    {r.isCorrect ? <CheckCircle className="text-emerald-500 shrink-0" /> : <XCircle className="text-red-500 shrink-0" />}
+                                    {r.isCorrect ? (
+                                        <CheckCircle className="text-emerald-500 shrink-0" />
+                                    ) : r.score > 0 ? (
+                                        <Zap className="text-amber-500 shrink-0" />
+                                    ) : (
+                                        <XCircle className="text-red-500 shrink-0" />
+                                    )}
                                     <div>
                                         <p className="text-sm font-bold text-slate-800 mb-1">{r.question}</p>
-                                        <p className="text-xs text-slate-500 line-clamp-2">{r.feedback}</p>
-                                        {!r.isCorrect && (
+                                        <p className={`text-xs font-semibold ${r.score > 0 && !r.isCorrect ? 'text-amber-600' : 'text-slate-500'} line-clamp-2`}>
+                                            {r.feedback}
+                                        </p>
+                                        {!r.isCorrect && r.score === 0 && r.correctAnswer && (
                                             <p className="text-[10px] font-bold text-emerald-600 mt-1">To'g'ri javob: {r.correctAnswer}</p>
                                         )}
                                     </div>
