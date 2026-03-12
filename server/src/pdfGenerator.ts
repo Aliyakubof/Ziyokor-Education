@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { Player, Quiz, UnitQuiz } from './types';
-import { checkAnswer } from './utils';
+import { checkAnswer, countCorrectParts } from './utils';
 
 export const generateQuizResultPDF = (
     quiz: Quiz | UnitQuiz,
@@ -68,7 +68,15 @@ export const generateQuizResultPDF = (
 
         // Table Body
         let y = tableTop + 25;
-        const total = quiz.questions.filter(q => q.type !== 'info-slide').length;
+        let total = 0;
+        quiz.questions.forEach(q => {
+            if (q.type === 'info-slide') return;
+            if (q.type === 'matching' || q.type === 'word-box') {
+                total += q.acceptedAnswers?.length || 0;
+            } else {
+                total += 1;
+            }
+        });
 
         players.sort((a, b) => b.score - a.score).forEach((player, index) => {
             if (y > 700) {
@@ -83,11 +91,13 @@ export const generateQuizResultPDF = (
                 if (q.type === 'info-slide') return;
 
                 if (player.partialScoreMap && player.partialScoreMap[qIdx] !== undefined) {
-                    if (player.partialScoreMap[qIdx] > 0) correctCount++;
+                    correctCount += player.partialScoreMap[qIdx];
                 } else {
                     const answer = player.answers[qIdx];
                     if (answer !== undefined) {
-                        if (['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'vocabulary', 'matching'].includes(q.type || '')) {
+                        if (q.type === 'matching' || q.type === 'word-box') {
+                            correctCount += countCorrectParts(answer, q.acceptedAnswers || []);
+                        } else if (['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'vocabulary'].includes(q.type || '')) {
                             if (checkAnswer(answer, q.acceptedAnswers || [])) {
                                 correctCount++;
                             }
@@ -131,7 +141,9 @@ export const generateQuizResultPDF = (
                 const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'vocabulary', 'matching'];
 
                 // 1. Determine the display answer based on question type
-                if (textTypes.includes(q.type || '')) {
+                if (q.type === 'matching' || q.type === 'word-box') {
+                    studentDisplayAnswer = answer !== undefined ? String(answer).split('+').join(' | ') : 'Javob berilmagan';
+                } else if (textTypes.includes(q.type || '')) {
                     studentDisplayAnswer = answer !== undefined ? String(answer) : 'Javob berilmagan';
                 } else {
                     const ansIdx = Number(answer);
@@ -143,18 +155,31 @@ export const generateQuizResultPDF = (
                 // Removed char replacement that caused '?' issues
                 // studentDisplayAnswer = studentDisplayAnswer.replace(/[^\x00-\xFF]/g, '?');
 
-                // 2. Determine if the answer is correct
+                // 2. Determine if the answer is correct and what score was earned
+                let earnedScore = 0;
+                let maxPossibleQScore = 1;
+
                 if (player.partialScoreMap && player.partialScoreMap[qIdx] !== undefined) {
-                    isCorrect = player.partialScoreMap[qIdx] > 0;
+                    earnedScore = player.partialScoreMap[qIdx];
+                    if (q.type === 'matching' || q.type === 'word-box') {
+                        maxPossibleQScore = q.acceptedAnswers?.length || 1;
+                    }
+                    isCorrect = earnedScore === maxPossibleQScore;
                 } else if (textTypes.includes(q.type || '')) {
-                    if (answer !== undefined && checkAnswer(answer, q.acceptedAnswers || [])) {
+                    if (q.type === 'matching' || q.type === 'word-box') {
+                        maxPossibleQScore = q.acceptedAnswers?.length || 1;
+                        earnedScore = countCorrectParts(answer, q.acceptedAnswers || []);
+                        isCorrect = earnedScore === maxPossibleQScore;
+                    } else if (answer !== undefined && checkAnswer(answer, q.acceptedAnswers || [])) {
                         isCorrect = true;
+                        earnedScore = 1;
                     }
                 } else {
                     const ansIdx = Number(answer);
                     if (answer !== undefined && !isNaN(ansIdx)) {
                         if (ansIdx === q.correctIndex) {
                             isCorrect = true;
+                            earnedScore = 1;
                         }
                     }
                 }
@@ -168,13 +193,18 @@ export const generateQuizResultPDF = (
                 doc.fontSize(11).font(fontBold).text(`${actualQIdx}. ${q.text}`);
                 doc.fontSize(10).font(fontRegular);
 
-                doc.fillColor(isCorrect ? '#059669' : '#dc2626')
-                    .text(`Sizning javobingiz: ${studentDisplayAnswer} ${isCorrect ? ' (TO\'G\'RI)' : ' (NOTO\'G\'RI)'}`);
+                const statusColor = isCorrect ? '#059669' : (earnedScore > 0 ? '#d97706' : '#dc2626');
+                const statusText = isCorrect ? ' (TO\'G\'RI)' : (earnedScore > 0 ? ` (QISMAN TO'G'RI: ${earnedScore}/${maxPossibleQScore})` : ' (NOTO\'G\'RI)');
+
+                doc.fillColor(statusColor)
+                    .text(`Sizning javobingiz: ${studentDisplayAnswer}${statusText}`);
 
                 if (!isCorrect) {
-                    const correctAnswer = textTypes.includes(q.type || '')
-                        ? (q.acceptedAnswers?.[0] || 'N/A')
-                        : (q.options[q.correctIndex] || 'N/A');
+                    const correctAnswer = (q.type === 'matching' || q.type === 'word-box')
+                        ? (q.acceptedAnswers?.join(' | ') || 'N/A')
+                        : (textTypes.includes(q.type || '')
+                            ? (q.acceptedAnswers?.[0] || 'N/A')
+                            : (q.options[q.correctIndex] || 'N/A'));
                     doc.fillColor('#4b5563').text(`To'g'ri javob: ${correctAnswer}`);
                 }
 
