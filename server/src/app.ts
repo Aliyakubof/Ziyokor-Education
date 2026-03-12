@@ -972,15 +972,15 @@ app.post('/api/student/vocab-battles/submit', async (req, res) => {
         if ((studentGroupIdRes.rowCount ?? 0) > 0) {
             const groupId = studentGroupIdRes.rows[0].group_id;
             const historyTitle = `Vocab Battle: ${battle.daraja} - Level ${battle.level}`;
-            const playerResults = {
-                [studentId]: {
+            const playerResults = [
+                {
                     id: studentId,
-                    name: 'Student', // Can fetch name if needed, or UI will ignore it since it's just history
+                    name: 'Student', // UI usually takes this from auth context anyway
                     score: score,
                     status: 'completed',
-                    answers: [] // No answers saved!
+                    answers: []
                 }
-            };
+            ];
             await query(
                 'INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results) VALUES ($1, $2, $3, $4, $5)',
                 [historyId, groupId, historyTitle, total, JSON.stringify(playerResults)]
@@ -1480,13 +1480,17 @@ app.get('/api/student/:id/stats', async (req, res) => {
         // Games Played & Total Score (from group games)
         const gamesRes = await query(`
             SELECT COUNT(*) as games_count
-            FROM game_results, jsonb_array_elements(player_results) as player
+            FROM game_results, jsonb_array_elements(
+                CASE WHEN jsonb_typeof(player_results) = 'array' THEN player_results ELSE '[]'::jsonb END
+            ) as player
             WHERE player ->> 'id' = $1
                 `, [id]);
 
         const scoreRes = await query(`
             SELECT SUM((player ->> 'score'):: int) as total_score
-            FROM game_results, jsonb_array_elements(player_results) as player
+            FROM game_results, jsonb_array_elements(
+                CASE WHEN jsonb_typeof(player_results) = 'array' THEN player_results ELSE '[]'::jsonb END
+            ) as player
             WHERE player ->> 'id' = $1
                 `, [id]);
 
@@ -1569,7 +1573,9 @@ quiz_title,
     total_questions,
     CASE WHEN total_questions > 0 THEN (player ->> 'score')::float * 100 / total_questions ELSE 0 END as percentage,
     player -> 'answers' as answers
-            FROM game_results, jsonb_array_elements(player_results) as player
+            FROM game_results, jsonb_array_elements(
+                CASE WHEN jsonb_typeof(player_results) = 'array' THEN player_results ELSE '[]'::jsonb END
+            ) as player
             WHERE player ->> 'id' = $1
             ORDER BY created_at DESC
             LIMIT 50
