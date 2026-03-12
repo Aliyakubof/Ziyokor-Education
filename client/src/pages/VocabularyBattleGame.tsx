@@ -4,6 +4,7 @@ import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import { ArrowLeft, Clock, TimerOff, CheckCircle2, XCircle, Trophy, ShieldAlert } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { motion } from 'framer-motion';
 
 interface VocabQuestion {
     text: string;
@@ -349,8 +350,12 @@ export default function VocabularyBattleGame() {
                         }
 
                         return (
-                            <div className="w-full space-y-8 animate-in fade-in duration-500">
-                                <div className="mt-4 flex flex-wrap justify-center gap-1.5 w-full">
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="w-full space-y-8 animate-in fade-in duration-500"
+                            >
+                                <div className="mt-4 flex flex-nowrap justify-start md:justify-center gap-2 w-full overflow-x-auto pb-4 scroll-hide items-center touch-pan-x">
                                     {displayChars.map((char, i) => {
                                         if (char === ' ') {
                                             return <div key={i} className="flex-shrink-0" style={{ width: targetWord.length > 10 ? '0.5rem' : '1.5rem' }} />;
@@ -366,11 +371,16 @@ export default function VocabularyBattleGame() {
                                         const fontSize = targetWord.length > 12 ? 'text-lg sm:text-2xl' : 'text-xl sm:text-3xl';
 
                                         return (
-                                            <input key={i} id={`voc-box-${i}`} type="text" maxLength={1} value={currentVal[i] === ' ' ? '' : (currentVal[i] || '')}
+                                            <motion.input 
+                                                key={i} 
+                                                id={`voc-box-${i}`} type="text" maxLength={1} value={currentVal[i] === ' ' ? '' : (currentVal[i] || '')}
+                                                initial={{ scale: 0.8 }}
+                                                animate={{ scale: 1 }}
+                                                whileFocus={{ scale: 1.05, borderColor: '#6366f1' }}
                                                 readOnly={selectedOption !== null}
                                                 autoFocus={selectedOption === null && !displayChars.slice(0, i).some(c => /[a-zA-Z0-9]/.test(c))}
                                                 autoComplete="off"
-                                                onKeyDown={(e) => {
+                                                onKeyDown={(e: any) => {
                                                     if (e.key === 'Backspace' && (!currentVal[i] || currentVal[i] === ' ') && i > 0) {
                                                         let prevIdx = i - 1;
                                                         while (prevIdx >= 0 && !/[a-zA-Z0-9]/.test(targetWord[prevIdx])) prevIdx--;
@@ -383,7 +393,7 @@ export default function VocabularyBattleGame() {
                                                         handleVocabularySubmit();
                                                     }
                                                 }}
-                                                onChange={(e) => {
+                                                onChange={(e: any) => {
                                                     let val = e.target.value.slice(-1).toLowerCase();
                                                     if (!val) val = ' ';
                                                     if (val !== ' ' && !/[a-z0-9]/i.test(val)) return;
@@ -430,7 +440,7 @@ export default function VocabularyBattleGame() {
                                         TASDIQLASH
                                     </button>
                                 </div>
-                            </div>
+                            </motion.div>
                         );
                     })()
                 ) : (

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
 import { Clock, CheckCircle2, XCircle, Info } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface QuestionData {
     info?: string;
@@ -419,14 +420,19 @@ export default function PlayerGame() {
                         <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">Fill in the blanks from the box</h2>
 
                         {/* Word Box - clickable words */}
-                        <div className="flex flex-wrap justify-center gap-2 mb-10 p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                        <div className="flex flex-wrap justify-center gap-2 mb-10 p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 min-h-[100px]">
                             {question.options.map((opt, i) => {
                                 const isUsed = usedWords.has(opt);
                                 return (
-                                    <button
-                                        key={i}
+                                    <motion.button
+                                        key={`word-${opt}-${i}`}
+                                        layoutId={`word-${opt}`}
                                         onClick={() => !isUsed && handleWordClick(opt)}
                                         disabled={isReview || isUsed}
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: isUsed ? 0.3 : 1, scale: isUsed ? 0.9 : 1 }}
+                                        whileHover={{ scale: isUsed ? 0.9 : 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                         className={`px-4 py-2 rounded-xl border font-bold shadow-sm transition-all
                                             ${isUsed
                                                 ? 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through'
@@ -434,7 +440,7 @@ export default function PlayerGame() {
                                             }`}
                                     >
                                         {opt}
-                                    </button>
+                                    </motion.button>
                                 );
                             })}
                         </div>
@@ -447,9 +453,13 @@ export default function PlayerGame() {
                                     {i < parts.length - 1 && (
                                         currentAnswersList[i]
                                             ? (
-                                                <button
+                                                <motion.button
+                                                    layoutId={`word-${currentAnswersList[i]}`}
                                                     onClick={() => handleBlankClick(i)}
                                                     disabled={isReview}
+                                                    initial={{ scale: 0.8 }}
+                                                    animate={{ scale: 1 }}
+                                                    whileHover={{ scale: 1.1 }}
                                                     className={`mx-2 px-3 py-1 rounded-xl border-2 font-bold transition-all align-middle
                                                         ${isReview
                                                             ? (currentAnswersList[i]?.toLowerCase().trim() === question.acceptedAnswers?.[i]?.toLowerCase().trim()
@@ -460,7 +470,7 @@ export default function PlayerGame() {
                                                     title={!isReview ? "O'chirish uchun bosing" : undefined}
                                                 >
                                                     {currentAnswersList[i]}
-                                                </button>
+                                                </motion.button>
                                             ) : (
                                                 <span className="mx-2 inline-block w-24 border-b-2 border-dashed border-slate-400 text-center text-slate-300 align-middle">
                                                     ?
@@ -588,12 +598,16 @@ export default function PlayerGame() {
             const displayChars = targetWord.split('');
 
             return (
-                <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full max-w-4xl mx-auto space-y-8"
+                >
                     <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200">
                         <div className="text-center space-y-6">
                             <h2 className="text-3xl md:text-5xl font-black text-slate-800 leading-tight">{question.text}</h2>
                         </div>
-                        <div className="mt-12 flex flex-nowrap justify-center gap-1 w-full overflow-hidden items-center">
+                        <div className="mt-12 flex flex-nowrap justify-start md:justify-center gap-2 w-full overflow-x-auto pb-4 scroll-hide items-center touch-pan-x">
                             {displayChars.map((char, i) => {
                                 if (char === ' ') {
                                     return <div key={i} className="flex-shrink-0" style={{ width: targetWord.length > 10 ? '0.5rem' : '1.5rem' }} />;
@@ -609,11 +623,16 @@ export default function PlayerGame() {
                                 const fontSize = targetWord.length > 15 ? 'text-sm md:text-xl' : targetWord.length > 10 ? 'text-lg md:text-2xl' : 'text-2xl md:text-4xl';
 
                                 return (
-                                    <input key={i} id={`voc-box-${i}`} type="text" maxLength={1} value={currentVal[i] === ' ' ? '' : (currentVal[i] || '')}
+                                    <motion.input 
+                                        key={i} 
+                                        id={`voc-box-${i}`} type="text" maxLength={1} value={currentVal[i] === ' ' ? '' : (currentVal[i] || '')}
+                                        initial={{ scale: 0.8 }}
+                                        animate={{ scale: 1 }}
+                                        whileFocus={{ scale: 1.05, borderColor: '#6366f1' }}
                                         readOnly={isReview}
                                         autoFocus={!isReview && !displayChars.slice(0, i).some(c => /[a-zA-Z0-9]/.test(c))}
                                         autoComplete="off"
-                                        onKeyDown={(e) => {
+                                        onKeyDown={(e: any) => {
                                             if (e.key === 'Backspace' && (!currentVal[i] || currentVal[i] === ' ') && i > 0) {
                                                 let prevIdx = i - 1;
                                                 while (prevIdx >= 0 && !/[a-zA-Z0-9]/.test(targetWord[prevIdx])) prevIdx--;
@@ -623,7 +642,7 @@ export default function PlayerGame() {
                                                 }
                                             }
                                         }}
-                                        onChange={(e) => {
+                                        onChange={(e: any) => {
                                             let val = e.target.value.slice(-1).toLowerCase();
                                             if (!val) val = ' ';
                                             if (val !== ' ' && !/[a-z0-9]/i.test(val)) return;
@@ -648,14 +667,14 @@ export default function PlayerGame() {
                                                 }
                                             }
                                         }}
-                                        className={`flex-shrink-0 ${boxWidth} ${boxHeight} ${fontSize} font-black text-center rounded-lg md:rounded-2xl border-2 transition-all outline-none uppercase ${isReview ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-red-50 border-red-500 text-red-600') : (currentVal[i] ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'bg-slate-50 border-slate-200')}`}
+                                        className={`flex-shrink-0 ${boxWidth} ${boxHeight} ${fontSize} font-black text-center rounded-lg md:rounded-2xl border-2 transition-all outline-none uppercase shadow-sm ${isReview ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-red-50 border-red-500 text-red-600') : (currentVal[i] ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20')}`}
                                     />
                                 );
                             })}
                         </div>
                         {isReview && !isCorrect && <div className="mt-8 p-6 rounded-3xl bg-emerald-50 text-emerald-600 text-center font-black">To'g'ri: {question.acceptedAnswers?.[0]}</div>}
                     </div>
-                </div>
+                </motion.div>
             );
         }
 
