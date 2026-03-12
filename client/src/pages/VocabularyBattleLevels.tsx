@@ -71,20 +71,21 @@ export default function VocabularyBattleLevels() {
                     <div className="relative w-full flex flex-col items-center">
                         {/* Winding dashed line behind the nodes */}
                         <div className="absolute inset-0 w-full h-full pointer-events-none -z-0">
-                            <svg className="w-full h-full stroke-slate-200" preserveAspectRatio="none">
+                            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                                 <path
-                                    d="M 50% 0 Q 80% 5%, 50% 10% T 50% 20% T 50% 30% T 50% 40% T 50% 50% T 50% 60% T 50% 70% T 50% 80% T 50% 90% T 50% 100%"
+                                    d={`M 50 0 ${mapNodes.map((_, i) => {
+                                        if (i === 0) return '';
+                                        const x = 50 + (i % 2 === 0 ? -25 : 25);
+                                        const y = (i * 100) / mapNodes.length;
+                                        const prevY = ((i - 1) * 100) / mapNodes.length;
+                                        const midY = (y + prevY) / 2;
+                                        return `Q ${x} ${midY}, 50 ${y}`;
+                                    }).join(' ')}`}
                                     fill="none"
-                                    strokeWidth="4"
-                                    strokeDasharray="12 12"
-                                    style={{
-                                        vectorEffect: 'non-scaling-stroke',
-                                        d: "path('M 50% 0 " + mapNodes.map((_, i) => {
-                                            if (i === 0) return '';
-                                            const direction = i % 2 === 0 ? '-40%' : '40%';
-                                            return `Q calc(50% + ${direction}) ${(i * 100) / mapNodes.length - 2}%, 50% ${(i * 100) / mapNodes.length}%`;
-                                        }).join(' ') + "')"
-                                    }}
+                                    stroke="#e2e8f0"
+                                    strokeWidth="1"
+                                    strokeDasharray="2 2"
+                                    style={{ vectorEffect: 'non-scaling-stroke' }}
                                 />
                             </svg>
                         </div>
