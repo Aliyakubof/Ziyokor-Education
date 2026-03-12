@@ -625,7 +625,7 @@ const TeacherDashboard = () => {
     const fetchGroups = async () => {
         if (!user?.id) return;
         try {
-            const res = await apiFetch(`/api/groups/${user.id}`);
+            const res = await apiFetch(`/api/teachers/${user.id}/groups`);
             const data = await res.json();
             setGroups(Array.isArray(data) ? data : []);
             if (data.length > 0) fetchBattles(data.map((g: any) => g.id));
