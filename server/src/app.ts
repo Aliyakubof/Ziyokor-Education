@@ -632,7 +632,7 @@ app.put('/api/admin/students/:id/password', async (req, res) => {
 // Admin: Unit Quizzes (Routes moved/consolidated below)
 
 // Admin: Vocabulary Battles
-app.get('/api/admin/vocab-battles', requireRole('admin', 'manager'), async (req, res) => {
+app.get('/api/admin/vocab-battles', requireRole('admin', 'manager', 'teacher'), async (req, res) => {
     try {
         const result = await query('SELECT * FROM vocabulary_battles ORDER BY daraja, level');
         res.json(result.rows);
