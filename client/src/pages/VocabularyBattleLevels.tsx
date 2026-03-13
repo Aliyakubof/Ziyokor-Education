@@ -2,36 +2,31 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
-import { ArrowLeft, Star, ChevronRight } from 'lucide-react';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import premiumMap from '../assets/map_final_premium.png';
+import { ArrowLeft, Star, Sparkles, Swords } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-// Ambient Sparkle Component
-const Sparkle = () => {
-    const size = Math.random() * 3 + 1;
-    const duration = 10 + Math.random() * 15;
-    
+// Atmospheric Particle (Fireflies/Stars)
+const Particle = ({ delay }: { delay: number }) => {
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0 }}
+            initial={{ 
+                x: `${Math.random() * 100}%`, 
+                y: '110%', 
+                opacity: 0,
+                scale: Math.random() * 0.5 + 0.5
+            }}
             animate={{ 
-                opacity: [0, 0.5, 0],
-                scale: [0, 1.2, 0],
-                y: [0, -100]
+                y: '-10%',
+                opacity: [0, 0.4, 0.4, 0],
+                x: [`${Math.random() * 100}%`, `${Math.random() * 100}%`]
             }}
             transition={{ 
-                duration, 
-                repeat: Infinity, 
-                delay: Math.random() * 10,
-                ease: "easeInOut" 
+                duration: 15 + Math.random() * 10,
+                repeat: Infinity,
+                delay,
+                ease: "linear"
             }}
-            className="absolute bg-white rounded-full blur-[1px] pointer-events-none z-1"
-            style={{ 
-                width: size, 
-                height: size,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`
-            }}
+            className="absolute w-1 h-1 bg-emerald-300 rounded-full blur-[1px] pointer-events-none z-0"
         />
     );
 };
@@ -42,9 +37,6 @@ export default function VocabularyBattleLevels() {
     const [levels, setLevels] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isActive, setIsActive] = useState(true);
-
-    const { scrollY } = useScroll();
-    const bgY = useTransform(scrollY, [0, 2000], [0, 150]); // Subtle parallax
 
     useEffect(() => {
         if (user?.id) fetchLevels();
@@ -81,39 +73,35 @@ export default function VocabularyBattleLevels() {
     });
 
     return (
-        <div className="min-h-screen bg-emerald-950 flex flex-col font-sans selection:bg-emerald-400 selection:text-white relative overflow-hidden">
-            {/* Fixed High-Resolution Map Background */}
+        <div className="min-h-screen bg-[#040d08] flex flex-col font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden">
+            {/* Immersive Background System */}
             <div className="fixed inset-0 z-0">
-                <motion.div 
-                    style={{ 
-                        backgroundImage: `url(${premiumMap})`,
-                        y: bgY
-                    }}
-                    className="absolute inset-x-0 -inset-y-20 bg-cover bg-center bg-no-repeat opacity-90 scale-105"
-                />
-                {/* Visual Polish Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30" />
-                <div className="absolute inset-0 backdrop-blur-[1px] opacity-20" />
-            </div>
-
-            {/* Ambient Sparkles */}
-            <div className="fixed inset-0 z-1 pointer-events-none">
-                {Array.from({ length: 20 }).map((_, i) => (
-                    <Sparkle key={i} />
-                ))}
+                {/* Deep Radial Gradient */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#0c3a21_0%,#040d08_70%)]" />
+                
+                {/* Nebula Glows */}
+                <div className="absolute top-[30%] -left-[10%] w-[60%] h-[60%] bg-emerald-900/10 blur-[150px] rounded-full mix-blend-screen" />
+                <div className="absolute bottom-[20%] -right-[10%] w-[50%] h-[50%] bg-teal-900/10 blur-[120px] rounded-full mix-blend-screen" />
+                
+                {/* Dynamic Particles */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    {Array.from({ length: 40 }).map((_, i) => (
+                        <Particle key={i} delay={i * 0.8} />
+                    ))}
+                </div>
             </div>
 
             {/* Simple Premium Header */}
-            <header className="sticky top-0 z-40 bg-white/10 backdrop-blur-xl border-b border-white/10">
-                <div className="px-4 h-16 flex items-center justify-between mx-auto w-full max-w-lg">
+            <header className="sticky top-0 z-40 bg-black/20 backdrop-blur-xl border-b border-white/5">
+                <div className="px-5 h-16 flex items-center justify-between mx-auto w-full max-w-lg">
                     <button
                         onClick={() => navigate('/student/dashboard')}
-                        className="w-10 h-10 flex items-center justify-center rounded-2xl bg-black/20 border border-white/10 text-white hover:bg-black/40 transition-all active:scale-90"
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-emerald-400 hover:bg-white/10 transition-all active:scale-90"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div className="flex-1 text-center">
-                        <h2 className="text-xl font-black text-white uppercase tracking-[0.2em] drop-shadow-lg italic">
+                        <h2 className="text-xl font-black text-white uppercase tracking-[0.2em] font-serif italic drop-shadow-2xl">
                             Vocabulary battle
                         </h2>
                     </div>
@@ -121,29 +109,40 @@ export default function VocabularyBattleLevels() {
                 </div>
             </header>
 
-            <main className="flex-1 relative z-10 px-4 py-8 w-full max-w-lg mx-auto overflow-x-hidden overflow-y-auto custom-scrollbar">
+            <main className="flex-1 relative z-10 px-4 py-12 w-full max-w-lg mx-auto overflow-x-hidden overflow-y-auto custom-scrollbar">
                 {!isActive ? (
-                    <div className="flex flex-col items-center justify-center py-32 text-center">
-                         <div className="bg-black/60 backdrop-blur-3xl p-12 rounded-[3.5rem] border border-white/10 shadow-2xl space-y-6">
-                             <div className="text-6xl animate-bounce">🗺️</div>
-                             <div>
-                                <h2 className="text-4xl font-black text-white mb-4 italic tracking-tighter uppercase">TEZ ORADA...</h2>
-                                <p className="text-white/60 font-medium max-w-[240px] mx-auto text-base leading-relaxed">
-                                    Xarita yangi sarguzashtlar bilan to'ldirilmoqda. Tayyor turing!
+                    <div className="flex flex-col items-center justify-center py-40 text-center animate-in fade-in zoom-in duration-700">
+                         <div className="relative group">
+                            <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-150 group-hover:bg-emerald-500/30 transition-all duration-500" />
+                            <div className="relative bg-black/40 backdrop-blur-3xl p-14 rounded-[4rem] border border-white/10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]">
+                                <Sparkles className="text-emerald-400 w-16 h-16 mx-auto mb-8 animate-pulse" />
+                                <h3 className="text-4xl font-black text-white mb-4 italic tracking-tighter uppercase">TEZ ORADA...</h3>
+                                <p className="text-emerald-100/40 font-medium max-w-[240px] mx-auto text-base leading-relaxed">
+                                    Xarita yangi darajalar bilan to'ldirilmoqda. O'z bilimingizni boyitib turing!
                                 </p>
-                             </div>
+                            </div>
                          </div>
                     </div>
                 ) : loading ? (
-                    <div className="text-center py-20">
-                        <div className="w-12 h-12 border-4 border-white/10 border-t-white rounded-full animate-spin mx-auto mb-4" />
-                        <span className="text-white/40 font-black uppercase tracking-widest text-xs">Yuklanmoqda...</span>
+                    <div className="flex flex-col items-center justify-center py-20 text-emerald-500/20">
+                        <div className="w-10 h-10 border-2 border-current border-t-transparent rounded-full animate-spin mb-4" />
+                        <span className="font-black uppercase tracking-[0.3em] text-[10px]">Loading Galaxy...</span>
                     </div>
                 ) : (
-                    <div className="relative pt-4 pb-40">
-                        {/* Winding Adventure Path Lines */}
-                        <div className="absolute inset-0 pointer-events-none z-0 opacity-40">
+                    <div className="relative pt-4 pb-48">
+                        {/* Winding Neon Energy Path */}
+                        <div className="absolute inset-0 pointer-events-none opacity-40">
                             <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="neonPath" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#10b981" />
+                                        <stop offset="100%" stopColor="#059669" />
+                                    </linearGradient>
+                                    <filter id="neonGlow">
+                                        <feGaussianBlur stdDeviation="1.5" result="blur" />
+                                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                    </filter>
+                                </defs>
                                 <path
                                     d={`M 50 0 ${mapNodes.map((_, i) => {
                                         const side = i % 2 === 0 ? 1 : -1;
@@ -154,73 +153,89 @@ export default function VocabularyBattleLevels() {
                                         return `Q ${x} ${midY}, 50 ${y}`;
                                     }).join(' ')}`}
                                     fill="none"
-                                    stroke="white"
-                                    strokeWidth="2.5"
-                                    strokeDasharray="4 8"
+                                    stroke="url(#neonPath)"
+                                    strokeWidth="3"
+                                    filter="url(#neonGlow)"
+                                    strokeDasharray="0.5 12"
+                                    strokeLinecap="round"
                                     style={{ vectorEffect: 'non-scaling-stroke' }}
                                 />
                             </svg>
                         </div>
 
-                        {/* High-End Interactive Level Nodes */}
-                        <div className="relative z-10 flex flex-col items-center space-y-12">
+                        {/* Interactive Galaxy Level Nodes */}
+                        <div className="relative z-10 flex flex-col items-center space-y-14">
                             {mapNodes.map((node, i) => {
                                 const isEven = i % 2 === 0;
                                 return (
                                     <motion.div
                                         key={node.levelNumber}
-                                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                                        whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                                        viewport={{ once: true, margin: "-50px" }}
+                                        initial={{ opacity: 0, scale: 0.8, x: isEven ? 60 : -60 }}
+                                        whileInView={{ opacity: 1, scale: 1, x: 0 }}
+                                        viewport={{ once: true, margin: "-100px" }}
                                         className={`relative w-full flex ${isEven ? 'justify-end pr-10' : 'justify-start pl-10'}`}
                                     >
                                         <button
                                             disabled={node.isLocked}
                                             onClick={() => node.battle && navigate(`/student/vocab-battle/play/${node.battle.id}`)}
                                             className={`
-                                                relative w-22 h-22 sm:w-26 sm:h-26 rounded-[2.5rem] flex flex-col items-center justify-center transition-all duration-500 group
-                                                shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] border-2
+                                                relative w-24 h-24 sm:w-28 sm:h-28 rounded-[2.5rem] flex flex-col items-center justify-center transition-all duration-500 group
+                                                shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)] border-t border-l border-white/10
                                                 ${node.isLocked 
-                                                    ? 'bg-black/60 backdrop-blur-xl border-white/5 text-white/20 cursor-not-allowed' 
-                                                    : 'bg-white border-white text-emerald-950 hover:scale-110 active:scale-95 shadow-emerald-500/20'
+                                                    ? 'bg-white/5 backdrop-blur-2xl text-white/5 cursor-not-allowed grayscale' 
+                                                    : 'bg-gradient-to-br from-white/10 to-transparent backdrop-blur-2xl text-white hover:scale-110 active:scale-95'
                                                 }
                                             `}
                                         >
-                                            <div className={`absolute -top-3 px-3 py-1 rounded-full text-[9px] font-black tracking-widest border shadow-lg ${node.isLocked ? 'bg-black/80 border-white/5 text-white/30' : 'bg-emerald-600 border-white text-white'}`}>
+                                            <div className={`
+                                                absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[9px] font-black tracking-widest border transition-all duration-500
+                                                ${node.isLocked 
+                                                    ? 'bg-black/60 border-white/5 text-white/20' 
+                                                    : 'bg-emerald-500 border-white/20 text-white shadow-lg shadow-emerald-500/20'
+                                                }
+                                            `}>
                                                 LVL {node.levelNumber}
                                             </div>
                                             
-                                            <div className={`text-4xl font-black italic ${node.isLocked ? 'blur-[1px]' : 'drop-shadow-sm'}`}>
+                                            <div className={`text-5xl font-black italic tracking-tighter ${node.isLocked ? 'blur-[1px]' : 'drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]'}`}>
                                                 {node.levelNumber}
                                             </div>
 
                                             {!node.isLocked && (
-                                                <div className="flex gap-0.5 mt-1">
+                                                <div className="flex gap-1 mt-1">
                                                     {[1, 2, 3].map(s => (
                                                         <Star 
                                                             key={s} 
                                                             size={12} 
-                                                            className={s <= node.stars ? "fill-yellow-400 text-yellow-500 drop-shadow-md" : "fill-gray-100 text-gray-200"} 
+                                                            className={s <= node.stars ? "fill-emerald-400 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" : "text-white/10 fill-transparent"} 
                                                         />
                                                     ))}
                                                 </div>
                                             )}
 
-                                            {!node.isLocked && node.stars === 0 && (
-                                                <div className="absolute -inset-1.5 rounded-[2.8rem] border-2 border-emerald-400 animate-ping opacity-30 pointer-events-none" />
+                                            {/* Particle Inner Glow for Active Nodes */}
+                                            {!node.isLocked && (
+                                                <div className="absolute inset-0 rounded-[2.5rem] bg-emerald-500/5 blur-xl group-hover:bg-emerald-500/10 transition-all duration-500" />
                                             )}
 
-                                            {/* Battle Indicator Tooltip */}
+                                            {/* Pulsing Outer Core for Current Level */}
+                                            {!node.isLocked && node.stars === 0 && (
+                                                <div className="absolute -inset-1 rounded-[2.7rem] border border-emerald-400/30 animate-[ping_3s_infinite] pointer-events-none" />
+                                            )}
+
+                                            {/* Desktop Battle Tooltip */}
                                             {!node.isLocked && (
-                                                <div className={`absolute top-1/2 -translate-y-1/2 min-w-max transition-all opacity-0 group-hover:opacity-100 hidden sm:flex
-                                                    ${isEven ? 'right-[115%] pr-4' : 'left-[115%] pl-4'}`}
-                                                >
-                                                    <div className="bg-white/95 backdrop-blur-xl border border-white p-3 rounded-2xl shadow-2xl flex items-center gap-3">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] text-emerald-600 font-black uppercase tracking-wider">Mavzu:</span>
-                                                            <span className="text-xs text-emerald-950 font-black">{node.battle?.title || "Sarguzasht"}</span>
+                                                <div className={`
+                                                    absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 hidden sm:flex pointer-events-none
+                                                    ${isEven ? 'right-[115%] pr-6' : 'left-[115%] pl-6'}
+                                                `}>
+                                                    <div className="bg-black/80 backdrop-blur-3xl border border-white/10 p-4 rounded-3xl shadow-2xl flex flex-col items-start min-w-[140px]">
+                                                        <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mb-1">Mavzu:</span>
+                                                        <span className="text-sm text-white font-bold leading-tight">{node.battle?.title || "Jang Maydoni"}</span>
+                                                        <div className="flex items-center gap-2 mt-3 text-[9px] text-white/40 font-black uppercase tracking-widest">
+                                                            <Swords size={12} />
+                                                            <span>Boshlaymizmi?</span>
                                                         </div>
-                                                        <ChevronRight size={16} className="text-emerald-500" />
                                                     </div>
                                                 </div>
                                             )}
@@ -232,6 +247,9 @@ export default function VocabularyBattleLevels() {
                     </div>
                 )}
             </main>
+
+            {/* Bottom Ambient Fade */}
+            <div className="fixed bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#040d08] to-transparent pointer-events-none z-30" />
         </div>
     );
 }
