@@ -238,44 +238,95 @@ export default function VocabularyBattleGame() {
         const total = questions.length;
         const perc = total > 0 ? Math.round((correctCount / total) * 100) : 0;
         const successColor = perc > 70 ? 'text-emerald-500' : perc > 40 ? 'text-amber-500' : 'text-rose-500';
+        const successBg = perc > 70 ? 'bg-emerald-500/10' : perc > 40 ? 'bg-amber-500/10' : 'bg-rose-500/10';
 
         return (
-            <div className="min-h-[100dvh] bg-slate-50 p-6 font-sans pb-24 max-w-2xl mx-auto flex flex-col">
-                <div className="text-center py-8 space-y-4 flex-1">
-                    <Trophy size={80} className={`mx-auto ${successColor} drop-shadow-xl mb-4`} />
-                    <h2 className={`text-4xl font-black ${successColor} tracking-tighter`}>Natija: {perc}%</h2>
-                    <p className="text-slate-500 font-bold text-lg uppercase tracking-widest bg-white inline-block px-4 py-1 rounded-full border border-slate-200 shadow-sm">
-                        {correctCount} / {total} to'g'ri
-                    </p>
+            <div className="min-h-[100dvh] bg-[#fafafa] font-sans pb-32 flex flex-col items-center overflow-x-hidden">
+                {/* Hero Result Section */}
+                <div className="w-full bg-white border-b border-slate-200 pt-12 pb-10 px-6 shadow-sm flex flex-col items-center relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+                    
+                    <motion.div 
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className={`mb-6 p-6 rounded-full ${successBg} relative`}
+                    >
+                        <Trophy size={80} className={`${successColor} drop-shadow-2xl relative z-10`} />
+                        <motion.div 
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ repeat: Infinity, duration: 2 }}
+                            className="absolute inset-0 bg-white/50 rounded-full blur-2xl"
+                        />
+                    </motion.div>
 
-                    <div className="mt-8 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm text-left space-y-4">
-                        <h3 className="font-black text-slate-800 border-b border-slate-100 pb-3">Xatolar ustida ishlash:</h3>
-                        <div className="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar space-y-3">
-                            {results.map((r, i) => (
-                                <div key={i} className={`p-4 rounded-2xl flex flex-col gap-2 ${r.correct ? 'bg-emerald-50 border border-emerald-100' : 'bg-rose-50 border border-rose-100'}`}>
-                                    <div className="font-bold text-slate-800 text-lg border-b border-black/5 pb-2">{r.qText}</div>
-                                    <div className="flex flex-col sm:flex-row gap-4 mt-1">
-                                        {!r.correct && (
-                                            <div className="flex items-center gap-2 text-rose-600 font-medium text-sm">
-                                                <XCircle size={16} /> Siz: {r.given}
-                                            </div>
-                                        )}
-                                        <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
-                                            <CheckCircle2 size={16} /> Javob: {r.expected}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                    <h2 className={`text-6xl font-black ${successColor} tracking-tighter mb-2`}>{perc}%</h2>
+                    <p className="text-slate-400 font-black text-sm uppercase tracking-[0.3em] mb-4">Muvaffaqiyat</p>
+                    
+                    <div className="flex gap-3">
+                        <div className="bg-slate-900 px-5 py-2 rounded-2xl text-white font-black text-lg shadow-xl shadow-slate-900/20">
+                            {correctCount} / {total}
+                        </div>
+                        <div className="bg-white border-2 border-slate-100 px-5 py-2 rounded-2xl text-slate-800 font-black text-lg shadow-sm">
+                            TO'G'RI
                         </div>
                     </div>
                 </div>
 
-                <button
-                    onClick={() => navigate('/student/vocab-battles')}
-                    className="w-full mt-auto py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-3xl text-lg shadow-xl shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"
-                >
-                    <ArrowLeft size={24} /> Bosh sahifa
-                </button>
+                {/* Results List */}
+                <div className="w-full max-w-2xl px-4 py-8 space-y-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-black text-slate-800 text-xl tracking-tight">Xatolar tahlili</h3>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{results.length} SAVOL</span>
+                    </div>
+
+                    <div className="space-y-4">
+                        {results.map((r, i) => (
+                            <motion.div 
+                                key={i}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                className={`group p-6 rounded-[2.5rem] border-2 transition-all flex flex-col gap-4 bg-white
+                                    ${r.correct ? 'border-emerald-100/50 shadow-emerald-500/5' : 'border-rose-100 shadow-rose-500/5'}
+                                `}
+                            >
+                                <div className="flex justify-between items-start gap-4">
+                                    <div className="font-black text-slate-900 text-xl sm:text-2xl leading-tight flex-1">
+                                        {r.qText}
+                                    </div>
+                                    <div className={`p-2 rounded-xl flex-shrink-0 ${r.correct ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                                        {r.correct ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-3">
+                                    {!r.correct && (
+                                        <div className="flex flex-col bg-rose-50/50 p-4 rounded-3xl border border-rose-100/50">
+                                            <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Sizning javobingiz:</span>
+                                            <span className="text-rose-600 font-bold text-lg">{r.given}</span>
+                                        </div>
+                                    )}
+                                    <div className={`flex flex-col p-4 rounded-3xl border ${r.correct ? 'bg-emerald-50/50 border-emerald-100/50' : 'bg-emerald-50 border-emerald-100'}`}>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest mb-1 ${r.correct ? 'text-emerald-400' : 'text-emerald-500'}`}>To'g'ri javob:</span>
+                                        <span className="text-emerald-600 font-bold text-lg">{r.expected}</span>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent z-50">
+                    <div className="max-w-2xl mx-auto">
+                        <button
+                            onClick={() => navigate('/student/vocab-battles')}
+                            className="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-[2rem] text-xl shadow-2xl shadow-slate-900/30 transition-all flex items-center justify-center gap-3 active:scale-95"
+                        >
+                            <ArrowLeft size={24} /> BOSH SAHIFA
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     }

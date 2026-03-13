@@ -96,6 +96,15 @@ export default function Home() {
 
                     {/* Right Actions */}
                     <div className="flex items-center gap-4">
+                        {isAuthenticated && (role === 'admin' || role === 'teacher') && (
+                            <button
+                                onClick={() => navigate('/create')}
+                                className="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-all font-bold text-sm shadow-sm active:scale-95"
+                            >
+                                <PlusCircle size={18} />
+                                Test yaratish
+                            </button>
+                        )}
                         {isAuthenticated ? (
                             <div className="flex items-center gap-4">
                                 <span className="text-sm font-semibold text-slate-600 hidden md:inline">{user?.name}</span>

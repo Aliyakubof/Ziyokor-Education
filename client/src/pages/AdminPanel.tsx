@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft, LogOut, FileQuestion, Users, Search, Key, X, Send } from 'lucide-react';
+import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft, LogOut, Users, Search, Key, X, Send } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import logo from '../assets/logo.jpeg';
@@ -196,12 +196,6 @@ const AdminPanel = () => {
                                     {role === 'admin' ? 'Administrator' : "O'qituvchi"}
                                 </p>
                             </div>
-                            <button
-                                onClick={() => navigate('/create')}
-                                className="flex items-center gap-2 px-3 py-2 md:px-5 md:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium shadow-sm text-sm md:text-base"
-                            >
-                                <FileQuestion size={18} /> <span className="hidden md:inline">Unit Quiz Yaratish</span><span className="md:hidden">Quiz</span>
-                            </button>
 
                             <button
                                 onClick={() => {

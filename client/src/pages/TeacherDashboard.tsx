@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, PlayCircle, Plus, ArrowLeft, LogOut, X, ChevronDown, Trash2, Send, FilePlus } from 'lucide-react';
+import { Users, PlayCircle, Plus, ArrowLeft, LogOut, X, ChevronDown, Trash2, Send } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import logo from '../assets/logo.jpeg';
@@ -758,16 +758,16 @@ const TeacherDashboard = () => {
                             <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                                 {role === 'admin' ? "Ziyokor - Barcha Guruhlar" : "Ziyokor - O'qituvchi Kabineti"}
                             </h1>
-                            <div className="flex items-center gap-3 mt-1">
-                                <p className="text-slate-500 text-sm">
+                            <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                <p className="text-slate-500 text-sm whitespace-nowrap">
                                     {role === 'admin' ? "Tizimdagi barcha guruhlar ro'yxati" : "Guruhlar va testlarni boshqarish"}
                                 </p>
-                                <span className="text-slate-300">•</span>
+                                <span className="text-slate-300 hidden sm:inline">•</span>
                                 <a
                                     href="https://t.me/Z_education_bot?start=teacher"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 text-[#229ED9] hover:text-[#1d8dbd] font-bold text-xs transition-colors"
+                                    className="flex items-center gap-1.5 text-[#229ED9] hover:text-[#1d8dbd] font-bold text-xs transition-colors whitespace-nowrap"
                                 >
                                     <Send size={14} />
                                     Telegram Botga ulanish
@@ -807,13 +807,6 @@ const TeacherDashboard = () => {
 
                     <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => navigate('/create')}
-                                className="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl transition-all font-bold text-sm border border-indigo-100 shadow-sm active:scale-95"
-                            >
-                                <FilePlus size={18} />
-                                Test yaratish
-                            </button>
                              <button
                                 onClick={() => navigate('/admin/vocab-battles')}
                                 className="hidden md:flex items-center gap-2 px-4 py-2 bg-pink-50 text-pink-600 hover:bg-pink-100 rounded-xl transition-all font-bold text-sm border border-pink-100 shadow-sm active:scale-95"
