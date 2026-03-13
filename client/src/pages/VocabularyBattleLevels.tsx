@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import { ArrowLeft, Lock, Star } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import vocabMap from '../assets/vocab_battle_map.png';
 
 export default function VocabularyBattleLevels() {
     const navigate = useNavigate();
@@ -11,6 +12,9 @@ export default function VocabularyBattleLevels() {
     const [levels, setLevels] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isActive, setIsActive] = useState(true);
+
+    const { scrollY } = useScroll();
+    const bgY = useTransform(scrollY, [0, 1000], [0, 200]);
 
     useEffect(() => {
         if (user?.id) fetchLevels();
@@ -48,31 +52,35 @@ export default function VocabularyBattleLevels() {
     });
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-sky-400 via-indigo-500 to-purple-600 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-900 relative overflow-hidden">
+        <div className="min-h-screen bg-slate-900 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-900 relative overflow-hidden">
+            {/* Map Background with Parallax */}
+            <motion.div 
+                style={{ 
+                    backgroundImage: `url(${vocabMap})`,
+                    y: bgY
+                }}
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50 z-0 scale-110"
+            />
+            
+            {/* Dark Overlay for Readability */}
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-transparent to-slate-900/60 z-0" />
+
             {/* Animated Background Elements */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-20 -left-20 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute bottom-40 -right-20 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-700" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] opacity-20">
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full fill-none stroke-white/20" strokeWidth="0.2">
-                        <circle cx="50" cy="50" r="40" />
-                        <circle cx="50" cy="50" r="30" />
-                        <circle cx="50" cy="50" r="20" />
-                        <path d="M0,50 L100,50 M50,0 L50,100" />
-                    </svg>
-                </div>
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-1">
+                <div className="absolute top-20 -left-20 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" />
+                <div className="absolute bottom-40 -right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-700" />
             </div>
 
             {/* Header */}
-            <header className="sticky top-0 z-40 bg-white/10 backdrop-blur-xl border-b border-white/10">
+            <header className="sticky top-0 z-40 bg-slate-900/40 backdrop-blur-xl border-b border-white/10">
                 <div className="px-4 h-16 sm:h-20 flex items-center justify-between mx-auto w-full max-w-lg">
                     <button
                         onClick={() => navigate('/student/dashboard')}
-                        className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/20 border border-white/30 text-white hover:bg-white/30 active:scale-95 transition-all shadow-lg"
+                        className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/10 border border-white/20 text-white hover:bg-white/20 active:scale-95 transition-all shadow-lg"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <div className="flex-1 text-center font-black text-xl text-white uppercase tracking-widest drop-shadow-md">
+                    <div className="flex-1 text-center font-black text-xl text-white uppercase tracking-widest drop-shadow-lg">
                         Vocab Battle
                     </div>
                     <div className="w-10"></div>
@@ -85,9 +93,9 @@ export default function VocabularyBattleLevels() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-12 text-center relative z-10 w-full"
                 >
-                    <h1 className="text-4xl font-black text-white tracking-tight mb-2 drop-shadow-lg">Bosqichlar</h1>
-                    <p className="text-white/80 font-bold uppercase tracking-widest text-[10px] bg-black/10 backdrop-blur-sm inline-block px-3 py-1 rounded-full border border-white/10">
-                        Cho'qqiga qarab OLGA!
+                    <h1 className="text-4xl font-black text-white tracking-tight mb-2 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">Sarguzashtlar</h1>
+                    <p className="text-white font-bold uppercase tracking-widest text-[10px] bg-indigo-600/60 backdrop-blur-sm inline-block px-4 py-1.5 rounded-full border border-white/20 shadow-lg">
+                        Xaritani zabt eting! 🗺️
                     </p>
                 </motion.div>
 
@@ -97,18 +105,18 @@ export default function VocabularyBattleLevels() {
                         animate={{ opacity: 1, scale: 1 }}
                         className="flex-1 flex flex-col items-center justify-center -mt-20 px-4"
                     >
-                         <div className="bg-white/10 backdrop-blur-xl p-10 rounded-[3rem] border border-white/20 text-center shadow-2xl space-y-6">
+                         <div className="bg-slate-900/60 backdrop-blur-2xl p-10 rounded-[3rem] border border-white/10 text-center shadow-2xl space-y-6">
                              <div className="text-6xl animate-bounce">⏳</div>
                              <div>
-                                <h2 className="text-4xl font-black text-white mb-3 tracking-tighter">Soon....</h2>
+                                <h2 className="text-4xl font-black text-white mb-3 tracking-tighter">Tez orada...</h2>
                                 <p className="text-white/70 font-medium max-w-[200px] mx-auto text-sm leading-relaxed">
-                                    Hozirda savollar tayyorlanmoqda. Tez orada yangi janglar boshlanadi!
+                                    Xarita darajalari tayyorlanmoqda. Sarguzashtga oz qoldi!
                                 </p>
                              </div>
                          </div>
                     </motion.div>
                 ) : loading ? (
-                    <div className="text-center py-20 text-white/50 font-black animate-pulse text-xl">Yuklanmoqda...</div>
+                    <div className="text-center py-20 text-white/50 font-black animate-pulse text-xl">Xarita yuklanmoqda...</div>
                 ) : (
                     <div className="relative w-full flex flex-col items-center">
                         {/* Winding dashed line behind the nodes */}
@@ -124,9 +132,9 @@ export default function VocabularyBattleLevels() {
                                         return `Q ${x} ${midY}, 50 ${y}`;
                                     }).join(' ')}`}
                                     fill="none"
-                                    stroke="rgba(255,255,255,0.3)"
-                                    strokeWidth="1.5"
-                                    strokeDasharray="4 4"
+                                    stroke="rgba(255,191,0,0.4)"
+                                    strokeWidth="2.5"
+                                    strokeDasharray="6 6"
                                     style={{ vectorEffect: 'non-scaling-stroke' }}
                                 />
                             </svg>
@@ -151,14 +159,14 @@ export default function VocabularyBattleLevels() {
                                                 absolute inset-0 rounded-[2.5rem] flex flex-col items-center justify-center gap-1.5 transition-all duration-300
                                                 shadow-2xl border-4
                                                 ${node.isLocked
-                                                    ? 'bg-white/10 border-white/10 text-white/20 cursor-not-allowed shadow-none'
-                                                    : 'bg-white border-white text-indigo-600 hover:border-sky-300 hover:bg-sky-50 hover:-translate-y-2 hover:scale-110 active:scale-95 cursor-pointer shadow-indigo-900/40 z-10'
+                                                    ? 'bg-slate-800/80 backdrop-blur-md border-slate-700 text-slate-500 cursor-not-allowed shadow-none'
+                                                    : 'bg-white border-white text-indigo-600 hover:border-amber-400 hover:bg-amber-50 hover:-translate-y-2 hover:scale-110 active:scale-95 cursor-pointer shadow-amber-900/20 z-10'
                                                 }
                                             `}
                                         >
-                                            <div className={`absolute -top-4 px-3 py-1 rounded-full shadow-md border font-black tracking-widest uppercase text-[9px] ${node.isLocked ? 'bg-slate-200 border-slate-300 text-slate-400' : 'bg-indigo-600 border-indigo-500 text-white'}`}>
+                                            <div className={`absolute -top-4 px-3 py-1 rounded-full shadow-md border font-black tracking-widest uppercase text-[9px] ${node.isLocked ? 'bg-slate-700 border-slate-600 text-slate-400' : 'bg-amber-500 border-amber-400 text-white'}`}>
                                                 {node.isLocked ? <Lock size={10} className="inline mr-1" /> : <Star size={10} className="inline mr-1 fill-white" />}
-                                                Level {node.levelNumber}
+                                                LEVEL {node.levelNumber}
                                             </div>
                                             
                                             <div className="text-3xl sm:text-4xl font-black drop-shadow-sm leading-none mt-2">
@@ -171,7 +179,7 @@ export default function VocabularyBattleLevels() {
                                                         <Star 
                                                             key={starIdx} 
                                                             size={12} 
-                                                            className={starIdx < node.stars ? "fill-yellow-400 text-yellow-500 drop-shadow-sm" : "fill-slate-100 text-slate-200"} 
+                                                            className={starIdx < node.stars ? "fill-amber-400 text-amber-500 drop-shadow-sm" : "fill-slate-100 text-slate-200"} 
                                                         />
                                                     ))}
                                                 </div>
