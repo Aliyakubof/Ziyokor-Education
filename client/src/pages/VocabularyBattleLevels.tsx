@@ -6,7 +6,7 @@ import { ArrowLeft, Lock, Star, Swords, Sparkles, ChevronRight } from 'lucide-re
 import { motion } from 'framer-motion';
 
 // Firefly/Particle Component
-const Particle = ({ i }: { i: number }) => {
+const Particle = () => {
     const size = Math.random() * 4 + 2;
     const duration = 15 + Math.random() * 20;
     const delay = Math.random() * -20;
@@ -90,7 +90,7 @@ export default function VocabularyBattleLevels() {
             {/* Floating Particles */}
             <div className="fixed inset-0 z-0 pointer-events-none">
                 {Array.from({ length: 30 }).map((_, i) => (
-                    <Particle key={i} i={i} />
+                    <Particle key={i} />
                 ))}
             </div>
 
