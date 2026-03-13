@@ -10,6 +10,7 @@ export default function DuelLobby() {
     const [invitations, setInvitations] = useState<any[]>([]);
     const [socketConnected, setSocketConnected] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
+    const [hasActiveQuizzes, setHasActiveQuizzes] = useState<boolean | null>(null);
 
     useEffect(() => {
         // Connect socket if not connected
@@ -49,6 +50,21 @@ export default function DuelLobby() {
         socket.on('duel-started', onDuelStarted);
         socket.on('error', onError);
 
+        const checkQuizzes = async () => {
+            try {
+                const res = await fetch(`${(window as any).VITE_BACKEND_URL || ''}/api/duel-quizzes`);
+                if (res.ok) {
+                    const data = await res.json();
+                    // Assuming user object has daraja or we just check if any active exist
+                    const activeExist = data.some((q: any) => q.is_active !== false);
+                    setHasActiveQuizzes(activeExist);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        checkQuizzes();
         setSocketConnected(socket.connected);
 
         return () => {
@@ -139,16 +155,32 @@ export default function DuelLobby() {
                     </div>
                 )}
 
-                {/* Search Player Card */}
-                <div className="glass-premium rounded-3xl p-6 flex flex-col items-center justify-center py-12">
-                    <Loader2 className="animate-spin text-rose-300 mb-4" size={48} />
-                    <h2 className="text-xl font-black text-slate-800 mb-2">
-                        Duellar tez orada ishga tushadi!
-                    </h2>
-                    <p className="text-sm font-bold text-slate-500 text-center max-w-sm">
-                        Hozirda duellar uchun savollar bazasi tayyorlanmoqda. Tez orada do'stlaringiz bilan bellashishingiz mumkin bo'ladi.
-                    </p>
-                </div>
+                {/* Search Player Card / Soon Message */}
+                {hasActiveQuizzes === false ? (
+                    <div className="glass-premium rounded-3xl p-6 flex flex-col items-center justify-center py-12">
+                        <Loader2 className="animate-spin text-rose-300 mb-4" size={48} />
+                        <h2 className="text-xl font-black text-slate-800 mb-2 uppercase tracking-tight">
+                            TEZ ORADA...
+                        </h2>
+                        <p className="text-sm font-bold text-slate-500 text-center max-w-sm">
+                            Hozirda duellar vaqtinchalik o'chirilgan. Savollar bazasi yangilanmoqda.
+                        </p>
+                    </div>
+                ) : hasActiveQuizzes === true ? (
+                    <div className="glass-premium rounded-3xl p-6 flex flex-col items-center justify-center py-12">
+                        <Swords className="text-rose-500 mb-4 animate-bounce" size={48} />
+                        <h2 className="text-xl font-black text-slate-800 mb-2">
+                            Duelga tayyormisiz?
+                        </h2>
+                        <p className="text-sm font-bold text-slate-500 text-center max-w-sm">
+                            Boshqa o'quvchilar sizni taklif qilishini kuting yoki taklifnomalarni tekshiring.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="animate-spin text-rose-400" size={32} />
+                    </div>
+                )}
 
                 {/* Info Card */}
                 <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100/50">

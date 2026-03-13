@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
-import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle, X, Info, Pencil, ChevronUp, ChevronDown } from 'lucide-react';
+import { PlusCircle, Save, ArrowLeft, Trash2, HelpCircle, CheckCircle2, FileQuestion, Type, List, AlertCircle, PenTool, XCircle, X, Info, Pencil, ChevronUp, ChevronDown, Swords } from 'lucide-react';
 
 interface QuestionDraft {
     info: string;
@@ -17,6 +17,14 @@ interface QuestionDraft {
 export default function CreateQuiz() {
     const navigate = useNavigate();
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
+    const quizType = searchParams.get('type') || (location.pathname.includes('/edit-quiz/') ? 'unit' : 'unit'); // Default to unit if not specified
+    
+    // We can't easily know the type of an existing quiz from the URL alone if we use the same edit route.
+    // However, we can try to fetch from both or have a separate edit route.
+    // For now, let's assume if it's editing, we might need to check both or have a 'type' param in the edit link too.
+    const actualType = searchParams.get('type') || 'unit';
+
     const { role } = useAuth();
     const [title, setTitle] = useState('');
     const [level, setLevel] = useState('Beginner');
@@ -36,7 +44,8 @@ export default function CreateQuiz() {
 
     const fetchAllQuizzes = async () => {
         try {
-            const res = await apiFetch('/api/unit-quizzes');
+            const endpoint = actualType === 'duel' ? '/api/duel-quizzes' : '/api/unit-quizzes';
+            const res = await apiFetch(endpoint);
             if (res.ok) {
                 const data = await res.json();
                 setAllQuizzes(Array.isArray(data) ? data : []);
@@ -48,16 +57,19 @@ export default function CreateQuiz() {
 
     const fetchQuiz = async () => {
         try {
-            const res = await apiFetch(`/api/unit-quizzes/${id}`);
+            const endpoint = actualType === 'duel' ? `/api/duel-quizzes/${id}` : `/api/unit-quizzes/${id}`;
+            const res = await apiFetch(endpoint);
             if (res.ok) {
                 const data = await res.json();
                 setTitle(data.title);
-                setLevel(data.level);
-                setUnit(data.unit);
+                setLevel(data.level || data.daraja || 'Beginner');
+                setUnit(data.unit || '1');
                 // Ensure questions is an array, handle if strictly parsed from JSON or already object
                 const parsedQuestions = typeof data.questions === 'string' ? JSON.parse(data.questions) : data.questions;
                 setQuestions(parsedQuestions || []);
             } else {
+                // Try the other type if not found? 
+                // Or better: ensure the link has the correct type.
                 alert("Quizni yuklashda xatolik!");
                 navigate(role === 'admin' ? '/admin' : '/teacher');
             }
@@ -197,7 +209,8 @@ export default function CreateQuiz() {
 
         setIsSaving(true);
         try {
-            const url = id ? `/api/unit-quizzes/${id}` : '/api/unit-quizzes';
+            const baseEndpoint = actualType === 'duel' ? '/api/duel-quizzes' : '/api/unit-quizzes';
+            const url = id ? `${baseEndpoint}/${id}` : baseEndpoint;
             const method = id ? 'PUT' : 'POST';
 
             const res = await apiFetch(url, {
@@ -205,6 +218,7 @@ export default function CreateQuiz() {
                 body: JSON.stringify({
                     title,
                     level,
+                    daraja: level, // For duel_quizzes
                     unit,
                     time_limit: timeLimit,
                     questions
@@ -215,7 +229,7 @@ export default function CreateQuiz() {
                 alert(id ? "Test muvaffaqiyatli yangilandi!" : "Yangi test muvaffaqiyatli yaratildi!");
                 if (!id && data.id) {
                     // Redirect to edit page of the newly created quiz to prevent duplicate saves
-                    navigate(`/edit-quiz/${data.id}`, { replace: true });
+                    navigate(`/edit-quiz/${data.id}?type=${actualType}`, { replace: true });
                 }
                 fetchAllQuizzes(); // Refresh the list below
             } else {
@@ -552,7 +566,8 @@ export default function CreateQuiz() {
                         </button>
                         <div className="bg-white px-6 py-2 rounded-2xl border border-slate-200 shadow-sm">
                             <span className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
-                                <FileQuestion size={16} /> {id ? 'Unit Quiz Tahrirlash' : 'Unit Quiz Yaratish'}
+                                {actualType === 'duel' ? <Swords size={16} /> : <FileQuestion size={16} />}
+                                {id ? (actualType === 'duel' ? 'Duel Savolini Tahrirlash' : 'Unit Quiz Tahrirlash') : (actualType === 'duel' ? 'Duel Savoli Yaratish' : 'Unit Quiz Yaratish')}
                             </span>
                         </div>
                     </div>
@@ -567,7 +582,7 @@ export default function CreateQuiz() {
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Quiz Sarlavhasi</label>
                                     <input
                                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-bold text-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400"
-                                        placeholder="Masalan: General English Unit 1"
+                                        placeholder={actualType === 'duel' ? "Masalan: Grammar Challenge 1" : "Masalan: General English Unit 1"}
                                         value={title}
                                         onChange={e => setTitle(e.target.value)}
                                     />
@@ -575,7 +590,7 @@ export default function CreateQuiz() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Level</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Daraja (Level)</label>
                                         <select
                                             value={level}
                                             onChange={(e) => setLevel(e.target.value)}
@@ -587,15 +602,17 @@ export default function CreateQuiz() {
                                             <option value="Intermediate">Intermediate</option>
                                         </select>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Unit</label>
-                                        <input
-                                            value={unit}
-                                            onChange={(e) => setUnit(e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-bold outline-none"
-                                            placeholder="1"
-                                        />
-                                    </div>
+                                    {actualType === 'unit' && (
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Unit</label>
+                                            <input
+                                                value={unit}
+                                                onChange={(e) => setUnit(e.target.value)}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-bold outline-none"
+                                                placeholder="1"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="bg-indigo-50/50 border border-indigo-100 p-6 rounded-[2rem] space-y-6">
@@ -1024,13 +1041,17 @@ export default function CreateQuiz() {
                                     <div>
                                         <h3 className="font-bold text-slate-800 text-lg mb-1">{quiz.title}</h3>
                                         <div className="flex items-center gap-2 mb-4">
-                                            <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-widest">{quiz.level}</span>
-                                            <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase tracking-widest">Unit {quiz.unit}</span>
+                                            <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                                                {quiz.level || quiz.daraja}
+                                            </span>
+                                            {actualType === 'unit' && (
+                                                <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase tracking-widest">Unit {quiz.unit}</span>
+                                            )}
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => {
-                                            navigate(`/edit-quiz/${quiz.id}`);
+                                            navigate(`/edit-quiz/${quiz.id}?type=${actualType}`);
                                             window.scrollTo({ top: 0, behavior: 'smooth' });
                                         }}
                                         className="w-full py-3 bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-600 font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-sm"

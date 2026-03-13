@@ -1255,6 +1255,69 @@ app.delete('/api/unit-quizzes/:id', async (req, res) => {
     }
 });
 
+// --- Duel Quizzes ---
+app.get('/api/duel-quizzes', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM duel_quizzes ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error fetching duel quizzes:', err);
+        res.status(500).json({ error: 'Error fetching duel quizzes', details: err.message });
+    }
+});
+
+app.get('/api/duel-quizzes/:id', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM duel_quizzes WHERE id = $1', [req.params.id]);
+        if (result.rowCount === 0) return res.status(404).send('Duel Quiz not found');
+        res.json(result.rows[0]);
+    } catch (err: any) {
+        console.error('Error fetching duel quiz:', err);
+        res.status(500).json({ error: 'Error fetching duel quiz', details: err.message });
+    }
+});
+
+app.post('/api/duel-quizzes', async (req, res) => {
+    try {
+        const { title, questions, level, daraja, is_active } = req.body;
+        const id = uuidv4();
+        await query(
+            'INSERT INTO duel_quizzes (id, title, questions, daraja, is_active) VALUES ($1, $2, $3, $4, $5)',
+            [id, title, Array.isArray(questions) ? JSON.stringify(questions) : questions, daraja || level || 'Beginner', is_active !== undefined ? is_active : true]
+        );
+        res.json({ id, title, questions: Array.isArray(questions) ? questions : JSON.parse(questions), daraja: daraja || level || 'Beginner', is_active: is_active !== undefined ? is_active : true });
+    } catch (err) {
+        console.error('Error creating duel quiz:', err);
+        res.status(500).json({ error: 'Error creating duel quiz' });
+    }
+});
+
+app.put('/api/duel-quizzes/:id', async (req, res) => {
+    try {
+        const { title, questions, level, daraja, is_active } = req.body;
+        const { id } = req.params;
+        await query(
+            'UPDATE duel_quizzes SET title = $1, questions = $2, daraja = $3, is_active = $4 WHERE id = $5',
+            [title, Array.isArray(questions) ? JSON.stringify(questions) : questions, daraja || level || 'Beginner', is_active, id]
+        );
+        res.json({ id, title, questions: Array.isArray(questions) ? questions : JSON.parse(questions), daraja: daraja || level || 'Beginner', is_active });
+    } catch (err) {
+        console.error('Error updating duel quiz:', err);
+        res.status(500).json({ error: 'Error updating duel quiz' });
+    }
+});
+
+app.delete('/api/duel-quizzes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM duel_quizzes WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err) {
+        console.error('Error deleting duel quiz:', err);
+        res.status(500).json({ error: 'Error deleting duel quiz' });
+    }
+});
+
 // Teacher: Groups
 app.post('/api/groups', async (req, res) => {
     try {
@@ -2995,12 +3058,20 @@ io.on('connection', (socket) => {
             const studentRes = await query('SELECT g.level FROM students s JOIN groups g ON s.group_id = g.id WHERE s.id = $1', [studentId]);
             const level = studentRes.rows[0]?.level || 'Beginner';
 
-            const quizRes = await query('SELECT id FROM unit_quizzes WHERE level = $1 ORDER BY RANDOM() LIMIT 1', [level]);
-            if (quizRes.rowCount === 0) {
-                socket.emit('error', 'Duel uchun mos test topilmadi');
-                return;
+            // Check for duel-specific questions first
+            const duelQuizRes = await query('SELECT * FROM duel_quizzes WHERE daraja = $1 AND is_active = TRUE ORDER BY RANDOM() LIMIT 1', [level]);
+            let quiz;
+            if ((duelQuizRes.rowCount || 0) > 0) {
+                quiz = duelQuizRes.rows[0];
+            } else {
+                // Fallback to unit quizzes
+                const unitQuizRes = await query('SELECT * FROM unit_quizzes WHERE level = $1 ORDER BY RANDOM() LIMIT 1', [level]);
+                if (unitQuizRes.rowCount === 0) {
+                    return socket.emit('error', { message: 'No questions found for your level' });
+                }
+                quiz = unitQuizRes.rows[0];
             }
-            const quizId = quizRes.rows[0].id;
+            const quizId = quiz.id;
 
             const duelId = uuidv4();
             await query(
