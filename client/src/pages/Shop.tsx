@@ -17,9 +17,14 @@ export default function Shop() {
 
     useEffect(() => {
         fetchItems();
-        fetchStats();
-        fetchPurchases();
     }, []);
+
+    useEffect(() => {
+        if (user?.id) {
+            fetchStats();
+            fetchPurchases();
+        }
+    }, [user?.id]);
 
     const fetchItems = async () => {
         try {
@@ -181,7 +186,7 @@ export default function Shop() {
                                     <h3 className="font-bold text-slate-800 text-sm mb-1">{item.name}</h3>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase mb-4">{item.type === 'avatar' ? 'Avatar' : item.type === 'theme' ? 'Mavzu' : 'Ruxsat'}</p>
 
-                                    {isPurchased ? (
+                                    {isPurchased && item.is_one_time ? (
                                         item.type === 'theme' ? (
                                             <button
                                                 onClick={() => handleApplyTheme(item.id)}
@@ -212,7 +217,7 @@ export default function Shop() {
                                             ) : (
                                                 <>
                                                     <ShoppingCart size={16} />
-                                                    {item.price}
+                                                    {isPurchased ? 'Yana Olish ' : ''} ({item.price})
                                                 </>
                                             )}
                                         </button>

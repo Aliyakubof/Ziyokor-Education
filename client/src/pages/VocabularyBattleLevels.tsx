@@ -10,6 +10,7 @@ export default function VocabularyBattleLevels() {
     const { user } = useAuth();
     const [levels, setLevels] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isActive, setIsActive] = useState(true);
 
     useEffect(() => {
         if (user?.id) fetchLevels();
@@ -20,8 +21,12 @@ export default function VocabularyBattleLevels() {
             const res = await apiFetch(`/api/student/vocab-battles/levels?studentId=${user?.id}`);
             if (res.ok) {
                 const data = await res.json();
-                // Data only has defined levels. We need a grid of exactly 30.
-                setLevels(data);
+                if (data.isActive === false) {
+                    setIsActive(false);
+                } else {
+                    setLevels(data.levels || []);
+                    setIsActive(true);
+                }
             }
         } catch (error) {
             console.error(error);
@@ -86,7 +91,23 @@ export default function VocabularyBattleLevels() {
                     </p>
                 </motion.div>
 
-                {loading ? (
+                {!isActive ? (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex-1 flex flex-col items-center justify-center -mt-20 px-4"
+                    >
+                         <div className="bg-white/10 backdrop-blur-xl p-10 rounded-[3rem] border border-white/20 text-center shadow-2xl space-y-6">
+                             <div className="text-6xl animate-bounce">⏳</div>
+                             <div>
+                                <h2 className="text-4xl font-black text-white mb-3 tracking-tighter">Soon....</h2>
+                                <p className="text-white/70 font-medium max-w-[200px] mx-auto text-sm leading-relaxed">
+                                    Hozirda savollar tayyorlanmoqda. Tez orada yangi janglar boshlanadi!
+                                </p>
+                             </div>
+                         </div>
+                    </motion.div>
+                ) : loading ? (
                     <div className="text-center py-20 text-white/50 font-black animate-pulse text-xl">Yuklanmoqda...</div>
                 ) : (
                     <div className="relative w-full flex flex-col items-center">

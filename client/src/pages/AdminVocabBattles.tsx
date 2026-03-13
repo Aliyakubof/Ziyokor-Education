@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api';
-import { PlusCircle, Search, Edit2, Trash2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Edit2, Trash2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
 export default function AdminVocabBattles() {
@@ -9,10 +9,42 @@ export default function AdminVocabBattles() {
     const { role } = useAuth();
     const [battles, setBattles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isActive, setIsActive] = useState<boolean | null>(null);
 
     useEffect(() => {
         fetchBattles();
+        fetchStatus();
     }, []);
+
+    const fetchStatus = async () => {
+        try {
+            const res = await apiFetch('/api/manager/settings');
+            if (res.ok) {
+                const data = await res.json();
+                const activeSetting = data.find((s: any) => s.key === 'vocab_battle_active');
+                if (activeSetting) {
+                    setIsActive(activeSetting.value === true || activeSetting.value === 'true');
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const toggleStatus = async () => {
+        const newValue = !isActive;
+        try {
+            const res = await apiFetch('/api/manager/settings/vocab_battle_active', {
+                method: 'PUT',
+                body: JSON.stringify({ value: newValue })
+            });
+            if (res.ok) {
+                setIsActive(newValue);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     const fetchBattles = async () => {
         try {
@@ -53,12 +85,25 @@ export default function AdminVocabBattles() {
                             <p className="text-slate-500 font-medium">Lug'at musobaqasi darajalari va levellarini boshqarish</p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => navigate('/admin/vocab-battles/create')}
-                        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 transition-colors"
-                    >
-                        <PlusCircle size={20} /> Yangi qo'shish
-                    </button>
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
+                            <span className={`text-xs font-black uppercase tracking-widest ${isActive ? 'text-green-600' : 'text-slate-400'}`}>
+                                {isActive === null ? 'Loading...' : isActive ? 'Active' : 'Hidden'}
+                            </span>
+                            <button
+                                onClick={toggleStatus}
+                                className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out focus:outline-none ${isActive ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                            >
+                                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${isActive ? 'translate-x-6' : 'translate-x-0'}`} />
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => navigate('/admin/vocab-battles/create')}
+                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 transition-colors"
+                        >
+                            <PlusCircle size={20} /> Yangi qo'shish
+                        </button>
+                    </div>
                 </header>
 
                 {loading ? (

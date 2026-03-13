@@ -10,6 +10,7 @@ interface ShopItem {
     url?: string;
     color?: string;
     is_active: boolean;
+    is_one_time: boolean;
 }
 
 export default function ManagerShop() {
@@ -112,7 +113,7 @@ export default function ManagerShop() {
                     <p className="text-slate-500 font-medium text-sm mt-1 uppercase tracking-widest">O'quvchilar uchun mahsulotlarni boshqarish</p>
                 </div>
                 <button
-                    onClick={() => setEditingItem({ name: '', type: 'avatar', price: 100, is_active: true })}
+                    onClick={() => setEditingItem({ name: '', type: 'avatar', price: 100, is_active: true, is_one_time: true })}
                     className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all active:scale-95"
                 >
                     <Plus size={18} /> Yangi Qo'shish
@@ -199,15 +200,27 @@ export default function ManagerShop() {
                         </div>
                     )}
 
-                    <div className="flex items-center gap-2 mb-6">
-                        <input
-                            type="checkbox"
-                            checked={editingItem.is_active}
-                            onChange={e => setEditingItem({ ...editingItem, is_active: e.target.checked })}
-                            id="isActive"
-                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
-                        />
-                        <label htmlFor="isActive" className="text-sm font-bold text-slate-700 cursor-pointer">Faol (Sotuvda ko'rinadi)</label>
+                    <div className="flex items-center gap-6 mb-6">
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={editingItem.is_active}
+                                onChange={e => setEditingItem({ ...editingItem, is_active: e.target.checked })}
+                                id="isActive"
+                                className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                            />
+                            <label htmlFor="isActive" className="text-sm font-bold text-slate-700 cursor-pointer">Faol (Sotuvda ko'rinadi)</label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={editingItem.is_one_time}
+                                onChange={e => setEditingItem({ ...editingItem, is_one_time: e.target.checked })}
+                                id="isOneTime"
+                                className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                            />
+                            <label htmlFor="isOneTime" className="text-sm font-bold text-slate-700 cursor-pointer">1 martalik (One-time)</label>
+                        </div>
                     </div>
 
                     <div className="flex justify-end gap-3">
@@ -250,7 +263,13 @@ export default function ManagerShop() {
                                             </div>
                                             <div>
                                                 <p className="font-bold text-slate-800 text-sm">{item.name}</p>
-                                                {!item.is_active && <span className="text-[8px] font-black uppercase text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">O'chirilgan</span>}
+                                                <div className="flex gap-1 mt-0.5">
+                                                    {!item.is_active && <span className="text-[8px] font-black uppercase text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">O'chirilgan</span>}
+                                                    {item.is_one_time ? 
+                                                        <span className="text-[8px] font-black uppercase text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-md">1 Martalik</span> :
+                                                        <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md">Forever</span>
+                                                    }
+                                                </div>
                                             </div>
                                         </div>
                                     </td>

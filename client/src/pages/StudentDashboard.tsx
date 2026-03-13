@@ -43,10 +43,10 @@ export default function StudentDashboard() {
 
     // Theme Engine Logic
     useEffect(() => {
-        if (stats.active_theme_id || stats.activeThemeId) {
-            applyTheme(stats.activeThemeId || stats.active_theme_id);
+        if (stats.active_theme_color) {
+            applyTheme(stats.active_theme_color);
         }
-    }, [stats.activeThemeId, stats.active_theme_id]);
+    }, [stats.active_theme_color]);
 
     useEffect(() => {
         if (user?.id) {

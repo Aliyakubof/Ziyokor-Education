@@ -272,6 +272,13 @@ async function initDb() {
             console.error('Migration error (teacher_id constraint):', migErr);
         }
 
+        // Initialize System Settings
+        await query(`
+            INSERT INTO system_settings (key, value, description)
+            VALUES ('vocab_battle_active', 'false', 'Vocabulary Battle feature availability for students')
+            ON CONFLICT (key) DO NOTHING;
+        `);
+
         console.log('Database initialized successfully');
         await ensureAdminExists();
         await ensureManagerExists();
@@ -750,13 +757,13 @@ app.delete('/api/telegram-questions/:id', requireRole('admin', 'teacher'), async
 // Manager: Shop Items Management
 app.post('/api/manager/shop/items', requireRole('admin', 'manager'), async (req, res) => {
     try {
-        const { name, type, price, url, color, is_active } = req.body;
+        const { name, type, price, url, color, is_active, is_one_time } = req.body;
         const id = uuidv4();
         await query(
-            'INSERT INTO shop_items (id, name, type, price, url, color, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-            [id, name, type, price, url, color, is_active !== undefined ? is_active : true]
+            'INSERT INTO shop_items (id, name, type, price, url, color, is_active, is_one_time) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+            [id, name, type, price, url, color, is_active !== undefined ? is_active : true, is_one_time !== undefined ? is_one_time : true]
         );
-        res.json({ id, name, type, price, url, color });
+        res.json({ id, name, type, price, url, color, is_one_time });
     } catch (err: any) {
         console.error('Error creating shop item:', err);
         res.status(500).json({ error: 'Xatolik', details: err.message });
@@ -766,12 +773,12 @@ app.post('/api/manager/shop/items', requireRole('admin', 'manager'), async (req,
 app.put('/api/manager/shop/items/:id', requireRole('admin', 'manager'), async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, type, price, url, color, is_active } = req.body;
+        const { name, type, price, url, color, is_active, is_one_time } = req.body;
         await query(
-            'UPDATE shop_items SET name = $1, type = $2, price = $3, url = $4, color = $5, is_active = $6 WHERE id = $7',
-            [name, type, price, url, color, is_active, id]
+            'UPDATE shop_items SET name = $1, type = $2, price = $3, url = $4, color = $5, is_active = $6, is_one_time = $7 WHERE id = $8',
+            [name, type, price, url, color, is_active, is_one_time, id]
         );
-        res.json({ id, name, type, price, url, color, is_active });
+        res.json({ id, name, type, price, url, color, is_active, is_one_time });
     } catch (err: any) {
         console.error('Error updating shop item:', err);
         res.status(500).json({ error: 'Xatolik', details: err.message });
@@ -1037,6 +1044,14 @@ app.get('/api/student/vocab-battles/levels', async (req, res) => {
         const { studentId } = req.query;
         if (!studentId) return res.status(400).json({ error: 'Student ID missing' });
 
+        // Check if Vocabulary Battle is globally active
+        const settingsRes = await query('SELECT value FROM system_settings WHERE key = $1', ['vocab_battle_active']);
+        const vocabBattleActive = (settingsRes.rowCount ?? 0) > 0 ? (settingsRes.rows[0].value === true || settingsRes.rows[0].value === 'true') : false;
+
+        if (!vocabBattleActive) {
+            return res.json({ isActive: false });
+        }
+
         // Get student's group level (daraja)
         const studentRes = await query(`
             SELECT g.level as daraja 
@@ -1099,11 +1114,11 @@ app.get('/api/student/vocab-battles/levels', async (req, res) => {
                 title: battle.title,
                 isLocked,
                 stars,
-                maxPercentage: perc
+                isActive: true
             };
         });
 
-        res.json(enrichedLevels);
+        res.json({ isActive: true, levels: enrichedLevels });
     } catch (err) {
         console.error('Error fetching vocab battle levels:', err);
         res.status(500).json({ error: 'Failed to fetch levels' });
@@ -1112,6 +1127,14 @@ app.get('/api/student/vocab-battles/levels', async (req, res) => {
 
 app.get('/api/student/vocab-battles/:id', async (req, res) => {
     try {
+        // Check if Vocabulary Battle is globally active
+        const settingsRes = await query('SELECT value FROM system_settings WHERE key = $1', ['vocab_battle_active']);
+        const vocabBattleActive = (settingsRes.rowCount ?? 0) > 0 ? (settingsRes.rows[0].value === true || settingsRes.rows[0].value === 'true') : false;
+
+        if (!vocabBattleActive) {
+            return res.status(403).json({ error: 'Vocabulary Battle hozircha yopiq' });
+        }
+
         const { id } = req.params;
         const result = await query('SELECT * FROM vocabulary_battles WHERE id = $1', [id]);
         if (result.rowCount === 0) return res.status(404).json({ error: 'Topilmadi' });
@@ -1642,9 +1665,11 @@ app.get('/api/student/:id/stats', async (req, res) => {
                 COALESCE(s.is_hero, false) as is_hero,
                 COALESCE(s.weekly_battle_score, 0) as weekly_battle_score,
                 s.group_id,
-                COALESCE(g.has_trophy, false) as has_trophy 
+                COALESCE(g.has_trophy, false) as has_trophy,
+                si.color as active_theme_color
             FROM students s 
             LEFT JOIN groups g ON s.group_id = g.id 
+            LEFT JOIN shop_items si ON s.active_theme_id = si.id
             WHERE s.id = $1
                 `, [id]);
         if (studentRes.rowCount === 0) return res.status(404).json({ error: 'Student not found' });
@@ -1689,6 +1714,7 @@ app.get('/api/student/:id/stats', async (req, res) => {
             groupId: student.group_id,
             avatarUrl: student.avatar_url || null,
             active_theme_id: student.active_theme_id,
+            active_theme_color: student.active_theme_color,
             hasAvatarUnlock: (unlockRes.rowCount || 0) > 0,
             gamesPlayed: parseInt(gamesRes.rows[0].games_count) || 0,
             totalScore: parseInt(scoreRes.rows[0].total_score) || 0,
@@ -1788,6 +1814,17 @@ app.post('/api/student/purchase', async (req, res) => {
         const student = studentRes.rows[0];
         if (student.coins < item.price) {
             return res.status(400).json({ error: 'Mablag\' yetarli emas' });
+        }
+
+        // If item is one-time, check if already purchased
+        if (item.is_one_time) {
+            const alreadyPurchasedRes = await query(
+                'SELECT 1 FROM student_purchases WHERE student_id = $1 AND item_id = $2 LIMIT 1',
+                [studentId, itemId]
+            );
+            if (alreadyPurchasedRes.rowCount && alreadyPurchasedRes.rowCount > 0) {
+                return res.status(400).json({ error: 'Bu mahsulot allaqachon sotib olingan' });
+            }
         }
 
         // Deduct coins and log purchase

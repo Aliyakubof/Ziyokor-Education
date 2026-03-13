@@ -71,11 +71,19 @@ html {
     animation: pulse-skeleton 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  @keyframes pulse-skeleton {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
+    @keyframes pulse-skeleton {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
 }
+
+/* Theme Preview Classes for Shop */
+.theme-indigo { background-color: #4f46e5; }
+.theme-emerald { background-color: #10b981; }
+.theme-sunset { background-color: #f59e0b; }
+.theme-cyber { background-color: #06b6d4; }
+.theme-sakura { background-color: #f472b6; }
+.theme-ocean { background-color: #0891b2; }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
