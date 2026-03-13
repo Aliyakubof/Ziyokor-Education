@@ -2,23 +2,24 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
-import { ArrowLeft, Lock, Star, Flower2 } from 'lucide-react';
+import { ArrowLeft, Lock, Star, Sparkles, MapPin } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import springMap from '../assets/map_spring.png';
+import premiumMap from '../assets/map_premium.png';
 
-// Falling Petal Component
-const FallingPetal = ({ delay }: { delay: number }) => {
+// Atmospheric Particle
+const Particle = ({ delay, type }: { delay: number, type: 'petal' | 'light' }) => {
     const randomX = Math.random() * 100;
-    const duration = 10 + Math.random() * 10;
+    const duration = type === 'petal' ? 8 + Math.random() * 8 : 15 + Math.random() * 10;
     
     return (
         <motion.div
             initial={{ y: -20, x: `${randomX}%`, opacity: 0, rotate: 0 }}
             animate={{ 
                 y: '110vh', 
-                x: `${randomX + (Math.random() * 20 - 10)}%`, // Slight horizontal drift
-                opacity: [0, 0.8, 0.8, 0],
-                rotate: 720
+                x: `${randomX + (Math.random() * 30 - 15)}%`,
+                opacity: [0, 0.6, 0.6, 0],
+                rotate: type === 'petal' ? 720 : 0,
+                scale: type === 'light' ? [0.5, 1.2, 0.5] : 1
             }}
             transition={{ 
                 duration, 
@@ -26,8 +27,8 @@ const FallingPetal = ({ delay }: { delay: number }) => {
                 delay, 
                 ease: "linear" 
             }}
-            className="absolute w-3 h-3 bg-pink-200/60 rounded-full blur-[1px] pointer-events-none z-1"
-            style={{ borderRadius: '40% 60% 50% 50%' }} // Petal shape
+            className={`absolute pointer-events-none z-1 ${type === 'petal' ? 'w-3 h-3 bg-pink-200/40' : 'w-1 h-20 bg-yellow-100/10 blur-xl'}`}
+            style={type === 'petal' ? { borderRadius: '40% 60% 50% 50%' } : {}}
         />
     );
 };
@@ -40,7 +41,8 @@ export default function VocabularyBattleLevels() {
     const [isActive, setIsActive] = useState(true);
 
     const { scrollY } = useScroll();
-    const bgY = useTransform(scrollY, [0, 2000], [0, 400]);
+    // Subtle parallax that keeps the map looking sharp
+    const bgY = useTransform(scrollY, [0, 5000], [0, 500]);
 
     useEffect(() => {
         if (user?.id) fetchLevels();
@@ -77,155 +79,176 @@ export default function VocabularyBattleLevels() {
     });
 
     return (
-        <div className="min-h-screen bg-[#e8f5e9] flex flex-col font-sans selection:bg-pink-100 selection:text-pink-900 relative overflow-hidden">
-            {/* Spring Map Background with Parallax */}
-            <motion.div 
-                style={{ 
-                    backgroundImage: `url(${springMap})`,
-                    y: bgY
-                }}
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-80 z-0 scale-110"
-            />
-            
-            {/* Soft Spring Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-[#c8e6c9]/30 z-0" />
+        <div className="min-h-screen bg-[#0a1a0a] flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-900 relative overflow-hidden">
+            {/* Ultra-High-Res Background Layer */}
+            <div className="fixed inset-0 z-0">
+                <motion.div 
+                    style={{ 
+                        backgroundImage: `url(${premiumMap})`,
+                        y: bgY
+                    }}
+                    className="absolute inset-0 bg-[length:100%_auto] bg-top bg-no-repeat scale-[1.02]"
+                />
+                {/* Dynamic Lighting Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40" />
+                <div className="absolute inset-0 bg-[#0d2a1c]/10 mix-blend-overlay" />
+            </div>
 
-            {/* Falling Petals Animation */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden z-2">
-                {Array.from({ length: 25 }).map((_, i) => (
-                    <FallingPetal key={i} delay={i * 0.8} />
+            {/* Atmospheric Effects */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-2">
+                {Array.from({ length: 15 }).map((_, i) => (
+                    <Particle key={`p-${i}`} delay={i * 1.2} type="petal" />
+                ))}
+                {Array.from({ length: 5 }).map((_, i) => (
+                    <Particle key={`l-${i}`} delay={i * 4} type="light" />
                 ))}
             </div>
 
-            {/* Header */}
-            <header className="sticky top-0 z-40 bg-white/40 backdrop-blur-md border-b border-pink-100">
-                <div className="px-4 h-16 flex items-center justify-between mx-auto w-full max-w-lg">
+            {/* Premium Header */}
+            <header className="sticky top-0 z-40 bg-black/10 backdrop-blur-2xl border-b border-white/5">
+                <div className="px-4 h-16 sm:h-20 flex items-center justify-between mx-auto w-full max-w-lg">
                     <button
                         onClick={() => navigate('/student/dashboard')}
-                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/80 border border-pink-200 text-pink-500 hover:bg-pink-50 active:scale-95 transition-all shadow-sm"
+                        className="w-11 h-11 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all shadow-2xl group"
                     >
-                        <ArrowLeft className="w-5 h-5" />
+                        <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
                     </button>
-                    <div className="flex-1 text-center font-black text-xl text-emerald-800 uppercase tracking-widest drop-shadow-sm">
-                        Bahorgi Jang
+                    <div className="flex-1 flex flex-col items-center">
+                        <div className="flex items-center gap-1.5 px-3 py-0.5 bg-emerald-500/20 rounded-full border border-emerald-500/30 mb-0.5">
+                            <Sparkles size={12} className="text-emerald-400" />
+                            <span className="text-[9px] font-black text-emerald-300 uppercase tracking-[0.2em]">Adventure Map</span>
+                        </div>
+                        <div className="font-black text-2xl text-white uppercase tracking-tighter drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+                            Jang <span className="text-emerald-400">Maydoni</span>
+                        </div>
                     </div>
-                    <div className="w-10"></div>
+                    <div className="w-11"></div>
                 </div>
             </header>
 
-            <main className="flex-1 relative z-10 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-6 custom-scrollbar pb-32 w-full max-w-lg mx-auto flex flex-col items-center">
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="mb-8 text-center relative z-10 w-full"
-                >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-emerald-100 mb-4">
-                        <Flower2 className="text-pink-400 animate-pulse" size={20} />
-                        <span className="text-emerald-900 font-black text-sm uppercase tracking-wider">Bahor Fasli</span>
-                    </div>
-                    <h1 className="text-4xl font-black text-emerald-900 tracking-tight drop-shadow-sm leading-none">
-                        Bilim Bog'i
-                    </h1>
-                </motion.div>
-
+            <main className="flex-1 relative z-10 overflow-x-hidden overflow-y-auto px-6 py-10 custom-scrollbar pb-40 w-full max-w-lg mx-auto flex flex-col items-center">
                 {!isActive ? (
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="flex-1 flex flex-col items-center justify-center -mt-20 px-4"
+                        className="flex-1 flex flex-col items-center justify-center pt-20"
                     >
-                         <div className="bg-white/80 backdrop-blur-2xl p-10 rounded-[3rem] border border-pink-50 text-center shadow-xl space-y-6">
-                             <div className="text-6xl animate-bounce">🌸</div>
+                         <div className="bg-black/60 backdrop-blur-3xl p-12 rounded-[3.5rem] border border-white/10 text-center shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] space-y-8">
+                             <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto border border-emerald-500/40">
+                                <Sparkles className="text-emerald-400 w-12 h-12" />
+                             </div>
                              <div>
-                                <h2 className="text-3xl font-black text-emerald-900 mb-3 tracking-tighter">Yaqinda...</h2>
-                                <p className="text-emerald-800/70 font-medium max-w-[200px] mx-auto text-sm leading-relaxed">
-                                    Bog'da yangi gullar ochilmoqda. Tez orada janglar boshlanadi!
+                                <h2 className="text-4xl font-black text-white mb-4 tracking-tighter">Yaqinda...</h2>
+                                <p className="text-white/60 font-medium max-w-[240px] mx-auto text-base leading-relaxed">
+                                    Xarita yangi darajalar bilan to'ldirilmoqda. Ozgina sabr qiling!
                                 </p>
                              </div>
                          </div>
                     </motion.div>
                 ) : loading ? (
-                    <div className="text-center py-20 text-emerald-800/30 font-black animate-pulse text-xl">Bog' yuklanmoqda...</div>
+                    <div className="text-center py-20">
+                        <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
+                        <span className="text-white/40 font-black uppercase tracking-widest text-sm">Xarita yuklanmoqda...</span>
+                    </div>
                 ) : (
                     <div className="relative w-full flex flex-col items-center">
-                        {/* Winding path line */}
-                        <div className="absolute inset-0 w-full h-full pointer-events-none -z-0">
+                        {/* Winding Magical Path */}
+                        <div className="absolute inset-0 w-full h-full pointer-events-none">
                             <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="pathGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.1" />
+                                        <stop offset="100%" stopColor="#fb7185" stopOpacity="0.1" />
+                                    </linearGradient>
+                                </defs>
                                 <path
                                     d={`M 50 0 ${mapNodes.map((_, i) => {
                                         if (i === 0) return '';
-                                        const x = 50 + (i % 2 === 0 ? -25 : 25);
+                                        const x = 50 + (i % 2 === 0 ? -28 : 28);
                                         const y = (i * 100) / mapNodes.length;
                                         const prevY = ((i - 1) * 100) / mapNodes.length;
                                         const midY = (y + prevY) / 2;
                                         return `Q ${x} ${midY}, 50 ${y}`;
                                     }).join(' ')}`}
                                     fill="none"
-                                    stroke="rgba(16, 185, 129, 0.3)"
-                                    strokeWidth="3"
-                                    strokeDasharray="1 10"
+                                    stroke="url(#pathGrad)"
+                                    strokeWidth="4"
                                     strokeLinecap="round"
+                                    strokeDasharray="1 12"
                                     style={{ vectorEffect: 'non-scaling-stroke' }}
                                 />
                             </svg>
                         </div>
 
-                        {/* Staggered nodes */}
-                        <div className="flex flex-col w-full relative z-10 space-y-12 sm:space-y-14 pb-16 pt-4">
+                        {/* Staggered Game-Pin Nodes */}
+                        <div className="flex flex-col w-full relative z-10 space-y-16 sm:space-y-20 pb-20 pt-4">
                             {mapNodes.map((node, i) => {
-                                const offsetClass = i % 2 !== 0 ? 'mr-auto ml-4 sm:ml-12' : 'ml-auto mr-4 sm:mr-12';
+                                const offsetClass = i % 2 !== 0 ? 'mr-auto' : 'ml-auto';
                                 return (
                                     <motion.div 
                                         key={node.levelNumber}
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        whileInView={{ opacity: 1, scale: 1 }}
-                                        viewport={{ once: true, margin: "-50px" }}
-                                        className={`relative group w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 ${offsetClass}`}
+                                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                                        whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                                        viewport={{ once: true, margin: "-100px" }}
+                                        className={`relative group w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 ${offsetClass}`}
                                     >
                                         <button
                                             disabled={node.isLocked}
                                             onClick={() => node.battle && navigate(`/student/vocab-battle/play/${node.battle.id}`)}
                                             className={`
-                                                absolute inset-0 rounded-full flex flex-col items-center justify-center gap-1 transition-all duration-300
-                                                shadow-lg border-4
+                                                relative w-full h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 transition-all duration-500
+                                                shadow-[0_15px_35px_-10px_rgba(0,0,0,0.5)] border-2
                                                 ${node.isLocked
-                                                    ? 'bg-white/40 backdrop-blur-sm border-gray-100 text-gray-300 cursor-not-allowed shadow-none'
-                                                    : 'bg-white border-emerald-400 text-emerald-700 hover:border-pink-400 hover:scale-110 active:scale-95 cursor-pointer shadow-emerald-200/50 z-10'
+                                                    ? 'bg-black/40 backdrop-blur-md border-white/5 text-white/20 cursor-not-allowed'
+                                                    : 'bg-gradient-to-br from-white to-emerald-50 border-white text-emerald-900 hover:scale-110 active:scale-95 cursor-pointer z-10'
                                                 }
                                             `}
                                         >
-                                            <div className={`absolute -top-3 px-2 py-0.5 rounded-full shadow-sm border font-black tracking-widest uppercase text-[8px] ${node.isLocked ? 'bg-gray-100 border-gray-200 text-gray-400' : 'bg-emerald-500 border-emerald-400 text-white'}`}>
-                                                {node.isLocked ? <Lock size={8} className="inline mr-0.5" /> : <Flower2 size={8} className="inline mr-0.5" />}
-                                                Lv.{node.levelNumber}
+                                            {/* Level Badge */}
+                                            <div className={`
+                                                absolute -top-3 px-3 py-1 rounded-full shadow-2xl border font-black tracking-tighter text-[10px] flex items-center gap-1
+                                                ${node.isLocked 
+                                                    ? 'bg-white/10 border-white/10 text-white/30 truncate' 
+                                                    : 'bg-emerald-600 border-white text-white drop-shadow-lg'
+                                                }
+                                            `}>
+                                                {node.isLocked ? <Lock size={10} /> : <Sparkles size={10} />}
+                                                LEVEL {node.levelNumber}
                                             </div>
                                             
-                                            <div className="text-2xl sm:text-3xl font-black drop-shadow-sm leading-none">
+                                            <div className={`text-4xl font-black ${node.isLocked ? 'blur-[1px]' : 'drop-shadow-md text-emerald-950 font-black'}`}>
                                                 {node.levelNumber}
                                             </div>
 
                                             {!node.isLocked && (
-                                                <div className="flex gap-0.5">
+                                                <div className="flex gap-0.5 mt-0.5">
                                                     {Array.from({ length: 3 }).map((_, starIdx) => (
                                                         <Star 
                                                             key={starIdx} 
-                                                            size={10} 
-                                                            className={starIdx < node.stars ? "fill-pink-400 text-pink-500" : "fill-gray-100 text-gray-200"} 
+                                                            size={14} 
+                                                            className={starIdx < node.stars ? "fill-yellow-400 text-yellow-500 drop-shadow-md" : "fill-emerald-100 text-emerald-200"} 
                                                         />
                                                     ))}
                                                 </div>
                                             )}
+
+                                            {/* Marker Bottom Pin Effect */}
+                                            <div className={`absolute -bottom-2 w-4 h-4 rotate-45 border-white transition-all duration-500 ${node.isLocked ? 'bg-black/40 border-b border-r' : 'bg-white border-b border-r shadow-xl'}`} />
+                                            
+                                            {/* Glow Effect for Active Levels */}
+                                            {!node.isLocked && (
+                                                <div className="absolute inset-0 rounded-[2rem] bg-emerald-400/20 blur-2xl animate-pulse -z-1" />
+                                            )}
                                         </button>
                                         
                                         {!node.isLocked && (
-                                            <div className="absolute -inset-2 rounded-full border border-pink-200 animate-ping opacity-20 pointer-events-none" />
-                                        )}
-
-                                        {!node.isLocked && (
-                                            <div className={`absolute top-1/2 -mt-4 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none min-w-max bg-white/95 backdrop-blur text-emerald-900 text-[10px] font-black py-2 px-3 rounded-xl shadow-xl z-20 whitespace-nowrap
-                                                ${i % 2 === 0 ? 'left-full ml-3' : 'right-full mr-3'}`}
+                                            <div className={`absolute top-1/2 -mt-5 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none min-w-max bg-black/80 backdrop-blur-xl text-white text-xs font-black py-2.5 px-4 rounded-2xl shadow-2xl z-20 whitespace-nowrap border border-white/10
+                                                ${i % 2 === 0 ? 'left-full ml-6' : 'right-full mr-6'}`}
                                             >
-                                                {node.battle?.title || "Boshlash"}
-                                                <div className={`absolute top-1/2 -mt-1 w-2 h-2 bg-white transform rotate-45 ${i % 2 === 0 ? '-left-1' : '-right-1'}`}></div>
+                                                <div className="flex items-center gap-2">
+                                                    <MapPin size={12} className="text-emerald-400" />
+                                                    {node.battle?.title || "Sarguzashtni boshlash"}
+                                                </div>
                                             </div>
                                         )}
                                     </motion.div>
