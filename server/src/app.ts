@@ -1502,8 +1502,23 @@ app.get('/api/students/:groupId', async (req, res) => {
 // Student Actions
 app.delete('/api/students/:id', async (req, res) => {
     try {
-        await query('DELETE FROM students WHERE id = $1', [req.params.id]);
-        await query('DELETE FROM student_telegram_subscriptions WHERE student_id = $1', [req.params.id]);
+        const { id } = req.params;
+        // Handle foreign key references before deletion
+        // 1. Set mvp_id to NULL in group_battles
+        await query('UPDATE group_battles SET mvp_id = NULL WHERE mvp_id = $1', [id]);
+        
+        // 2. Delete related activity/logs
+        await query('DELETE FROM contact_logs WHERE student_id = $1', [id]);
+        await query('DELETE FROM student_purchases WHERE student_id = $1', [id]);
+        await query('DELETE FROM student_telegram_subscriptions WHERE student_id = $1', [id]);
+        
+        // 3. Finally delete the student
+        const result = await query('DELETE FROM students WHERE id = $1', [id]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+        
         res.json({ success: true });
     } catch (err) {
         console.error('Error deleting student:', err);
