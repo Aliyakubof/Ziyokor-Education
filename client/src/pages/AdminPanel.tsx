@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft, LogOut, Users, Search, Key, X, Swords } from 'lucide-react';
+import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft, LogOut, Users, Search, Key, X } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import logo from '../assets/logo.jpeg';
@@ -34,7 +34,6 @@ const AdminPanel = () => {
     const { user, logout, role } = useAuth();
     const [teachers, setTeachers] = useState<Teacher[]>([]);
     const [unitQuizzes, setUnitQuizzes] = useState<UnitQuiz[]>([]);
-    const [duelQuizzes, setDuelQuizzes] = useState<UnitQuiz[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
     const [view, setView] = useState<'DASHBOARD' | 'STUDENTS'>('DASHBOARD');
     const [searchQuery, setSearchQuery] = useState('');
@@ -53,7 +52,6 @@ const AdminPanel = () => {
     useEffect(() => {
         fetchTeachers();
         fetchUnitQuizzes();
-        fetchDuelQuizzes();
         fetchStudents();
     }, []);
 
@@ -79,35 +77,6 @@ const AdminPanel = () => {
         }
     };
 
-    const fetchDuelQuizzes = async () => {
-        try {
-            const res = await apiFetch('/api/duel-quizzes');
-            const data = await res.json();
-            setDuelQuizzes(Array.isArray(data) ? data : []);
-        } catch (err) {
-            console.error('Error fetching duel quizzes:', err);
-            setDuelQuizzes([]);
-        }
-    };
-
-    const handleStatusToggle = async (quiz: UnitQuiz) => {
-        try {
-            const newStatus = !quiz.is_active;
-            const res = await apiFetch(`/api/duel-quizzes/${quiz.id}`, {
-                method: 'PUT',
-                body: JSON.stringify({ ...quiz, is_active: newStatus })
-            });
-
-            if (res.ok) {
-                fetchDuelQuizzes();
-            } else {
-                alert("Statusni o'zgartirishda xatolik!");
-            }
-        } catch (err) {
-            console.error("Error toggling status:", err);
-            alert("Xatolik yuz berdi!");
-        }
-    };
 
     const fetchStudents = async () => {
         try {
@@ -416,91 +385,6 @@ const AdminPanel = () => {
                                                                 if (res.ok) {
                                                                     fetchUnitQuizzes();
                                                                     alert("Quiz o'chirildi!");
-                                                                } else {
-                                                                    alert("O'chirishda xatolik!");
-                                                                }
-                                                            } catch (err) {
-                                                                console.error("Error deleting quiz:", err);
-                                                                alert("O'chirishda xatolik!");
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="p-2 text-slate-400 hover:text-red-600 transition-colors bg-slate-50 rounded-lg"
-                                                    title="O'chirish"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </section>
-
-                        {/* Duel Quizzes Section */}
-                        <section className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-rose-100 p-2 rounded-lg">
-                                        <Swords className="text-rose-600 w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl font-black text-slate-800 tracking-tight">Duel Savollari</h2>
-                                        <p className="text-slate-500 text-xs font-medium">O'quvchilar dueli uchun savollar</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="px-3 py-1 bg-slate-100 text-slate-600 font-medium rounded-full text-sm">{duelQuizzes.length}</span>
-                                    <button
-                                        onClick={() => navigate('/create?type=duel')}
-                                        className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-rose-200"
-                                    >
-                                        <Plus size={16} /> Yangi
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                {duelQuizzes.length === 0 ? (
-                                    <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-100 border-dashed text-slate-500">
-                                        Hozircha duel savollari yo'q.
-                                    </div>
-                                ) : (
-                                    duelQuizzes.map(quiz => (
-                                        <div key={quiz.id} className={`bg-white border ${quiz.is_active === false ? 'border-slate-100 opacity-60' : 'border-slate-200'} rounded-lg p-4 flex justify-between items-center hover:border-rose-300 transition-colors`}>
-                                            <div className="flex items-center gap-4">
-                                                <button
-                                                    onClick={() => handleStatusToggle(quiz)}
-                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${quiz.is_active !== false ? 'bg-rose-600' : 'bg-slate-200'}`}
-                                                >
-                                                    <span
-                                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${quiz.is_active !== false ? 'translate-x-6' : 'translate-x-1'}`}
-                                                    />
-                                                </button>
-                                                <div>
-                                                    <p className={`font-semibold ${quiz.is_active === false ? 'text-slate-400' : 'text-slate-800'}`}>{quiz.title}</p>
-                                                    <div className="flex items-center gap-3 mt-1 text-sm">
-                                                        <span className="px-2 py-0.5 bg-rose-50 text-rose-700 rounded border border-rose-100 font-medium">{quiz.level}</span>
-                                                        {quiz.is_active === false && <span className="text-rose-500 font-bold text-[10px] uppercase">O'chirilgan</span>}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => navigate(`/edit-quiz/${quiz.id}?type=duel`)}
-                                                    className="p-2 text-slate-400 hover:text-rose-600 transition-colors bg-slate-50 rounded-lg"
-                                                    title="Tahrirlash"
-                                                >
-                                                    ✎
-                                                </button>
-                                                <button
-                                                    onClick={async () => {
-                                                        if (window.confirm("Rostdan ham bu duel savolini o'chirmoqchimisiz?")) {
-                                                            try {
-                                                                const res = await apiFetch(`/api/duel-quizzes/${quiz.id}`, { method: 'DELETE' });
-                                                                if (res.ok) {
-                                                                    fetchDuelQuizzes();
-                                                                    alert("Duel savoli o'chirildi!");
                                                                 } else {
                                                                     alert("O'chirishda xatolik!");
                                                                 }

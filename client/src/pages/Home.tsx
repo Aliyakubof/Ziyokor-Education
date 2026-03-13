@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { LogIn, Settings, Users, PlusCircle, ArrowRight, ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { LogIn, Settings, Users, PlusCircle, ArrowRight, ChevronLeft, ChevronRight, Send, Swords } from 'lucide-react';
 import { apiFetch } from '../api';
 import logo from '../assets/logo.jpeg';
 
@@ -253,6 +253,20 @@ export default function Home() {
                             <h3 className="text-lg font-bold text-slate-900 mb-2">Vocab Battle</h3>
                             <p className="text-slate-500 text-sm font-medium mb-4">Lug'at musobaqalari</p>
                             <span className="inline-flex items-center justify-center bg-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                                Boshqarish
+                            </span>
+                        </Link>
+                    )}
+
+                    {/* Duel Quizzes - For Admin or Teacher */}
+                    {(role === 'admin' || role === 'teacher') && (
+                        <Link to="/manage-duels" className="w-full md:w-[280px] group bg-slate-50 hover:bg-white border border-slate-200 hover:border-rose-200 rounded-2xl p-8 transition-all hover:shadow-xl hover:shadow-rose-500/10 flex flex-col items-center relative overflow-hidden">
+                            <div className="bg-rose-100 text-rose-600 p-4 rounded-xl mb-6 group-hover:scale-110 transition-transform">
+                                <Swords size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 mb-2">Duel Savollari</h3>
+                            <p className="text-slate-500 text-sm font-medium mb-4">Savollar bazasini boshqarish</p>
+                            <span className="inline-flex items-center justify-center bg-rose-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                                 Boshqarish
                             </span>
                         </Link>

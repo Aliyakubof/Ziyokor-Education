@@ -12,6 +12,7 @@ import StudentLogin from './pages/StudentLogin';
 import AdminVocabBattles from './pages/AdminVocabBattles';
 import CreateVocabBattle from './pages/CreateVocabBattle';
 import ManageTelegramQuestions from './pages/ManageTelegramQuestions';
+import ManageDuels from './pages/ManageDuels';
 
 import StudentDashboard from './pages/StudentDashboard';
 import Leaderboard from './pages/Leaderboard';
@@ -251,6 +252,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole={['admin', 'teacher']}>
                   <ManageTelegramQuestions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manage-duels"
+              element={
+                <ProtectedRoute requiredRole={['admin', 'teacher']}>
+                  <ManageDuels />
                 </ProtectedRoute>
               }
             />
