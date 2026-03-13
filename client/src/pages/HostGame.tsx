@@ -33,12 +33,16 @@ const MemoizedPlayerCard = memo(({ player, totalQuestionsCount }: { player: any;
             )}
             <div className="flex justify-between items-start mb-6">
                 <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-lg
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-lg overflow-hidden
                         ${isFinished ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-indigo-500 shadow-indigo-500/20'}`}>
-                        {player.name?.[0]?.toUpperCase() || 'S'}
+                        {player.avatar_url ? (
+                            <img src={player.avatar_url} alt={player.name} className="w-full h-full object-cover" />
+                        ) : (
+                            player.name?.[0]?.toUpperCase() || 'O'
+                        )}
                     </div>
                     <div>
-                        <h3 className="font-black text-slate-800 text-lg leading-tight truncate max-w-[120px]">{player.name}</h3>
+                        <h3 className="font-black text-slate-800 text-lg leading-tight">{player.name}</h3>
                     </div>
                 </div>
                 <div className="text-right">

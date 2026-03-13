@@ -14,8 +14,10 @@ type UserRole = 'admin' | 'teacher' | 'student' | 'manager';
 interface AuthContextType {
     user: User | null;
     role: UserRole | null;
+    activeThemeId: string | null;
     login: (token: string, userData: User, role: UserRole) => void;
     logout: () => void;
+    setActiveThemeId: (themeId: string) => void;
     isAuthenticated: boolean;
 }
 
@@ -34,6 +36,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [role, setRole] = useState<UserRole | null>(() => {
         return localStorage.getItem('ziyokor_role') as UserRole | null;
     });
+    const [activeThemeId, setActiveThemeIdState] = useState<string | null>(() => {
+        return localStorage.getItem('ziyokor_theme');
+    });
+
+    const setActiveThemeId = (themeId: string) => {
+        setActiveThemeIdState(themeId);
+        localStorage.setItem('ziyokor_theme', themeId);
+    };
 
     const login = (token: string, userData: User, userRole: UserRole) => {
         setUser(userData);
@@ -56,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, role, login, logout, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{ user, role, activeThemeId, login, logout, setActiveThemeId, isAuthenticated: !!user }}>
             {children}
         </AuthContext.Provider>
     );

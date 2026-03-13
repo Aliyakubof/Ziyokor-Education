@@ -57,9 +57,12 @@ export default function Leaderboard() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-10">
+        <div className="min-h-screen bg-slate-50 font-sans pb-10 transition-colors duration-500">
             {/* Header */}
-            <div className="bg-gradient-to-br from-indigo-800 to-violet-900 pt-8 pb-16 px-6 text-white relative overflow-hidden">
+            <div 
+                className="pt-8 pb-16 px-6 text-white relative overflow-hidden transition-all duration-500"
+                style={{ background: `linear-gradient(to bottom right, var(--primary-color, #4f46e5), var(--secondary-color, #4338ca))` }}
+            >
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
                 <button
                     onClick={() => navigate(-1)}
@@ -68,25 +71,27 @@ export default function Leaderboard() {
                     <ChevronLeft size={24} />
                 </button>
                 <h1 className="text-3xl font-black mb-2 flex items-center gap-3">
-                    <Trophy className="text-yellow-400 fill-yellow-400/20" size={32} />
+                    <Trophy className="opacity-80" size={32} />
                     Peshqadamlar
                 </h1>
-                <p className="text-indigo-200 font-medium">Eng yaxshi o'quvchilar ro'yxati</p>
+                <p className="text-white/80 font-medium">Eng yaxshi o'quvchilar ro'yxati</p>
             </div>
 
             {/* Controls */}
             <div className="px-4 -mt-10 relative z-10 space-y-4">
                 {/* Tabs */}
-                <div className="bg-white p-1.5 rounded-2xl shadow-xl flex gap-2">
+                <div className="glass-premium p-1.5 rounded-2xl flex gap-2">
                     <button
                         onClick={() => setView('global')}
-                        className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${view === 'global' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
+                        className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${view === 'global' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                        style={view === 'global' ? { backgroundColor: 'var(--primary-color)' } : {}}
                     >
                         <Globe size={18} /> Global
                     </button>
                     <button
                         onClick={() => setView('group')}
-                        className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${view === 'group' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
+                        className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${view === 'group' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                        style={view === 'group' ? { backgroundColor: 'var(--primary-color)' } : {}}
                     >
                         <Users size={18} /> Guruh
                     </button>
@@ -117,7 +122,7 @@ export default function Leaderboard() {
                 )}
 
                 {/* List */}
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="glass-premium rounded-3xl overflow-hidden">
                     {loading ? (
                         <div className="py-20 text-center">
                             <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>

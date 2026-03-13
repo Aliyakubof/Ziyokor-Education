@@ -140,7 +140,7 @@ const UnitLobby = () => {
                                         `}>
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-2.5 h-2.5 rounded-full ${player.isCheater || player.status === 'Cheating' ? 'bg-red-500 animate-pulse' : 'bg-indigo-500'}`} />
-                                                <h3 className="font-black text-slate-800 text-lg leading-tight truncate max-w-[120px]">{player.name}</h3>
+                                                <h3 className="font-black text-slate-800 text-lg leading-tight">{player.name}</h3>
                                             </div>
 
                                             {(player.isCheater || player.status === 'Cheating') && (

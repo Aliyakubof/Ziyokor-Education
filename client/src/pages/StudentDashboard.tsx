@@ -13,7 +13,7 @@ import imageCompression from 'browser-image-compression';
 import logo from '../assets/logo.jpeg';
 
 export default function StudentDashboard() {
-    const { user, logout } = useAuth();
+    const { user, logout, setActiveThemeId } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'home' | 'history' | 'profile'>('home');
     const [stats, setStats] = useState(() => {
@@ -41,41 +41,17 @@ export default function StudentDashboard() {
     const [pin, setPin] = useState('');
     const [isLoading, setIsLoading] = useState(!localStorage.getItem(`stats_${user?.id}`));
 
-    // Theme Engine Logic
-    useEffect(() => {
-        if (stats.active_theme_color) {
-            applyTheme(stats.active_theme_color);
-        }
-    }, [stats.active_theme_color]);
-
     useEffect(() => {
         if (user?.id) {
             fetchData();
         }
     }, [user]);
 
-    const applyTheme = (themeId: string) => {
-        const root = document.documentElement;
-        // Premium Themes Definition
-        const themes: Record<string, any> = {
-            'theme-indigo': { primary: '#4f46e5', secondary: '#4338ca', bg: '#1e1b4b', text: '#e0e7ff' }, // Modern Indigo
-            'theme-emerald': { primary: '#10b981', secondary: '#059669', bg: '#064e3b', text: '#d1fae5' }, // Emerald Oasis
-            'theme-sunset': { primary: '#f59e0b', secondary: '#ea580c', bg: '#431407', text: '#ffedd5' }, // Royal Sunset
-            'theme-cyber': { primary: '#06b6d4', secondary: '#db2777', bg: '#0f172a', text: '#ccfbf1' }, // Cyber Neon
-            'theme-sakura': { primary: '#f472b6', secondary: '#db2777', bg: '#500724', text: '#fce7f3' }, // Soft Sakura
-            'theme-ocean': { primary: '#0891b2', secondary: '#0e7490', bg: '#083344', text: '#cffafe' }, // Deep Ocean
-        };
-
-        // Find theme name from the ID or color string. 
-        // In our shop, we store the theme name or color hex in the 'color' column.
-        // For simplicity, let's assume the manager sets color to something like "theme-emerald"
-        const theme = themes[themeId] || themes['theme-indigo'];
-        
-        root.style.setProperty('--primary-color', theme.primary);
-        root.style.setProperty('--secondary-color', theme.secondary);
-        root.style.setProperty('--bg-gradient-from', theme.bg);
-        root.style.setProperty('--bg-gradient-to', 'transparent');
-    };
+    useEffect(() => {
+        if (stats.active_theme_color) {
+            setActiveThemeId(stats.active_theme_color);
+        }
+    }, [stats.active_theme_color, setActiveThemeId]);
 
     const fetchData = async () => {
         try {
@@ -176,8 +152,8 @@ export default function StudentDashboard() {
         <div className="min-h-screen bg-slate-50 font-sans pb-24 md:pb-12 relative overflow-hidden">
             {/* Background Gradients */}
             <div 
-                className="absolute top-0 left-0 w-full h-[500px] z-0 opacity-100 transition-colors duration-1000"
-                style={{ background: `linear-gradient(to bottom, var(--bg-gradient-from, #312e81), var(--bg-gradient-to, transparent))` }}
+                className="absolute top-0 left-0 w-full h-full z-0 opacity-100 transition-colors duration-1000"
+                style={{ background: `linear-gradient(to bottom, var(--bg-gradient-from, #f8fafc), var(--bg-gradient-to, transparent))` }}
             ></div>
             <div 
                 className="absolute top-[-100px] right-[-100px] w-[500px] h-[500px] rounded-full blur-[120px] z-0 opacity-50"

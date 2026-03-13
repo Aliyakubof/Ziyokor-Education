@@ -71,9 +71,12 @@ export default function DuelLobby() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-10">
+        <div className="min-h-screen bg-slate-50 font-sans pb-10 transition-colors duration-500">
             {/* Header */}
-            <div className="bg-gradient-to-br from-rose-700 to-red-900 pt-8 pb-16 px-6 text-white relative overflow-hidden">
+            <div 
+                className="pt-8 pb-16 px-6 text-white relative overflow-hidden transition-all duration-500"
+                style={{ background: `linear-gradient(to bottom right, var(--primary-color, #e11d48), var(--secondary-color, #881337))` }}
+            >
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
                 <button
                     onClick={() => navigate(-1)}
@@ -81,11 +84,11 @@ export default function DuelLobby() {
                 >
                     <ChevronLeft size={24} />
                 </button>
-                <h1 className="text-3xl font-black mb-2 flex items-center gap-3 text-red-100">
-                    <Swords className="text-red-400" size={32} />
+                <h1 className="text-3xl font-black mb-2 flex items-center gap-3 text-white">
+                    <Swords className="opacity-80" size={32} />
                     Duellar
                 </h1>
-                <p className="text-rose-200 font-medium font-sm">Boshqa o'quvchilar bilan bellashing</p>
+                <p className="text-white/80 font-medium font-sm">Boshqa o'quvchilar bilan bellashing</p>
 
                 <div className={`absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${socketConnected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}`}>
                     <div className={`w-1.5 h-1.5 rounded-full ${socketConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></div>
@@ -137,7 +140,7 @@ export default function DuelLobby() {
                 )}
 
                 {/* Search Player Card */}
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center justify-center py-12">
+                <div className="glass-premium rounded-3xl p-6 flex flex-col items-center justify-center py-12">
                     <Loader2 className="animate-spin text-rose-300 mb-4" size={48} />
                     <h2 className="text-xl font-black text-slate-800 mb-2">
                         Duellar tez orada ishga tushadi!

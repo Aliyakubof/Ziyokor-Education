@@ -2287,7 +2287,8 @@ function scrubSinglePlayer(game: any, p: any) {
             }).length,
             status: p.status,
             isFinished: p.isFinished,
-            isCheater: p.isCheater
+            isCheater: p.isCheater,
+            avatar_url: p.avatar_url
         };
     }
     return p;
@@ -2645,10 +2646,12 @@ io.on('connection', (socket) => {
                     (player as any).aiFeedbackMap = {};
                     (player as any).isFinished = false;
                 }
+                player.avatar_url = student.avatar_url;
             } else {
                 player = {
                     id: studentId,
                     name: student.name,
+                    avatar_url: student.avatar_url,
                     score: 0,
                     answers: {},
                     status: 'Online'

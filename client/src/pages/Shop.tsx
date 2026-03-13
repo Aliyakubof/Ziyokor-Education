@@ -5,7 +5,7 @@ import { apiFetch } from '../api';
 import { ShoppingBag, ChevronLeft, Coins, CheckCircle2, AlertCircle, ShoppingCart } from 'lucide-react';
 
 export default function Shop() {
-    const { user } = useAuth();
+    const { user, setActiveThemeId: setGlobalThemeId } = useAuth();
     const navigate = useNavigate();
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,6 +44,9 @@ export default function Shop() {
                 const data = await res.json();
                 setBalance(data.coins);
                 setActiveThemeId(data.active_theme_id);
+                if (data.active_theme_color) {
+                    setGlobalThemeId(data.active_theme_color);
+                }
             }
         } catch (err) {
             console.error(err);
@@ -99,9 +102,8 @@ export default function Shop() {
 
             if (res.ok) {
                 setActiveThemeId(themeId);
+                setGlobalThemeId(themeId);
                 setMessage({ text: "Mavzu muvaffaqiyatli o'rnatildi!", type: 'success' });
-                // Force reload or update context if needed
-                setTimeout(() => window.location.reload(), 1000);
             } else {
                 const data = await res.json();
                 setMessage({ text: data.error || "Xatolik yuz berdi", type: 'error' });
@@ -115,9 +117,12 @@ export default function Shop() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-10">
+        <div className="min-h-screen bg-slate-50 font-sans pb-10 transition-colors duration-500">
             {/* Header */}
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-800 pt-8 pb-16 px-6 text-white relative overflow-hidden">
+            <div 
+                className="pt-8 pb-16 px-6 text-white relative overflow-hidden transition-all duration-500"
+                style={{ background: `linear-gradient(to bottom right, var(--primary-color, #059669), var(--secondary-color, #0d9488))` }}
+            >
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
                 <button
                     onClick={() => navigate(-1)}
@@ -128,10 +133,10 @@ export default function Shop() {
                 <div className="flex justify-between items-start">
                     <div>
                         <h1 className="text-3xl font-black mb-2 flex items-center gap-3">
-                            <ShoppingBag className="text-emerald-300" size={32} />
+                            <ShoppingBag className="opacity-80" size={32} />
                             Do'kon
                         </h1>
-                        <p className="text-emerald-100 font-medium font-sm">Profilni ko'rinishini o'zgartiring</p>
+                        <p className="text-white/80 font-medium font-sm">Profil ko'rinishini o'zgartiring</p>
                     </div>
                     <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 flex items-center gap-2 shadow-lg">
                         <span className="text-xl font-black">{balance.toLocaleString()}</span>
@@ -151,7 +156,7 @@ export default function Shop() {
                 )}
 
                 {loading ? (
-                    <div className="py-20 text-center bg-white rounded-3xl shadow-sm">
+                    <div className="py-20 text-center glass-premium rounded-3xl">
                         <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                         <p className="text-slate-400 font-medium">Elementlar yuklanmoqda...</p>
                     </div>
@@ -167,7 +172,7 @@ export default function Shop() {
                             const isActive = activeThemeId === item.id;
 
                             return (
-                                <div key={item.id} className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex flex-col items-center text-center group">
+                                <div key={item.id} className="glass-premium rounded-3xl p-4 flex flex-col items-center text-center group">
                                     <div className="w-24 h-24 rounded-2xl bg-slate-50 mb-4 flex items-center justify-center overflow-hidden border border-slate-50 group-hover:scale-105 transition-transform duration-300">
                                         {item.type === 'avatar' ? (
                                             <img

@@ -391,8 +391,11 @@ export default function SoloQuiz() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-10">
-            <div className="bg-gradient-to-br from-indigo-900 to-blue-900 pt-8 pb-16 px-6 text-white relative overflow-hidden">
+        <div className="min-h-screen bg-slate-50 font-sans pb-10 transition-colors duration-500">
+            <div 
+                className="pt-8 pb-16 px-6 text-white relative overflow-hidden transition-all duration-500"
+                style={{ background: `linear-gradient(to bottom right, var(--primary-color, #4338ca), var(--secondary-color, #1e1b4b))` }}
+            >
                 <button
                     onClick={() => navigate(-1)}
                     className="mb-6 p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
@@ -400,10 +403,10 @@ export default function SoloQuiz() {
                     <ChevronLeft size={24} />
                 </button>
                 <h1 className="text-3xl font-black mb-2 flex items-center gap-3">
-                    <BookOpen className="text-indigo-300" size={32} />
+                    <BookOpen className="opacity-80" size={32} />
                     Mashqlar
                 </h1>
-                <p className="text-indigo-200 font-medium font-sm">Bilimingizni mustahkamlang</p>
+                <p className="text-white/80 font-medium font-sm">Bilimingizni mustahkamlang</p>
             </div>
 
             <div className="px-4 -mt-10 relative z-10 space-y-4">
@@ -440,13 +443,13 @@ export default function SoloQuiz() {
                 </div>
 
                 {loading && !isBattleMode ? (
-                    <div className="py-20 text-center bg-white rounded-3xl shadow-sm">
+                    <div className="py-20 text-center glass-premium rounded-3xl">
                         <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                         <p className="text-slate-400 font-medium">Testlar yuklanmoqda...</p>
                     </div>
                 ) : (
                     quizzes.map((quiz) => (
-                        <div key={quiz.id} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center justify-between group hover:border-indigo-200 transition-colors">
+                        <div key={quiz.id} className="glass-premium rounded-3xl p-5 flex items-center justify-between group hover:border-indigo-200 transition-colors">
                             <div className="flex-1">
                                 <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full uppercase mb-2 inline-block">Unit {quiz.unit}</span>
                                 <h3 className="font-bold text-slate-800 mb-1">{quiz.title}</h3>

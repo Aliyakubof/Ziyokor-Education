@@ -7,6 +7,7 @@ export interface Player {
     isCheater?: boolean;
     partialScoreMap?: Record<number, number>; // questionIndex -> score (0 or 1, or fractional)
     aiFeedbackMap?: Record<number, string>; // questionIndex -> AI feedback
+    avatar_url?: string;
 }
 
 export interface Teacher {

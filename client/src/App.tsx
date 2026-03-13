@@ -32,6 +32,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
 import { useLocation } from 'react-router-dom';
+import { ThemeEngine } from './components/ThemeEngine';
 
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' | 'manager' | ('admin' | 'teacher' | 'student' | 'manager')[] }) => {
   const { isAuthenticated, role } = useAuth();
@@ -88,7 +89,8 @@ function App() {
 
   return (
     <AuthProvider>
-      <AppMonitor>
+      <ThemeEngine>
+        <AppMonitor>
         <div className="min-h-[100dvh] w-full overflow-x-hidden font-sans flex flex-col"
           style={{
             paddingTop: 'env(safe-area-inset-top)',
@@ -280,6 +282,7 @@ function App() {
           </Routes>
         </div>
       </AppMonitor>
+      </ThemeEngine>
     </AuthProvider>
   );
 }
