@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
 import { ShoppingBag, ChevronLeft, Coins, CheckCircle2, AlertCircle, ShoppingCart } from 'lucide-react';
+import { themes } from '../themeConfig';
 
 export default function Shop() {
     const { user, setActiveThemeId: setGlobalThemeId } = useAuth();
@@ -183,7 +184,11 @@ export default function Shop() {
                                         ) : (
                                             <div className="w-16 h-16 rounded-xl shadow-inner border border-slate-100" style={{ backgroundColor: item.color?.startsWith('#') ? item.color : 'white' }}>
                                                 {item.color?.startsWith('theme-') && (
-                                                    <div className={`w-full h-full rounded-xl ${item.color}`}></div>
+                                                    <div className={`w-full h-full rounded-xl flex flex-col p-1.5 gap-1.5`} 
+                                                         style={{ background: `linear-gradient(135deg, ${(themes as any)[item.color]?.primary || '#eee'}, ${(themes as any)[item.color]?.bg || '#f1f5f9'})` }}>
+                                                        <div className="w-full h-1/3 rounded-lg opacity-40 bg-white shadow-sm"></div>
+                                                        <div className="w-2/3 h-1/4 rounded-lg bg-white/60"></div>
+                                                    </div>
                                                 )}
                                             </div>
                                         )}
