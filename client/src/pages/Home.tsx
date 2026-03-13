@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { LogIn, Settings, Users, PlusCircle, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogIn, Settings, Users, PlusCircle, ArrowRight, ChevronLeft, ChevronRight, Send } from 'lucide-react';
 import { apiFetch } from '../api';
 import logo from '../assets/logo.jpeg';
 
@@ -96,15 +96,6 @@ export default function Home() {
 
                     {/* Right Actions */}
                     <div className="flex items-center gap-4">
-                        {isAuthenticated && (role === 'admin' || role === 'teacher') && (
-                            <button
-                                onClick={() => navigate('/create')}
-                                className="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-all font-bold text-sm shadow-sm active:scale-95"
-                            >
-                                <PlusCircle size={18} />
-                                Test yaratish
-                            </button>
-                        )}
                         {isAuthenticated ? (
                             <div className="flex items-center gap-4">
                                 <span className="text-sm font-semibold text-slate-600 hidden md:inline">{user?.name}</span>
@@ -259,10 +250,24 @@ export default function Home() {
                             <div className="bg-pink-100 text-pink-600 p-4 rounded-xl mb-6 group-hover:scale-110 transition-transform">
                                 <PlusCircle size={32} />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-900 mb-2">Vocab Battle yaratish</h3>
+                            <h3 className="text-lg font-bold text-slate-900 mb-2">Vocab Battle</h3>
                             <p className="text-slate-500 text-sm font-medium mb-4">Lug'at musobaqalari</p>
                             <span className="inline-flex items-center justify-center bg-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                                Yaratish & Boshqarish
+                                Boshqarish
+                            </span>
+                        </Link>
+                    )}
+
+                    {/* Telegram Bot Questions - For Admin or Teacher */}
+                    {(role === 'admin' || role === 'teacher') && (
+                        <Link to="/admin/telegram-questions" className="w-full md:w-[280px] group bg-slate-50 hover:bg-white border border-slate-200 hover:border-sky-200 rounded-2xl p-8 transition-all hover:shadow-xl hover:shadow-sky-500/10 flex flex-col items-center relative overflow-hidden">
+                            <div className="bg-sky-100 text-sky-600 p-4 rounded-xl mb-6 group-hover:scale-110 transition-transform">
+                                <Send size={32} className="rotate-0" />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 mb-2">Telegram Bot</h3>
+                            <p className="text-slate-500 text-sm font-medium mb-4">Savol yaratish</p>
+                            <span className="inline-flex items-center justify-center bg-sky-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                                Savollar
                             </span>
                         </Link>
                     )}

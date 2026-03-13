@@ -807,20 +807,6 @@ const TeacherDashboard = () => {
 
                     <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
                         <div className="flex items-center gap-3">
-                             <button
-                                onClick={() => navigate('/admin/vocab-battles')}
-                                className="hidden md:flex items-center gap-2 px-4 py-2 bg-pink-50 text-pink-600 hover:bg-pink-100 rounded-xl transition-all font-bold text-sm border border-pink-100 shadow-sm active:scale-95"
-                            >
-                                <Plus size={18} />
-                                Vocab Battle
-                            </button>
-                            <button
-                                onClick={() => navigate('/admin/telegram-questions')}
-                                className="hidden md:flex items-center gap-2 px-4 py-2 bg-sky-50 text-sky-600 hover:bg-sky-100 rounded-xl transition-all font-bold text-sm border border-sky-100 shadow-sm active:scale-95"
-                            >
-                                <Send size={18} />
-                                Telegram Bot
-                            </button>
                             <div className="text-right">
                                 <p className="text-sm font-bold text-slate-800 leading-tight">{user?.name}</p>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
