@@ -70,3 +70,13 @@ CREATE TABLE IF NOT EXISTS group_battles (
     mvp_id TEXT REFERENCES students(id),
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Telegram Bot Questions Table
+CREATE TABLE IF NOT EXISTS telegram_questions (
+    id UUID PRIMARY KEY,
+    text TEXT NOT NULL,
+    options JSONB NOT NULL,
+    correct_index INT NOT NULL,
+    level TEXT NOT NULL DEFAULT 'General',
+    created_at TIMESTAMP DEFAULT NOW()
+);

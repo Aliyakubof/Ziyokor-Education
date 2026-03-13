@@ -11,11 +11,14 @@ export default function Shop() {
     const [loading, setLoading] = useState(true);
     const [purchasing, setPurchasing] = useState<string | null>(null);
     const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+    const [purchasedItems, setPurchasedItems] = useState<string[]>([]);
+    const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
     const [balance, setBalance] = useState(0);
 
     useEffect(() => {
         fetchItems();
         fetchStats();
+        fetchPurchases();
     }, []);
 
     const fetchItems = async () => {
@@ -35,6 +38,19 @@ export default function Shop() {
             if (res.ok) {
                 const data = await res.json();
                 setBalance(data.coins);
+                setActiveThemeId(data.active_theme_id);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const fetchPurchases = async () => {
+        try {
+            const res = await apiFetch(`/api/student/${user?.id}/purchases`);
+            if (res.ok) {
+                const data = await res.json();
+                setPurchasedItems(data.map((p: any) => p.item_id));
             }
         } catch (err) {
             console.error(err);
@@ -55,11 +71,38 @@ export default function Shop() {
             if (res.ok) {
                 setMessage({ text: "Muvaffaqiyatli xarid qilindi!", type: 'success' });
                 setBalance(data.newCoins);
+                setPurchasedItems(prev => [...prev, itemId]);
             } else {
                 setMessage({ text: data.error || "Xatolik yuz berdi", type: 'error' });
             }
         } catch (err) {
             setMessage({ text: "Server bilan aloqa uzildi", type: 'error' });
+        } finally {
+            setPurchasing(null);
+            setTimeout(() => setMessage(null), 3000);
+        }
+    };
+
+    const handleApplyTheme = async (themeId: string) => {
+        setPurchasing(themeId);
+        try {
+            const res = await apiFetch('/api/student/active-theme', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId: user?.id, themeId })
+            });
+
+            if (res.ok) {
+                setActiveThemeId(themeId);
+                setMessage({ text: "Mavzu muvaffaqiyatli o'rnatildi!", type: 'success' });
+                // Force reload or update context if needed
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                const data = await res.json();
+                setMessage({ text: data.error || "Xatolik yuz berdi", type: 'error' });
+            }
+        } catch (err) {
+            setMessage({ text: "Xatolik yuz berdi", type: 'error' });
         } finally {
             setPurchasing(null);
             setTimeout(() => setMessage(null), 3000);
@@ -114,37 +157,69 @@ export default function Shop() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {items.map((item) => (
-                            <div key={item.id} className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex flex-col items-center text-center group">
-                                <div className="w-24 h-24 rounded-2xl bg-slate-50 mb-4 flex items-center justify-center overflow-hidden border border-slate-50 group-hover:scale-105 transition-transform duration-300">
-                                    {item.type === 'avatar' ? (
-                                        <img src={item.url} alt={item.name} className="w-20 h-20 object-contain" />
+                        {items.map((item) => {
+                            const isPurchased = purchasedItems.includes(item.id);
+                            const isActive = activeThemeId === item.id;
+
+                            return (
+                                <div key={item.id} className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 flex flex-col items-center text-center group">
+                                    <div className="w-24 h-24 rounded-2xl bg-slate-50 mb-4 flex items-center justify-center overflow-hidden border border-slate-50 group-hover:scale-105 transition-transform duration-300">
+                                        {item.type === 'avatar' ? (
+                                            <img
+                                                src={item.url?.startsWith('/') ? `${(window as any).VITE_BACKEND_URL || ''}${item.url}` : item.url}
+                                                alt={item.name}
+                                                className="w-20 h-20 object-contain"
+                                            />
+                                        ) : (
+                                            <div className="w-16 h-16 rounded-xl shadow-inner border border-slate-100" style={{ backgroundColor: item.color?.startsWith('#') ? item.color : 'white' }}>
+                                                {item.color?.startsWith('theme-') && (
+                                                    <div className={`w-full h-full rounded-xl ${item.color}`}></div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <h3 className="font-bold text-slate-800 text-sm mb-1">{item.name}</h3>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-4">{item.type === 'avatar' ? 'Avatar' : item.type === 'theme' ? 'Mavzu' : 'Ruxsat'}</p>
+
+                                    {isPurchased ? (
+                                        item.type === 'theme' ? (
+                                            <button
+                                                onClick={() => handleApplyTheme(item.id)}
+                                                disabled={isActive || purchasing === item.id}
+                                                className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${isActive
+                                                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg active:scale-95'
+                                                    }`}
+                                            >
+                                                {isActive ? 'O\'rnatilgan' : 'O\'rnatish'}
+                                            </button>
+                                        ) : (
+                                            <div className="w-full py-2.5 bg-slate-50 text-slate-400 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5">
+                                                <CheckCircle2 size={16} /> Sotib olingan
+                                            </div>
+                                        )
                                     ) : (
-                                        <div className="w-16 h-16 rounded-xl shadow-inner" style={{ backgroundColor: item.color }}></div>
+                                        <button
+                                            onClick={() => handlePurchase(item.id)}
+                                            disabled={purchasing === item.id || balance < item.price}
+                                            className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${balance < item.price
+                                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 active:scale-95'
+                                                }`}
+                                        >
+                                            {purchasing === item.id ? (
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            ) : (
+                                                <>
+                                                    <ShoppingCart size={16} />
+                                                    {item.price}
+                                                </>
+                                            )}
+                                        </button>
                                     )}
                                 </div>
-                                <h3 className="font-bold text-slate-800 text-sm mb-1">{item.name}</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase mb-4">{item.type === 'avatar' ? 'Avatar' : 'Mavzu'}</p>
-
-                                <button
-                                    onClick={() => handlePurchase(item.id)}
-                                    disabled={purchasing === item.id || balance < item.price}
-                                    className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${balance < item.price
-                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 active:scale-95'
-                                        }`}
-                                >
-                                    {purchasing === item.id ? (
-                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    ) : (
-                                        <>
-                                            <ShoppingCart size={16} />
-                                            {item.price}
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

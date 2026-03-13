@@ -11,6 +11,7 @@ import ManagerDashboard from './pages/ManagerDashboard';
 import StudentLogin from './pages/StudentLogin';
 import AdminVocabBattles from './pages/AdminVocabBattles';
 import CreateVocabBattle from './pages/CreateVocabBattle';
+import ManageTelegramQuestions from './pages/ManageTelegramQuestions';
 
 import StudentDashboard from './pages/StudentDashboard';
 import Leaderboard from './pages/Leaderboard';
@@ -240,6 +241,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/telegram-questions"
+              element={
+                <ProtectedRoute requiredRole={['admin', 'teacher']}>
+                  <ManageTelegramQuestions />
                 </ProtectedRoute>
               }
             />

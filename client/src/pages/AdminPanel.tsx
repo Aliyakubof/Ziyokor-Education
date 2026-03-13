@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft, LogOut, FileQuestion, Users, Search, Key, X } from 'lucide-react';
+import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft, LogOut, FileQuestion, Users, Search, Key, X, Send } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import logo from '../assets/logo.jpeg';
@@ -358,6 +358,25 @@ const AdminPanel = () => {
                                     </div>
                                 </div>
                                 <div className="text-purple-300 group-hover:text-purple-500 transition-colors bg-purple-50 p-2 rounded-lg">
+                                    <ArrowLeft className="rotate-180" size={20} />
+                                </div>
+                            </button>
+
+                            {/* Telegram Bot Questions Card */}
+                            <button
+                                onClick={() => navigate('/admin/telegram-questions')}
+                                className="w-full bg-white border-2 border-slate-100 hover:border-sky-200 p-6 rounded-2xl flex items-center justify-between group transition-all shadow-sm mt-4"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-sky-50 rounded-xl flex items-center justify-center text-sky-600 group-hover:scale-110 transition-transform shadow-inner">
+                                        <Send size={24} />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-lg font-black text-slate-800">Telegram Savollari</p>
+                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Bot uchun maxsus testlar</p>
+                                    </div>
+                                </div>
+                                <div className="text-sky-300 group-hover:text-sky-500 transition-colors bg-sky-50 p-2 rounded-lg">
                                     <ArrowLeft className="rotate-180" size={20} />
                                 </div>
                             </button>

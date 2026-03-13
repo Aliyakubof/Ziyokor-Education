@@ -27,11 +27,33 @@ import { Worker } from 'worker_threads';
 import path from 'path';
 import fs from 'fs';
 
+import multer from 'multer';
+
 const app = express();
 const RESULTS_DIR = path.join(__dirname, '..', 'storage', 'results');
+const UPLOADS_DIR = path.join(__dirname, '..', 'storage', 'uploads');
+
 if (!fs.existsSync(RESULTS_DIR)) {
     fs.mkdirSync(RESULTS_DIR, { recursive: true });
 }
+if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Multer storage config
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, UPLOADS_DIR);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage });
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 const allowedOrigins = [
     process.env.FRONTEND_URL,
@@ -192,6 +214,17 @@ async function initDb() {
         `);
 
         await query(`
+            CREATE TABLE IF NOT EXISTS telegram_questions (
+                id UUID PRIMARY KEY,
+                text TEXT NOT NULL,
+                options JSONB NOT NULL,
+                correct_index INT NOT NULL,
+                level TEXT NOT NULL DEFAULT 'General',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        await query(`
             CREATE TABLE IF NOT EXISTS group_battles(
             id UUID PRIMARY KEY,
             group_a_id UUID REFERENCES groups(id) ON DELETE CASCADE,
@@ -208,6 +241,7 @@ async function initDb() {
 
         // Parent ID Migration
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS parent_id TEXT UNIQUE;');
+        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS active_theme_id UUID REFERENCES shop_items(id);');
 
         // Telegram Subscriber Role Migration
         await query('ALTER TABLE student_telegram_subscriptions ADD COLUMN IF NOT EXISTS role TEXT;');
@@ -658,6 +692,134 @@ app.delete('/api/admin/vocab-battles/:id', requireRole('admin', 'teacher'), asyn
     } catch (err: any) {
         console.error('Error deleting vocab battle:', err);
         res.status(500).json({ error: 'Error deleting vocab battle', details: err.message });
+    }
+});
+
+// Admin: Telegram Bot Questions
+app.get('/api/telegram-questions', requireRole('admin', 'teacher', 'manager'), async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM telegram_questions ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error fetching telegram questions:', err);
+        res.status(500).json({ error: 'Error fetching telegram questions', details: err.message });
+    }
+});
+
+app.post('/api/telegram-questions', requireRole('admin', 'teacher'), async (req, res) => {
+    try {
+        const { text, options, correct_index, level } = req.body;
+        const id = uuidv4();
+        await query(
+            'INSERT INTO telegram_questions (id, text, options, correct_index, level) VALUES ($1, $2, $3, $4, $5)',
+            [id, text, JSON.stringify(options), correct_index, level || 'General']
+        );
+        res.json({ id, text, options, correct_index, level });
+    } catch (err: any) {
+        console.error('Error creating telegram question:', err);
+        res.status(500).json({ error: 'Error creating telegram question', details: err.message });
+    }
+});
+
+app.put('/api/telegram-questions/:id', requireRole('admin', 'teacher'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { text, options, correct_index, level } = req.body;
+        await query(
+            'UPDATE telegram_questions SET text = $1, options = $2, correct_index = $3, level = $4 WHERE id = $5',
+            [text, JSON.stringify(options), correct_index, level, id]
+        );
+        res.json({ id, text, options, correct_index, level });
+    } catch (err: any) {
+        console.error('Error updating telegram question:', err);
+        res.status(500).json({ error: 'Error updating telegram question', details: err.message });
+    }
+});
+
+app.delete('/api/telegram-questions/:id', requireRole('admin', 'teacher'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM telegram_questions WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err: any) {
+        console.error('Error deleting telegram question:', err);
+        res.status(500).json({ error: 'Error deleting telegram question', details: err.message });
+    }
+});
+
+// Manager: Shop Items Management
+app.post('/api/manager/shop/items', requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { name, type, price, url, color, is_active } = req.body;
+        const id = uuidv4();
+        await query(
+            'INSERT INTO shop_items (id, name, type, price, url, color, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            [id, name, type, price, url, color, is_active !== undefined ? is_active : true]
+        );
+        res.json({ id, name, type, price, url, color });
+    } catch (err: any) {
+        console.error('Error creating shop item:', err);
+        res.status(500).json({ error: 'Xatolik', details: err.message });
+    }
+});
+
+app.put('/api/manager/shop/items/:id', requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, type, price, url, color, is_active } = req.body;
+        await query(
+            'UPDATE shop_items SET name = $1, type = $2, price = $3, url = $4, color = $5, is_active = $6 WHERE id = $7',
+            [name, type, price, url, color, is_active, id]
+        );
+        res.json({ id, name, type, price, url, color, is_active });
+    } catch (err: any) {
+        console.error('Error updating shop item:', err);
+        res.status(500).json({ error: 'Xatolik', details: err.message });
+    }
+});
+
+app.delete('/api/manager/shop/items/:id', requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM shop_items WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err: any) {
+        console.error('Error deleting shop item:', err);
+        res.status(500).json({ error: 'Xatolik', details: err.message });
+    }
+});
+
+// Manager: Upload Image
+app.post('/api/manager/upload', requireRole('admin', 'manager'), upload.single('image'), (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'Rasm yuklanmadi' });
+        const fileUrl = `/uploads/${req.file.filename}`;
+        res.json({ url: fileUrl });
+    } catch (err: any) {
+        console.error('Upload error:', err);
+        res.status(500).json({ error: 'Yuklashda xatolik' });
+    }
+});
+
+// Student: Set Active Theme
+app.post('/api/student/active-theme', async (req, res) => {
+    try {
+        const { studentId, themeId } = req.body;
+        // Verify student owns the theme
+        const purchaseRes = await query(
+            'SELECT 1 FROM student_purchases WHERE student_id = $1 AND item_id = $2 LIMIT 1',
+            [studentId, themeId]
+        );
+
+        if (purchaseRes.rowCount === 0) {
+            return res.status(403).json({ error: 'Siz bu mavzuni sotib olmagansiz' });
+        }
+
+        await query('UPDATE students SET active_theme_id = $1 WHERE id = $2', [themeId, studentId]);
+        res.json({ success: true, themeId });
+    } catch (err: any) {
+        console.error('Set active theme error:', err);
+        res.status(500).json({ error: 'Xatolik' });
     }
 });
 
@@ -1474,8 +1636,9 @@ app.get('/api/student/:id/stats', async (req, res) => {
         // Basic Student Info (Coins, Streaks, Battle Stats) - use LEFT JOIN so missing group doesn't crash
         const studentRes = await query(`
             SELECT
-            s.coins,
+                s.coins,
                 s.streak_count,
+                s.active_theme_id,
                 COALESCE(s.is_hero, false) as is_hero,
                 COALESCE(s.weekly_battle_score, 0) as weekly_battle_score,
                 s.group_id,
@@ -1525,6 +1688,7 @@ app.get('/api/student/:id/stats', async (req, res) => {
             weeklyBattleScore: student.weekly_battle_score || 0,
             groupId: student.group_id,
             avatarUrl: student.avatar_url || null,
+            active_theme_id: student.active_theme_id,
             hasAvatarUnlock: (unlockRes.rowCount || 0) > 0,
             gamesPlayed: parseInt(gamesRes.rows[0].games_count) || 0,
             totalScore: parseInt(scoreRes.rows[0].total_score) || 0,
@@ -1646,47 +1810,17 @@ app.post('/api/student/purchase', async (req, res) => {
     }
 });
 
-// Manager: Shop Items Management
-app.post('/api/manager/shop/items', async (req, res) => {
+app.get('/api/student/:id/purchases', async (req, res) => {
     try {
-        const { name, type, price, url, color } = req.body;
-        const id = uuidv4();
-        await query(
-            'INSERT INTO shop_items (id, name, type, price, url, color) VALUES ($1, $2, $3, $4, $5, $6)',
-            [id, name, type, price, url || null, color || null]
-        );
-        res.json({ id, name, type, price, url, color, is_active: true });
+        const { id } = req.params;
+        const result = await query('SELECT item_id, item_type FROM student_purchases WHERE student_id = $1', [id]);
+        res.json(result.rows);
     } catch (err) {
-        console.error('Error creating shop item:', err);
-        res.status(500).json({ error: 'Xatolik yuz berdi' });
+        console.error('Error fetching purchases:', err);
+        res.status(500).json({ error: 'Xaridlarni yuklab bo\'lmadi' });
     }
 });
 
-app.put('/api/manager/shop/items/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, type, price, url, color, is_active } = req.body;
-        await query(
-            'UPDATE shop_items SET name = $1, type = $2, price = $3, url = $4, color = $5, is_active = $6 WHERE id = $7',
-            [name, type, price, url || null, color || null, is_active !== undefined ? is_active : true, id]
-        );
-        res.json({ id, name, type, price, url, color, is_active });
-    } catch (err) {
-        console.error('Error updating shop item:', err);
-        res.status(500).json({ error: 'Xatolik yuz berdi' });
-    }
-});
-
-app.delete('/api/manager/shop/items/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        await query('DELETE FROM shop_items WHERE id = $1', [id]);
-        res.json({ success: true, id });
-    } catch (err) {
-        console.error('Error deleting shop item:', err);
-        res.status(500).json({ error: 'Xatolik yuz berdi' });
-    }
-});
 
 // Manager: System Settings Management
 app.get('/api/manager/settings', async (req, res) => {

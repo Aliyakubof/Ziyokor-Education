@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS students (
     avatar_url TEXT,
     is_hero BOOLEAN DEFAULT FALSE,
     weekly_battle_score INT DEFAULT 0,
-    parent_id TEXT UNIQUE
+    parent_id TEXT UNIQUE,
+    active_theme_id UUID REFERENCES shop_items(id)
 );
 
 -- Quizzes Table (Regular)
@@ -143,6 +144,16 @@ CREATE TABLE IF NOT EXISTS group_battles (
 CREATE TABLE IF NOT EXISTS telegram_group_chats (
     chat_id TEXT PRIMARY KEY,
     title TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Telegram Bot Questions Table
+CREATE TABLE IF NOT EXISTS telegram_questions (
+    id UUID PRIMARY KEY,
+    text TEXT NOT NULL,
+    options JSONB NOT NULL,
+    correct_index INT NOT NULL,
+    level TEXT NOT NULL DEFAULT 'General',
     created_at TIMESTAMP DEFAULT NOW()
 );
 

@@ -16,6 +16,7 @@ export default function ManagerShop() {
     const [items, setItems] = useState<ShopItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingItem, setEditingItem] = useState<Partial<ShopItem> | null>(null);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         fetchItems();
@@ -32,7 +33,41 @@ export default function ManagerShop() {
         }
     };
 
-    // Note: I'll need to implement these endpoints in app.ts
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            // Note: apiFetch usually handles JSON, but for multipart/form-data we might need a manual fetch or adjust apiFetch
+            // In many boilerplate projects, apiFetch adds Content-Type: application/json automatically which breaks FormData.
+            // Let's use a standard fetch with authorization if apiFetch is restrictive.
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${(window as any).VITE_BACKEND_URL || ''}/api/manager/upload`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setEditingItem(prev => ({ ...prev, url: data.url }));
+            } else {
+                alert('Rasm yuklashda xatolik');
+            }
+        } catch (err) {
+            console.error('Upload error:', err);
+            alert('Server bilan bog\'lanishda xatolik');
+        } finally {
+            setUploading(false);
+        }
+    };
+
     const handleSave = async () => {
         if (!editingItem) return;
         try {
@@ -48,6 +83,9 @@ export default function ManagerShop() {
             if (res.ok) {
                 fetchItems();
                 setEditingItem(null);
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Xatolik yuz berdi');
             }
         } catch (err) {
             console.error(err);
@@ -121,28 +159,56 @@ export default function ManagerShop() {
                     </div>
 
                     {editingItem.type === 'avatar' && (
-                        <div className="space-y-1 mb-6">
-                            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Avatar URL (SVG/PNG)</label>
-                            <input
-                                value={editingItem.url || ''}
-                                onChange={e => setEditingItem({ ...editingItem, url: e.target.value })}
-                                placeholder="https://..."
-                                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-indigo-500 transition-colors"
-                            />
+                        <div className="space-y-4 mb-6">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Avatar URL</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        value={editingItem.url || ''}
+                                        onChange={e => setEditingItem({ ...editingItem, url: e.target.value })}
+                                        placeholder="https://..."
+                                        className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-indigo-500 transition-colors"
+                                    />
+                                    <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2">
+                                        {uploading ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div> : <Plus size={18} />}
+                                        Rasm Yuklash
+                                        <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                                    </label>
+                                </div>
+                            </div>
+                            {editingItem.url && (
+                                <div className="w-20 h-20 bg-white rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden p-2">
+                                    <img src={editingItem.url.startsWith('/') ? `${(window as any).VITE_BACKEND_URL || ''}${editingItem.url}` : editingItem.url} alt="Preview" className="w-full h-full object-contain" />
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {editingItem.type === 'theme' && (
                         <div className="space-y-1 mb-6">
-                            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Mavzu Rangi (Hex Code)</label>
-                            <input
-                                value={editingItem.color || ''}
-                                onChange={e => setEditingItem({ ...editingItem, color: e.target.value })}
-                                placeholder="#ffffff"
-                                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-indigo-500 transition-colors"
-                            />
+                            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Mavzu Rangi (Hex Code yoki CSS Variable)</label>
+                            <div className="flex gap-4 items-center">
+                                <input
+                                    value={editingItem.color || ''}
+                                    onChange={e => setEditingItem({ ...editingItem, color: e.target.value })}
+                                    placeholder="#ffffff yoki theme-emerald"
+                                    className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-indigo-500 transition-colors"
+                                />
+                                <div className="w-10 h-10 rounded-xl border shadow-inner" style={{ backgroundColor: editingItem.color?.startsWith('#') ? editingItem.color : 'white' }}></div>
+                            </div>
                         </div>
                     )}
+
+                    <div className="flex items-center gap-2 mb-6">
+                        <input
+                            type="checkbox"
+                            checked={editingItem.is_active}
+                            onChange={e => setEditingItem({ ...editingItem, is_active: e.target.checked })}
+                            id="isActive"
+                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                        />
+                        <label htmlFor="isActive" className="text-sm font-bold text-slate-700 cursor-pointer">Faol (Sotuvda ko'rinadi)</label>
+                    </div>
 
                     <div className="flex justify-end gap-3">
                         <button onClick={() => setEditingItem(null)} className="px-5 py-2.5 bg-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-300 transition-all">Bekor qilish</button>
@@ -174,7 +240,13 @@ export default function ManagerShop() {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-100">
-                                                {item.type === 'avatar' && item.url ? <img src={item.url} className="w-8 h-8 object-contain" /> : item.type === 'theme' ? <div className="w-6 h-6 rounded-md shadow-inner" style={{ backgroundColor: item.color }}></div> : <Unlock size={20} className="text-slate-400" />}
+                                                {item.type === 'avatar' && item.url ? (
+                                                    <img src={item.url.startsWith('/') ? `${(window as any).VITE_BACKEND_URL || ''}${item.url}` : item.url} className="w-8 h-8 object-contain" />
+                                                ) : item.type === 'theme' ? (
+                                                    <div className="w-6 h-6 rounded-md shadow-inner" style={{ backgroundColor: item.color?.startsWith('#') ? item.color : 'white' }}></div>
+                                                ) : (
+                                                    <Unlock size={20} className="text-slate-400" />
+                                                )}
                                             </div>
                                             <div>
                                                 <p className="font-bold text-slate-800 text-sm">{item.name}</p>

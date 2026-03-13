@@ -32,25 +32,22 @@ export function setupTelegramGame(bot: Telegraf) {
                 });
             }
 
-            let textQuery = q ? `SELECT id, title, level FROM unit_quizzes WHERE LOWER(title) LIKE $1 LIMIT 10` : `SELECT id, title, level FROM unit_quizzes LIMIT 10`;
-            let params = q ? [`%${q}%`] : [];
-            const result = await query(textQuery, params);
-
-            const results = result.rows.map(row => ({
+            // We only show one "Random Duel" option now that unit quizzes are removed
+            const results = [{
                 type: 'article',
-                id: `duel_quiz_${row.id}`,
-                title: `⚔️ Duel: ${row.title}`,
-                description: `Daraja: ${row.level} - Do'stingiz bilan bellashing!`,
+                id: `duel_custom_random`,
+                title: `⚔️ Tasodifiy Duel`,
+                description: `Maxsus savollar orqali do'stingiz bilan bellashing!`,
                 input_message_content: {
-                    message_text: `⚔️ <b>${row.title}</b> bo'yicha DUEL!\n\nMen seni duelga chorlayman! Qani kim kuchliroq ekan ko'ramiz!`,
+                    message_text: `⚔️ <b>Ziyokor Bot</b>: Yangi DUEL!\n\nMen seni maxsus savollar bo'yicha duelga chorlayman! Qani kim kuchliroq ekan ko'ramiz!`,
                     parse_mode: 'HTML'
                 },
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: "⚔️ Duelga Qo'shilish", callback_data: `tg_duel_join_${row.id}` }]
+                        [{ text: "⚔️ Duelga Qo'shilish", callback_data: `tg_duel_join_custom` }]
                     ]
                 }
-            }));
+            }];
 
             await ctx.answerInlineQuery(results as any, { cache_time: 5 });
         } catch (err) {
@@ -78,18 +75,19 @@ export function setupTelegramGame(bot: Telegraf) {
                 gameMode: 'SOLO',
                 teamScores: { Red: 0, Blue: 0 },
                 totalCoinPool: 0,
-                quizId: quizId
+                quizId: 'custom_duel'
             };
 
-            // Fetch quiz
-            const quizRes = await query('SELECT title, questions FROM unit_quizzes WHERE id = $1', [quizId]);
-            if (quizRes && quizRes.rowCount && quizRes.rowCount > 0 && quizRes.rows[0].questions) {
-                state.quizTitle = quizRes.rows[0].title;
-                const allQs = quizRes.rows[0].questions;
-                // Grab up to 5 random questions for short PvP
-                let tgQuestions = transformToTelegramStyle(allQs);
-                tgQuestions = tgQuestions.sort(() => 0.5 - Math.random()).slice(0, 5);
-                state.questions = tgQuestions;
+            // Fetch random custom questions
+            const quizRes = await query('SELECT * FROM telegram_questions ORDER BY RANDOM() LIMIT 5');
+            if (quizRes && quizRes.rowCount && quizRes.rowCount > 0) {
+                state.quizTitle = "Maxsus Duel ✨";
+                state.questions = quizRes.rows.map(r => ({
+                    text: r.text,
+                    options: r.options,
+                    correctIndex: r.correct_index,
+                    type: 'multiple-choice'
+                } as any));
             }
         }
 
@@ -238,23 +236,38 @@ export function setupTelegramGame(bot: Telegraf) {
         }
 
         try {
-            // Fetch available levels
-            const result = await query('SELECT DISTINCT level FROM unit_quizzes ORDER BY level');
+            const result = await query('SELECT * FROM telegram_questions ORDER BY RANDOM() LIMIT 20');
             if (result.rowCount === 0) {
-                return ctx.reply("❌ Hech qanday test (daraja) topilmadi.");
+                return ctx.reply("❌ Hozircha maxsus savollar yo'q. Iltimos, Admin panel orqali savollar qo'shing.");
             }
 
-            const buttons = result.rows.map(row => [{
-                text: row.level,
-                callback_data: `tg_level_${row.level}`
-            }]);
+            const state = (await gameSessions.get(chatId))!;
+            state.quizId = 'custom';
+            state.quizTitle = "Maxsus Savollar ✨";
+            state.questions = result.rows.map(r => ({
+                text: r.text,
+                options: r.options,
+                correctIndex: r.correct_index,
+                type: 'multiple-choice'
+            } as any));
 
-            await ctx.reply("🎮 <b>Ziyokor Education - Guruh O'yini</b>\n\nQaysi darajadagi testni boshlamoqchisiz?", {
-                parse_mode: 'HTML',
-                reply_markup: { inline_keyboard: buttons }
-            });
+            await ctx.reply(
+                `🎮 <b>Ziyokor Education - Guruh O'yini</b>\n\n` +
+                `🎉 <b>${state.quizTitle}</b> yuklandi (${state.questions.length} ta savol).\n\n` +
+                `Qanday formatda o'ynaymiz?`,
+                {
+                    parse_mode: 'HTML',
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: "👤 Solo (Har kim o'zi uchun)", callback_data: "tg_mode_SOLO" }],
+                            [{ text: "👥 Team Battle (Jamoaviy)", callback_data: "tg_mode_TEAM" }]
+                        ]
+                    }
+                }
+            );
         } catch (err) {
-            gameLogger.error('error fetching levels:', err);
+            console.error('[tg_game] error loading questions in start_game:', err);
+            ctx.reply("❌ Xatolik yuz berdi.");
         }
     });
 
@@ -283,79 +296,6 @@ export function setupTelegramGame(bot: Telegraf) {
         } catch (e) { }
 
         await gameSessions.delete(chatId);
-    });
-
-    bot.action(/^tg_level_(.+)$/, async (ctx) => {
-        const chatId = ctx.chat?.id.toString();
-        const level = ctx.match[1];
-        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("❌ O'yin topilmadi, iltimos /start_game ni qayta bosing", { show_alert: true });
-
-        const state = (await gameSessions.get(chatId))!;
-        if (state.status !== 'SETUP') return ctx.answerCbQuery();
-
-        try {
-            state.level = level;
-            const quizzesRes = await query('SELECT id, title, unit FROM unit_quizzes WHERE level = $1 ORDER BY unit', [level]);
-            if (quizzesRes.rowCount === 0) {
-                return ctx.answerCbQuery("Bu darajada testlar yo'q.", { show_alert: true });
-            }
-
-            const buttons = quizzesRes.rows.map(row => [{
-                text: `${row.unit} - ${row.title}`,
-                callback_data: `tg_quiz_${row.id}`
-            }]);
-
-            await ctx.editMessageText(`Siz <b>${level}</b> darajasini tanladingiz.\n\nQaysi testni o'ynaymiz?`, {
-                parse_mode: 'HTML',
-                reply_markup: { inline_keyboard: buttons }
-            });
-            ctx.answerCbQuery();
-        } catch (err) {
-            gameLogger.error('error fetching quizzes:', err);
-            ctx.answerCbQuery('Xatolik');
-        }
-    });
-
-    bot.action(/^tg_quiz_(.+)$/, async (ctx) => {
-        const chatId = ctx.chat?.id.toString();
-        const quizId = ctx.match[1];
-        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("O'yin xatosi", { show_alert: true });
-
-        const state = (await gameSessions.get(chatId))!;
-        if (state.status !== 'SETUP') return ctx.answerCbQuery();
-
-        try {
-            const quizRes = await query('SELECT title, questions FROM unit_quizzes WHERE id = $1', [quizId]);
-            if (quizRes.rowCount === 0) return ctx.answerCbQuery("Test topilmadi", { show_alert: true });
-
-            state.quizId = quizId;
-            state.quizTitle = quizRes.rows[0].title;
-            const allQuestions: Question[] = quizRes.rows[0].questions;
-            // Transform questions for Telegram (multiple-choice)
-            state.questions = transformToTelegramStyle(allQuestions);
-
-            if (state.questions.length === 0) {
-                return ctx.editMessageText("Bu testda Telegram uchun mos (Test yoki Lug'at) savollar yo'q ekan.");
-            }
-
-            await ctx.editMessageText(
-                `🎉 <b>${state.quizTitle}</b> tanlandi.\n\n` +
-                `Qanday formatda o'ynaymiz?`,
-                {
-                    parse_mode: 'HTML',
-                    reply_markup: {
-                        inline_keyboard: [
-                            [{ text: "👤 Solo (Har kim o'zi uchun)", callback_data: "tg_mode_SOLO" }],
-                            [{ text: "👥 Team Battle (Jamoaviy)", callback_data: "tg_mode_TEAM" }]
-                        ]
-                    }
-                }
-            );
-            ctx.answerCbQuery();
-        } catch (err) {
-            console.error('[tg_game] error starting quiz:', err);
-            ctx.answerCbQuery();
-        }
     });
 
     bot.action(/^tg_mode_(SOLO|TEAM)$/, async (ctx) => {

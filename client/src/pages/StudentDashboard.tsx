@@ -16,23 +16,37 @@ export default function StudentDashboard() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'home' | 'history' | 'profile'>('home');
-    const [stats, setStats] = useState({
-        gamesPlayed: 0,
-        totalScore: 0,
-        rank: 0,
-        coins: 0,
-        streakCount: 0,
-        isHero: false,
-        hasTrophy: false,
-        weeklyBattleScore: 0,
-        groupId: '',
-        avatarUrl: null as string | null,
-        hasAvatarUnlock: false
+    const [stats, setStats] = useState(() => {
+        const cached = localStorage.getItem(`stats_${user?.id}`);
+        return cached ? JSON.parse(cached) : {
+            gamesPlayed: 0,
+            totalScore: 0,
+            rank: 0,
+            coins: 0,
+            streakCount: 0,
+            isHero: false,
+            hasTrophy: false,
+            weeklyBattleScore: 0,
+            groupId: '',
+            avatarUrl: null as string | null,
+            hasAvatarUnlock: false
+        };
     });
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-    const [battle, setBattle] = useState<any>(null);
+    const [battle, setBattle] = useState<any>(() => {
+        const cached = localStorage.getItem(`battle_${user?.id}`);
+        return cached ? JSON.parse(cached) : null;
+    });
     const [history, setHistory] = useState<any[]>([]);
     const [pin, setPin] = useState('');
+    const [isLoading, setIsLoading] = useState(!localStorage.getItem(`stats_${user?.id}`));
+
+    // Theme Engine Logic
+    useEffect(() => {
+        if (stats.active_theme_id || stats.activeThemeId) {
+            applyTheme(stats.activeThemeId || stats.active_theme_id);
+        }
+    }, [stats.activeThemeId, stats.active_theme_id]);
 
     useEffect(() => {
         if (user?.id) {
@@ -40,20 +54,51 @@ export default function StudentDashboard() {
         }
     }, [user]);
 
+    const applyTheme = (themeId: string) => {
+        const root = document.documentElement;
+        // Premium Themes Definition
+        const themes: Record<string, any> = {
+            'theme-indigo': { primary: '#4f46e5', secondary: '#4338ca', bg: '#1e1b4b', text: '#e0e7ff' }, // Modern Indigo
+            'theme-emerald': { primary: '#10b981', secondary: '#059669', bg: '#064e3b', text: '#d1fae5' }, // Emerald Oasis
+            'theme-sunset': { primary: '#f59e0b', secondary: '#ea580c', bg: '#431407', text: '#ffedd5' }, // Royal Sunset
+            'theme-cyber': { primary: '#06b6d4', secondary: '#db2777', bg: '#0f172a', text: '#ccfbf1' }, // Cyber Neon
+            'theme-sakura': { primary: '#f472b6', secondary: '#db2777', bg: '#500724', text: '#fce7f3' }, // Soft Sakura
+            'theme-ocean': { primary: '#0891b2', secondary: '#0e7490', bg: '#083344', text: '#cffafe' }, // Deep Ocean
+        };
+
+        // Find theme name from the ID or color string. 
+        // In our shop, we store the theme name or color hex in the 'color' column.
+        // For simplicity, let's assume the manager sets color to something like "theme-emerald"
+        const theme = themes[themeId] || themes['theme-indigo'];
+        
+        root.style.setProperty('--primary-color', theme.primary);
+        root.style.setProperty('--secondary-color', theme.secondary);
+        root.style.setProperty('--bg-gradient-from', theme.bg);
+        root.style.setProperty('--bg-gradient-to', 'transparent');
+    };
+
     const fetchData = async () => {
         try {
             const statsRes = await apiFetch(`/api/student/${user?.id}/stats`);
             const statsData = await statsRes.json();
             setStats(statsData);
+            localStorage.setItem(`stats_${user?.id}`, JSON.stringify(statsData));
+
             if (statsData.groupId) {
                 const battleRes = await apiFetch(`/api/battles/current/${statsData.groupId}`);
-                if (battleRes.ok) setBattle(await battleRes.json());
+                if (battleRes.ok) {
+                    const battleData = await battleRes.json();
+                    setBattle(battleData);
+                    localStorage.setItem(`battle_${user?.id}`, JSON.stringify(battleData));
+                }
             }
 
             const historyRes = await apiFetch(`/api/student/${user?.id}/history`);
             if (historyRes.ok) setHistory(await historyRes.json());
+            setIsLoading(false);
         } catch (err) {
             console.error(err);
+            setIsLoading(false);
         }
     };
 
@@ -113,7 +158,7 @@ export default function StudentDashboard() {
                 });
 
                 if (res.ok) {
-                    setStats(prev => ({ ...prev, avatarUrl: base64data as string }));
+                    setStats((prev: any) => ({ ...prev, avatarUrl: base64data as string }));
                 } else {
                     const errInfo = await res.json();
                     alert(errInfo.error || "Rasm joylashda xatolik yuz berdi");
@@ -130,9 +175,18 @@ export default function StudentDashboard() {
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-24 md:pb-12 relative overflow-hidden">
             {/* Background Gradients */}
-            <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-indigo-950 via-indigo-900 to-transparent z-0 opacity-100"></div>
-            <div className="absolute top-[-100px] right-[-100px] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] z-0"></div>
-            <div className="absolute top-[200px] left-[-100px] w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] z-0"></div>
+            <div 
+                className="absolute top-0 left-0 w-full h-[500px] z-0 opacity-100 transition-colors duration-1000"
+                style={{ background: `linear-gradient(to bottom, var(--bg-gradient-from, #312e81), var(--bg-gradient-to, transparent))` }}
+            ></div>
+            <div 
+                className="absolute top-[-100px] right-[-100px] w-[500px] h-[500px] rounded-full blur-[120px] z-0 opacity-50"
+                style={{ backgroundColor: 'var(--primary-color, #4f46e5)' }}
+            ></div>
+            <div 
+                className="absolute top-[200px] left-[-100px] w-[400px] h-[400px] rounded-full blur-[100px] z-0 opacity-30"
+                style={{ backgroundColor: 'var(--secondary-color, #3b82f6)' }}
+            ></div>
 
             <div className="max-w-7xl mx-auto md:px-8 relative z-10">
                 <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-8 lg:pt-12">
@@ -164,122 +218,138 @@ export default function StudentDashboard() {
                 </div>
 
                 {/* Level Progress */}
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xl">
-                    <div className="flex justify-between items-end mb-2">
-                        <div>
-                            <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Daraja</span>
-                            <div className="text-3xl font-black flex items-center gap-2">
-                                {level} <span className="text-sm font-bold text-indigo-300 mt-2">Level</span>
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xl min-h-[120px] mb-6">
+                    {isLoading && !stats.totalScore ? (
+                        <div className="animate-skeleton space-y-3">
+                            <div className="flex justify-between items-end">
+                                <div className="w-20 h-8 bg-white/20 rounded"></div>
+                                <div className="w-16 h-8 bg-white/20 rounded"></div>
                             </div>
+                            <div className="w-full bg-white/10 h-3 rounded-full"></div>
                         </div>
-                        <div className="text-right">
-                            <span className="text-2xl font-bold text-yellow-400">{stats.totalScore.toLocaleString()}</span>
-                            <span className="text-xs font-bold text-indigo-200 block">Total XP</span>
-                        </div>
-                    </div>
-                    <div className="w-full bg-black/20 rounded-full h-3 overflow-hidden">
-                        <div
-                            className="bg-gradient-to-r from-yellow-400 to-orange-500 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(250,204,21,0.5)]"
-                            style={{ width: `${progressPercent}%` }}
-                        ></div>
-                    </div>
-                    <div className="flex justify-between text-[10px] font-bold text-indigo-300 mt-1 uppercase">
-                        <span>{currentLevelProgress} XP</span>
-                        <span>{1000 - currentLevelProgress} XP to Lvl {level + 1}</span>
-                    </div>
+                    ) : (
+                        <>
+                            <div className="flex justify-between items-end mb-2">
+                                <div>
+                                    <span className="text-xs font-bold uppercase tracking-wider opacity-70">Daraja</span>
+                                    <div className="text-3xl font-black flex items-center gap-2">
+                                        {level} <span className="text-sm font-bold opacity-80 mt-2">Level</span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-2xl font-bold text-yellow-400">{stats.totalScore.toLocaleString()}</span>
+                                    <span className="text-xs font-bold text-indigo-200 block">Total XP</span>
+                                </div>
+                            </div>
+                            <div className="w-full bg-black/20 rounded-full h-3 overflow-hidden">
+                                <div
+                                    className="bg-gradient-to-r from-yellow-400 to-orange-500 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(250,204,21,0.5)]"
+                                    style={{ width: `${progressPercent}%` }}
+                                ></div>
+                            </div>
+                            <div className="flex justify-between text-[10px] font-bold text-indigo-300 mt-1 uppercase">
+                                <span>{currentLevelProgress} XP</span>
+                                <span>{1000 - currentLevelProgress} XP to Lvl {level + 1}</span>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Group Battle Hero Card */}
-                {battle && (
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => navigate(`/student/battle/${battle.id}`)}
-                        className="mt-6 relative group cursor-pointer"
-                    >
-                        {/* Glow effect behind the card */}
-                        <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-rose-500 rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
+                <div className="min-h-[160px]">
+                    {isLoading && !battle ? (
+                        <div className="w-full h-[160px] bg-white/5 backdrop-blur-md rounded-3xl animate-skeleton border border-white/10"></div>
+                    ) : battle ? (
+                        <motion.div
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => navigate(`/student/battle/${battle.id}`)}
+                            className="relative group cursor-pointer"
+                        >
+                            {/* Glow effect behind the card */}
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-rose-500 rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
 
-                        <div className="relative bg-indigo-950/40 backdrop-blur-xl rounded-3xl p-5 border border-white/10 shadow-2xl overflow-hidden">
-                            {/* Animated stripes background */}
-                            <div className="absolute inset-0 opacity-10 bg-[linear-gradient(45deg,rgba(255,255,255,0.1)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.1)_50%,rgba(255,255,255,0.1)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-shimmer pointer-events-none"></div>
+                            <div className="relative bg-indigo-950/40 backdrop-blur-xl rounded-3xl p-5 border border-white/10 shadow-2xl overflow-hidden">
+                                {/* Animated stripes background */}
+                                <div className="absolute inset-0 opacity-10 bg-[linear-gradient(45deg,rgba(255,255,255,0.1)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.1)_50%,rgba(255,255,255,0.1)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-shimmer pointer-events-none"></div>
 
-                            <div className="flex justify-between items-center mb-4 relative z-10">
-                                <span className="flex items-center gap-2 bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-400/30">
-                                    <Swords size={14} className="text-indigo-400 animate-bounce" />
-                                    <span className="text-[10px] font-black text-indigo-100 uppercase tracking-widest">Haftalik Battle</span>
-                                </span>
+                                <div className="flex justify-between items-center mb-4 relative z-10">
+                                    <span className="flex items-center gap-2 bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-400/30">
+                                        <Swords size={14} className="text-indigo-400 animate-bounce" />
+                                        <span className="text-[10px] font-black text-indigo-100 uppercase tracking-widest">Haftalik Battle</span>
+                                    </span>
 
-                                <div className="flex items-center gap-2">
-                                    {isWeekend() && (
-                                        <motion.span
-                                            animate={{ scale: [1, 1.1, 1] }}
-                                            transition={{ duration: 2, repeat: Infinity }}
-                                            className="bg-orange-500 text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-orange-500/30"
-                                        >
-                                            Double XP 🔥
-                                        </motion.span>
-                                    )}
-                                    <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center">
-                                        <ChevronRight size={14} className="text-white/50 group-hover:text-white transition-colors" />
+                                    <div className="flex items-center gap-2">
+                                        {isWeekend() && (
+                                            <motion.span
+                                                animate={{ scale: [1, 1.1, 1] }}
+                                                transition={{ duration: 2, repeat: Infinity }}
+                                                className="bg-orange-500 text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-orange-500/30"
+                                            >
+                                                Double XP 🔥
+                                            </motion.span>
+                                        )}
+                                        <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center">
+                                            <ChevronRight size={14} className="text-white/50 group-hover:text-white transition-colors" />
+                                        </div>
                                     </div>
+                                </div>
+
+                                <div className="flex items-center justify-between gap-4 mb-5 relative z-10">
+                                    {/* Our Group */}
+                                    <div className="flex-1 text-center">
+                                        <h4 className="text-xs font-black text-white/90 uppercase tracking-tight truncate leading-tight mb-0.5">
+                                            {battle.group_a_id === stats.groupId ? battle.group_a_name : battle.group_b_name}
+                                        </h4>
+                                        <p className="text-[8px] font-bold text-indigo-300/60 uppercase truncate">Sizning Guruhingiz</p>
+                                        <div className="mt-2 text-xl font-black text-indigo-400 tabular-nums">
+                                            {battle.group_a_id === stats.groupId ? battle.score_a.toLocaleString() : battle.score_b.toLocaleString()}
+                                        </div>
+                                    </div>
+
+                                    {/* VS Icon */}
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-10 h-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center shadow-xl">
+                                            <span className="text-xs font-black italic text-transparent bg-clip-text bg-gradient-to-tr from-indigo-400 to-rose-400">VS</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Opponent Group */}
+                                    <div className="flex-1 text-center">
+                                        <h4 className="text-xs font-black text-white/90 uppercase tracking-tight truncate leading-tight mb-0.5">
+                                            {battle.group_a_id === stats.groupId ? battle.group_b_name : battle.group_a_name}
+                                        </h4>
+                                        <p className="text-[8px] font-bold text-rose-300/60 uppercase truncate">
+                                            Ustoz: {battle.group_a_id === stats.groupId ? battle.teacher_b_name : battle.teacher_a_name}
+                                        </p>
+                                        <div className="mt-2 text-xl font-black text-rose-400 tabular-nums">
+                                            {battle.group_a_id === stats.groupId ? battle.score_b.toLocaleString() : battle.score_a.toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Mini Power Meter */}
+                                <div className="relative h-2.5 bg-black/40 rounded-full overflow-hidden flex border border-white/5">
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${Math.round(((battle.group_a_id === stats.groupId ? battle.score_a : battle.score_b) / (battle.score_a + battle.score_b || 1)) * 100)}%` }}
+                                        transition={{ duration: 1.5, ease: "circOut" }}
+                                        className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400"
+                                    ></motion.div>
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${100 - Math.round(((battle.group_a_id === stats.groupId ? battle.score_a : battle.score_b) / (battle.score_a + battle.score_b || 1)) * 100)}%` }}
+                                        transition={{ duration: 1.5, ease: "circOut" }}
+                                        className="h-full bg-gradient-to-l from-rose-600 to-rose-400"
+                                    ></motion.div>
+                                    <div className="absolute top-0 bottom-0 w-0.5 bg-white/20 left-[50%] -translate-x-1/2"></div>
                                 </div>
                             </div>
-
-                            <div className="flex items-center justify-between gap-4 mb-5 relative z-10">
-                                {/* Our Group */}
-                                <div className="flex-1 text-center">
-                                    <h4 className="text-xs font-black text-white/90 uppercase tracking-tight truncate leading-tight mb-0.5">
-                                        {battle.group_a_id === stats.groupId ? battle.group_a_name : battle.group_b_name}
-                                    </h4>
-                                    <p className="text-[8px] font-bold text-indigo-300/60 uppercase truncate">Sizning Guruhingiz</p>
-                                    <div className="mt-2 text-xl font-black text-indigo-400 tabular-nums">
-                                        {battle.group_a_id === stats.groupId ? battle.score_a.toLocaleString() : battle.score_b.toLocaleString()}
-                                    </div>
-                                </div>
-
-                                {/* VS Icon */}
-                                <div className="flex flex-col items-center">
-                                    <div className="w-10 h-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center shadow-xl">
-                                        <span className="text-xs font-black italic text-transparent bg-clip-text bg-gradient-to-tr from-indigo-400 to-rose-400">VS</span>
-                                    </div>
-                                </div>
-
-                                {/* Opponent Group */}
-                                <div className="flex-1 text-center">
-                                    <h4 className="text-xs font-black text-white/90 uppercase tracking-tight truncate leading-tight mb-0.5">
-                                        {battle.group_a_id === stats.groupId ? battle.group_b_name : battle.group_a_name}
-                                    </h4>
-                                    <p className="text-[8px] font-bold text-rose-300/60 uppercase truncate">
-                                        Ustoz: {battle.group_a_id === stats.groupId ? battle.teacher_b_name : battle.teacher_a_name}
-                                    </p>
-                                    <div className="mt-2 text-xl font-black text-rose-400 tabular-nums">
-                                        {battle.group_a_id === stats.groupId ? battle.score_b.toLocaleString() : battle.score_a.toLocaleString()}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Mini Power Meter */}
-                            <div className="relative h-2.5 bg-black/40 rounded-full overflow-hidden flex border border-white/5">
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${Math.round(((battle.group_a_id === stats.groupId ? battle.score_a : battle.score_b) / (battle.score_a + battle.score_b || 1)) * 100)}%` }}
-                                    transition={{ duration: 1.5, ease: "circOut" }}
-                                    className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400"
-                                ></motion.div>
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${100 - Math.round(((battle.group_a_id === stats.groupId ? battle.score_a : battle.score_b) / (battle.score_a + battle.score_b || 1)) * 100)}%` }}
-                                    transition={{ duration: 1.5, ease: "circOut" }}
-                                    className="h-full bg-gradient-to-l from-rose-600 to-rose-400"
-                                ></motion.div>
-                                <div className="absolute top-0 bottom-0 w-0.5 bg-white/20 left-[50%] -translate-x-1/2"></div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
+                        </motion.div>
+                    ) : null}
+                </div>
                     </header>
 
                     {/* Right Column / Main Content Area */}
