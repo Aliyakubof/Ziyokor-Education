@@ -2,9 +2,35 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
-import { ArrowLeft, Lock, Star } from 'lucide-react';
+import { ArrowLeft, Lock, Star, Flower2 } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import vocabMap from '../assets/vocab_battle_map.png';
+import springMap from '../assets/map_spring.png';
+
+// Falling Petal Component
+const FallingPetal = ({ delay }: { delay: number }) => {
+    const randomX = Math.random() * 100;
+    const duration = 10 + Math.random() * 10;
+    
+    return (
+        <motion.div
+            initial={{ y: -20, x: `${randomX}%`, opacity: 0, rotate: 0 }}
+            animate={{ 
+                y: '110vh', 
+                x: `${randomX + (Math.random() * 20 - 10)}%`, // Slight horizontal drift
+                opacity: [0, 0.8, 0.8, 0],
+                rotate: 720
+            }}
+            transition={{ 
+                duration, 
+                repeat: Infinity, 
+                delay, 
+                ease: "linear" 
+            }}
+            className="absolute w-3 h-3 bg-pink-200/60 rounded-full blur-[1px] pointer-events-none z-1"
+            style={{ borderRadius: '40% 60% 50% 50%' }} // Petal shape
+        />
+    );
+};
 
 export default function VocabularyBattleLevels() {
     const navigate = useNavigate();
@@ -14,7 +40,7 @@ export default function VocabularyBattleLevels() {
     const [isActive, setIsActive] = useState(true);
 
     const { scrollY } = useScroll();
-    const bgY = useTransform(scrollY, [0, 1000], [0, 200]);
+    const bgY = useTransform(scrollY, [0, 2000], [0, 400]);
 
     useEffect(() => {
         if (user?.id) fetchLevels();
@@ -39,64 +65,67 @@ export default function VocabularyBattleLevels() {
         }
     };
 
-    // Build exactly 30 map nodes
     const mapNodes = Array.from({ length: 30 }, (_, i) => {
         const levelNum = i + 1;
         const battle = levels.find(l => Number(l.level) === levelNum);
         return {
             levelNumber: levelNum,
-            battle, // Will be undefined if admin didn't create it yet
+            battle,
             isLocked: !battle || battle.isLocked,
             stars: battle?.stars || 0
         };
     });
 
     return (
-        <div className="min-h-screen bg-slate-900 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-900 relative overflow-hidden">
-            {/* Map Background with Parallax */}
+        <div className="min-h-screen bg-[#e8f5e9] flex flex-col font-sans selection:bg-pink-100 selection:text-pink-900 relative overflow-hidden">
+            {/* Spring Map Background with Parallax */}
             <motion.div 
                 style={{ 
-                    backgroundImage: `url(${vocabMap})`,
+                    backgroundImage: `url(${springMap})`,
                     y: bgY
                 }}
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50 z-0 scale-110"
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-80 z-0 scale-110"
             />
             
-            {/* Dark Overlay for Readability */}
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-transparent to-slate-900/60 z-0" />
+            {/* Soft Spring Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-[#c8e6c9]/30 z-0" />
 
-            {/* Animated Background Elements */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden z-1">
-                <div className="absolute top-20 -left-20 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute bottom-40 -right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-700" />
+            {/* Falling Petals Animation */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-2">
+                {Array.from({ length: 25 }).map((_, i) => (
+                    <FallingPetal key={i} delay={i * 0.8} />
+                ))}
             </div>
 
             {/* Header */}
-            <header className="sticky top-0 z-40 bg-slate-900/40 backdrop-blur-xl border-b border-white/10">
-                <div className="px-4 h-16 sm:h-20 flex items-center justify-between mx-auto w-full max-w-lg">
+            <header className="sticky top-0 z-40 bg-white/40 backdrop-blur-md border-b border-pink-100">
+                <div className="px-4 h-16 flex items-center justify-between mx-auto w-full max-w-lg">
                     <button
                         onClick={() => navigate('/student/dashboard')}
-                        className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/10 border border-white/20 text-white hover:bg-white/20 active:scale-95 transition-all shadow-lg"
+                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/80 border border-pink-200 text-pink-500 hover:bg-pink-50 active:scale-95 transition-all shadow-sm"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <div className="flex-1 text-center font-black text-xl text-white uppercase tracking-widest drop-shadow-lg">
-                        Vocab Battle
+                    <div className="flex-1 text-center font-black text-xl text-emerald-800 uppercase tracking-widest drop-shadow-sm">
+                        Bahorgi Jang
                     </div>
                     <div className="w-10"></div>
                 </div>
             </header>
 
-            <main className="flex-1 relative z-10 overflow-x-hidden overflow-y-auto px-4 py-12 sm:px-6 custom-scrollbar pb-32 w-full max-w-lg mx-auto flex flex-col items-center">
+            <main className="flex-1 relative z-10 overflow-x-hidden overflow-y-auto px-4 py-8 sm:px-6 custom-scrollbar pb-32 w-full max-w-lg mx-auto flex flex-col items-center">
                 <motion.div 
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-12 text-center relative z-10 w-full"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="mb-8 text-center relative z-10 w-full"
                 >
-                    <h1 className="text-4xl font-black text-white tracking-tight mb-2 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">Sarguzashtlar</h1>
-                    <p className="text-white font-bold uppercase tracking-widest text-[10px] bg-indigo-600/60 backdrop-blur-sm inline-block px-4 py-1.5 rounded-full border border-white/20 shadow-lg">
-                        Xaritani zabt eting! 🗺️
-                    </p>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-emerald-100 mb-4">
+                        <Flower2 className="text-pink-400 animate-pulse" size={20} />
+                        <span className="text-emerald-900 font-black text-sm uppercase tracking-wider">Bahor Fasli</span>
+                    </div>
+                    <h1 className="text-4xl font-black text-emerald-900 tracking-tight drop-shadow-sm leading-none">
+                        Bilim Bog'i
+                    </h1>
                 </motion.div>
 
                 {!isActive ? (
@@ -105,21 +134,21 @@ export default function VocabularyBattleLevels() {
                         animate={{ opacity: 1, scale: 1 }}
                         className="flex-1 flex flex-col items-center justify-center -mt-20 px-4"
                     >
-                         <div className="bg-slate-900/60 backdrop-blur-2xl p-10 rounded-[3rem] border border-white/10 text-center shadow-2xl space-y-6">
-                             <div className="text-6xl animate-bounce">⏳</div>
+                         <div className="bg-white/80 backdrop-blur-2xl p-10 rounded-[3rem] border border-pink-50 text-center shadow-xl space-y-6">
+                             <div className="text-6xl animate-bounce">🌸</div>
                              <div>
-                                <h2 className="text-4xl font-black text-white mb-3 tracking-tighter">Tez orada...</h2>
-                                <p className="text-white/70 font-medium max-w-[200px] mx-auto text-sm leading-relaxed">
-                                    Xarita darajalari tayyorlanmoqda. Sarguzashtga oz qoldi!
+                                <h2 className="text-3xl font-black text-emerald-900 mb-3 tracking-tighter">Yaqinda...</h2>
+                                <p className="text-emerald-800/70 font-medium max-w-[200px] mx-auto text-sm leading-relaxed">
+                                    Bog'da yangi gullar ochilmoqda. Tez orada janglar boshlanadi!
                                 </p>
                              </div>
                          </div>
                     </motion.div>
                 ) : loading ? (
-                    <div className="text-center py-20 text-white/50 font-black animate-pulse text-xl">Xarita yuklanmoqda...</div>
+                    <div className="text-center py-20 text-emerald-800/30 font-black animate-pulse text-xl">Bog' yuklanmoqda...</div>
                 ) : (
                     <div className="relative w-full flex flex-col items-center">
-                        {/* Winding dashed line behind the nodes */}
+                        {/* Winding path line */}
                         <div className="absolute inset-0 w-full h-full pointer-events-none -z-0">
                             <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                                 <path
@@ -132,16 +161,17 @@ export default function VocabularyBattleLevels() {
                                         return `Q ${x} ${midY}, 50 ${y}`;
                                     }).join(' ')}`}
                                     fill="none"
-                                    stroke="rgba(255,191,0,0.4)"
-                                    strokeWidth="2.5"
-                                    strokeDasharray="6 6"
+                                    stroke="rgba(16, 185, 129, 0.3)"
+                                    strokeWidth="3"
+                                    strokeDasharray="1 10"
+                                    strokeLinecap="round"
                                     style={{ vectorEffect: 'non-scaling-stroke' }}
                                 />
                             </svg>
                         </div>
 
                         {/* Staggered nodes */}
-                        <div className="flex flex-col w-full relative z-10 space-y-12 sm:space-y-16 pb-16 pt-8">
+                        <div className="flex flex-col w-full relative z-10 space-y-12 sm:space-y-14 pb-16 pt-4">
                             {mapNodes.map((node, i) => {
                                 const offsetClass = i % 2 !== 0 ? 'mr-auto ml-4 sm:ml-12' : 'ml-auto mr-4 sm:mr-12';
                                 return (
@@ -149,37 +179,37 @@ export default function VocabularyBattleLevels() {
                                         key={node.levelNumber}
                                         initial={{ opacity: 0, scale: 0.8 }}
                                         whileInView={{ opacity: 1, scale: 1 }}
-                                        viewport={{ once: true }}
-                                        className={`relative group w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 ${offsetClass}`}
+                                        viewport={{ once: true, margin: "-50px" }}
+                                        className={`relative group w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 ${offsetClass}`}
                                     >
                                         <button
                                             disabled={node.isLocked}
                                             onClick={() => node.battle && navigate(`/student/vocab-battle/play/${node.battle.id}`)}
                                             className={`
-                                                absolute inset-0 rounded-[2.5rem] flex flex-col items-center justify-center gap-1.5 transition-all duration-300
-                                                shadow-2xl border-4
+                                                absolute inset-0 rounded-full flex flex-col items-center justify-center gap-1 transition-all duration-300
+                                                shadow-lg border-4
                                                 ${node.isLocked
-                                                    ? 'bg-slate-800/80 backdrop-blur-md border-slate-700 text-slate-500 cursor-not-allowed shadow-none'
-                                                    : 'bg-white border-white text-indigo-600 hover:border-amber-400 hover:bg-amber-50 hover:-translate-y-2 hover:scale-110 active:scale-95 cursor-pointer shadow-amber-900/20 z-10'
+                                                    ? 'bg-white/40 backdrop-blur-sm border-gray-100 text-gray-300 cursor-not-allowed shadow-none'
+                                                    : 'bg-white border-emerald-400 text-emerald-700 hover:border-pink-400 hover:scale-110 active:scale-95 cursor-pointer shadow-emerald-200/50 z-10'
                                                 }
                                             `}
                                         >
-                                            <div className={`absolute -top-4 px-3 py-1 rounded-full shadow-md border font-black tracking-widest uppercase text-[9px] ${node.isLocked ? 'bg-slate-700 border-slate-600 text-slate-400' : 'bg-amber-500 border-amber-400 text-white'}`}>
-                                                {node.isLocked ? <Lock size={10} className="inline mr-1" /> : <Star size={10} className="inline mr-1 fill-white" />}
-                                                LEVEL {node.levelNumber}
+                                            <div className={`absolute -top-3 px-2 py-0.5 rounded-full shadow-sm border font-black tracking-widest uppercase text-[8px] ${node.isLocked ? 'bg-gray-100 border-gray-200 text-gray-400' : 'bg-emerald-500 border-emerald-400 text-white'}`}>
+                                                {node.isLocked ? <Lock size={8} className="inline mr-0.5" /> : <Flower2 size={8} className="inline mr-0.5" />}
+                                                Lv.{node.levelNumber}
                                             </div>
                                             
-                                            <div className="text-3xl sm:text-4xl font-black drop-shadow-sm leading-none mt-2">
+                                            <div className="text-2xl sm:text-3xl font-black drop-shadow-sm leading-none">
                                                 {node.levelNumber}
                                             </div>
 
                                             {!node.isLocked && (
-                                                <div className="flex gap-0.5 mt-1">
+                                                <div className="flex gap-0.5">
                                                     {Array.from({ length: 3 }).map((_, starIdx) => (
                                                         <Star 
                                                             key={starIdx} 
-                                                            size={12} 
-                                                            className={starIdx < node.stars ? "fill-amber-400 text-amber-500 drop-shadow-sm" : "fill-slate-100 text-slate-200"} 
+                                                            size={10} 
+                                                            className={starIdx < node.stars ? "fill-pink-400 text-pink-500" : "fill-gray-100 text-gray-200"} 
                                                         />
                                                     ))}
                                                 </div>
@@ -187,11 +217,15 @@ export default function VocabularyBattleLevels() {
                                         </button>
                                         
                                         {!node.isLocked && (
-                                            <div className={`absolute top-1/2 -mt-4 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none min-w-max bg-white/95 backdrop-blur text-slate-800 text-xs font-black py-2 px-4 rounded-xl shadow-2xl z-20 whitespace-nowrap
-                                                ${i % 2 === 0 ? 'left-full ml-4' : 'right-full mr-4'}`}
+                                            <div className="absolute -inset-2 rounded-full border border-pink-200 animate-ping opacity-20 pointer-events-none" />
+                                        )}
+
+                                        {!node.isLocked && (
+                                            <div className={`absolute top-1/2 -mt-4 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none min-w-max bg-white/95 backdrop-blur text-emerald-900 text-[10px] font-black py-2 px-3 rounded-xl shadow-xl z-20 whitespace-nowrap
+                                                ${i % 2 === 0 ? 'left-full ml-3' : 'right-full mr-3'}`}
                                             >
                                                 {node.battle?.title || "Boshlash"}
-                                                <div className={`absolute top-1/2 -mt-1 w-2 h-2 bg-white/95 transform rotate-45 ${i % 2 === 0 ? '-left-1' : '-right-1'}`}></div>
+                                                <div className={`absolute top-1/2 -mt-1 w-2 h-2 bg-white transform rotate-45 ${i % 2 === 0 ? '-left-1' : '-right-1'}`}></div>
                                             </div>
                                         )}
                                     </motion.div>
