@@ -87,7 +87,7 @@ export default function DuelLobby() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-10 transition-colors duration-500">
+        <div className="min-h-screen font-sans pb-10 transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
             {/* Header */}
             <div 
                 className="pt-8 pb-16 px-6 text-white relative overflow-hidden transition-all duration-500"
@@ -131,21 +131,23 @@ export default function DuelLobby() {
                             Duel takliflari <span className="w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
                         </h3>
                         {invitations.map((inv) => (
-                            <div key={inv.fromId} className="bg-white p-4 rounded-3xl border-2 border-rose-100 shadow-lg flex items-center justify-between">
+                            <div key={inv.fromId} className="p-4 rounded-3xl border shadow-lg flex items-center justify-between transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                                 <div>
-                                    <h4 className="font-black text-slate-800 text-base">{inv.fromName}</h4>
-                                    <p className="text-xs text-slate-400 font-bold">Sizni duelga chaqirdi!</p>
+                                    <h4 className="font-black text-base" style={{ color: 'var(--text-color)' }}>{inv.fromName}</h4>
+                                    <p className="text-xs font-bold opacity-40" style={{ color: 'var(--text-color)' }}>Sizni duelga chaqirdi!</p>
                                 </div>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => rejectInvite(inv.fromId)}
-                                        className="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-200"
+                                        className="w-10 h-10 rounded-xl flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity"
+                                        style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}
                                     >
                                         <X size={20} />
                                     </button>
                                     <button
                                         onClick={() => acceptInvite(inv)}
-                                        className="w-12 h-12 bg-rose-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-rose-200 hover:bg-rose-700"
+                                        className="w-12 h-12 text-white rounded-xl flex items-center justify-center shadow-lg transition-transform active:scale-95"
+                                        style={{ backgroundColor: 'var(--primary-color)' }}
                                     >
                                         <Check size={24} />
                                     </button>
@@ -157,22 +159,22 @@ export default function DuelLobby() {
 
                 {/* Search Player Card / Soon Message */}
                 {hasActiveQuizzes === false ? (
-                    <div className="glass-premium rounded-3xl p-6 flex flex-col items-center justify-center py-12">
-                        <Loader2 className="animate-spin text-rose-300 mb-4" size={48} />
-                        <h2 className="text-xl font-black text-slate-800 mb-2 uppercase tracking-tight">
+                    <div className="glass-premium rounded-3xl p-6 flex flex-col items-center justify-center py-12 border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                        <Loader2 className="animate-spin mb-4" size={48} style={{ color: 'var(--primary-color)' }} />
+                        <h2 className="text-xl font-black mb-2 uppercase tracking-tight" style={{ color: 'var(--text-color)' }}>
                             TEZ ORADA...
                         </h2>
-                        <p className="text-sm font-bold text-slate-500 text-center max-w-sm">
+                        <p className="text-sm font-bold text-center max-w-sm opacity-50" style={{ color: 'var(--text-color)' }}>
                             Hozirda duellar vaqtinchalik o'chirilgan. Savollar bazasi yangilanmoqda.
                         </p>
                     </div>
                 ) : hasActiveQuizzes === true ? (
-                    <div className="glass-premium rounded-3xl p-6 flex flex-col items-center justify-center py-12">
-                        <Swords className="text-rose-500 mb-4 animate-bounce" size={48} />
-                        <h2 className="text-xl font-black text-slate-800 mb-2">
+                    <div className="glass-premium rounded-3xl p-6 flex flex-col items-center justify-center py-12 border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                        <Swords className="mb-4 animate-bounce" size={48} style={{ color: 'var(--primary-color)' }} />
+                        <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text-color)' }}>
                             Duelga tayyormisiz?
                         </h2>
-                        <p className="text-sm font-bold text-slate-500 text-center max-w-sm">
+                        <p className="text-sm font-bold text-center max-w-sm opacity-50" style={{ color: 'var(--text-color)' }}>
                             Boshqa o'quvchilar sizni taklif qilishini kuting yoki taklifnomalarni tekshiring.
                         </p>
                     </div>
@@ -183,19 +185,19 @@ export default function DuelLobby() {
                 )}
 
                 {/* Info Card */}
-                <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100/50">
-                    <h3 className="font-black text-rose-700 mb-2">Duel qoidalari</h3>
-                    <ul className="text-xs font-bold text-rose-600/80 space-y-2">
+                <div className="p-6 rounded-3xl border transition-colors" style={{ backgroundColor: 'color-mix(in srgb, var(--primary-color), transparent 90%)', borderColor: 'var(--border-color)' }}>
+                    <h3 className="font-black mb-2" style={{ color: 'var(--primary-color)' }}>Duel qoidalari</h3>
+                    <ul className="text-xs font-bold space-y-2 opacity-70" style={{ color: 'var(--text-color)' }}>
                         <li className="flex gap-2">
-                            <span className="w-1.5 h-1.5 bg-rose-400 rounded-full mt-1 shrink-0"></span>
+                            <span className="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style={{ backgroundColor: 'var(--primary-color)' }}></span>
                             Ikki o'quvchi bir vaqtda bir xil testni topshiradi.
                         </li>
                         <li className="flex gap-2">
-                            <span className="w-1.5 h-1.5 bg-rose-400 rounded-full mt-1 shrink-0"></span>
+                            <span className="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style={{ backgroundColor: 'var(--primary-color)' }}></span>
                             G'olibga qo'shimcha tangalar va XP beriladi.
                         </li>
                         <li className="flex gap-2">
-                            <span className="w-1.5 h-1.5 bg-rose-400 rounded-full mt-1 shrink-0"></span>
+                            <span className="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style={{ backgroundColor: 'var(--primary-color)' }}></span>
                             Mag'lubiyat uchun streak kamaymaydi.
                         </li>
                     </ul>

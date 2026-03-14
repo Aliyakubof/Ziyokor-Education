@@ -63,7 +63,7 @@ export default function BattleDetails() {
     };
 
     if (loading) return (
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
+        <div className="min-h-screen flex flex-col items-center justify-center transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
             <motion.div
                 animate={{ rotate: 360, scale: [1, 1.2, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
@@ -80,7 +80,7 @@ export default function BattleDetails() {
     );
 
     if (!battle) return (
-        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
             <ShieldAlert size={64} className="text-rose-500 mb-4" />
             <h1 className="text-2xl font-black mb-2">Battle topilmadi</h1>
             <button onClick={() => navigate(-1)} className="text-indigo-400 font-bold">Orqaga qaytish</button>
@@ -97,7 +97,7 @@ export default function BattleDetails() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white font-sans pb-20 relative overflow-hidden">
+        <div className="min-h-screen font-sans pb-20 relative overflow-hidden transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
             {/* Animated Background Elements */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
                 <motion.div
@@ -168,7 +168,7 @@ export default function BattleDetails() {
                     {/* Glow behind card */}
                     <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-rose-600 rounded-[2rem] md:rounded-[3rem] blur opacity-10 group-hover:opacity-30 transition duration-1000"></div>
 
-                    <div className="relative bg-slate-900/60 backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 border border-white/10 shadow-2xl overflow-hidden">
+                    <div className="relative backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 border shadow-2xl overflow-hidden transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                         {/* Shimmer Effect */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
 
@@ -180,7 +180,7 @@ export default function BattleDetails() {
                             >
                                 <div className="relative mb-4 md:mb-6 inline-block">
                                     <div className="absolute inset-0 bg-indigo-500 rounded-[1.5rem] md:rounded-[2rem] blur-xl opacity-20" />
-                                    <div className="w-20 h-20 md:w-32 md:h-32 lg:w-40 lg:h-40 bg-gradient-to-br from-indigo-500 to-blue-700 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center shadow-2xl border-2 border-white/20 relative z-10 md:rotate-3">
+                                    <div className="w-20 h-20 md:w-32 md:h-32 lg:w-40 lg:h-40 bg-gradient-to-br from-indigo-500 to-blue-700 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center shadow-2xl border-2 relative z-10 md:rotate-3" style={{ borderColor: 'var(--card-bg)' }}>
                                         <ShieldAlert className="text-white w-10 md:w-16 lg:w-20" size={40} />
                                     </div>
                                     <motion.div
@@ -207,7 +207,8 @@ export default function BattleDetails() {
                                 <motion.div
                                     animate={{ scale: [1, 1.05, 1] }}
                                     transition={{ duration: 3, repeat: Infinity }}
-                                    className="w-16 h-16 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full bg-slate-950 flex items-center justify-center border-2 md:border-4 border-white/5 shadow-2xl relative"
+                                    className="w-16 h-16 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center border-2 md:border-4 shadow-2xl relative"
+                                    style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}
                                 >
                                     <span className="text-2xl md:text-4xl lg:text-5xl font-black italic bg-clip-text text-transparent bg-gradient-to-tr from-rose-500 to-indigo-500">VS</span>
                                     <div className="absolute inset-0 rounded-full border border-white/10 animate-ping opacity-10" />
@@ -223,8 +224,7 @@ export default function BattleDetails() {
                                 className="w-full md:flex-1 text-center order-3"
                             >
                                 <div className="relative mb-4 md:mb-6 inline-block">
-                                    <div className="absolute inset-0 bg-rose-500 rounded-[1.5rem] md:rounded-[2rem] blur-xl opacity-20" />
-                                    <div className="w-20 h-20 md:w-32 md:h-32 lg:w-40 lg:h-40 bg-gradient-to-br from-rose-500 to-orange-600 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center shadow-2xl border-2 border-white/20 relative z-10 md:-rotate-3">
+                                    <div className="w-20 h-20 md:w-32 md:h-32 lg:w-40 lg:h-40 bg-gradient-to-br from-rose-500 to-orange-600 rounded-[1.5rem] md:rounded-[2.5rem] flex items-center justify-center shadow-2xl border-2 relative z-10 md:-rotate-3" style={{ borderColor: 'var(--card-bg)' }}>
                                         <Flame className="text-white w-10 md:w-16 lg:w-20" size={40} />
                                     </div>
                                     <motion.div
@@ -297,14 +297,15 @@ export default function BattleDetails() {
                         <div className="space-y-3 md:space-y-4">
                             <AnimatePresence>
                                 {battle.membersA.map((m: any, idx: number) => (
-                                    <motion.div
-                                        key={idx}
-                                        initial={{ x: -20, opacity: 0 }}
-                                        whileInView={{ x: 0, opacity: 1 }}
-                                        viewport={{ once: true }}
-                                        transition={{ delay: 0.05 * idx }}
-                                        className="flex items-center justify-between bg-white/5 backdrop-blur-md p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] border border-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all shadow-lg"
-                                    >
+                                        <motion.div
+                                            key={idx}
+                                            initial={{ x: -20, opacity: 0 }}
+                                            whileInView={{ x: 0, opacity: 1 }}
+                                            viewport={{ once: true }}
+                                            transition={{ delay: 0.05 * idx }}
+                                            className="flex items-center justify-between backdrop-blur-md p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] border hover:bg-indigo-500/5 transition-all shadow-lg"
+                                            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
+                                        >
                                         <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
                                             <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center font-black text-indigo-400 text-xs md:text-sm">
                                                 {idx + 1}

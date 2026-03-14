@@ -846,11 +846,11 @@ app.get('/api/student/quizzes', async (req, res) => {
         if (studentRes.rowCount === 0) return res.status(404).json({ error: 'Student or group not found' });
         const level = studentRes.rows[0].level;
 
-        // Fetch quizzes for this level
-        const result = await query('SELECT id, title, unit, level, time_limit FROM unit_quizzes WHERE level = $1', [level]);
+        // Fetch practice quizzes from solo_quizzes for this level
+        const result = await query('SELECT id, title, level, time_limit FROM solo_quizzes WHERE level = $1 ORDER BY created_at DESC', [level]);
         res.json(result.rows);
     } catch (err) {
-        res.status(500).json({ error: 'Error fetching level quizzes' });
+        res.status(500).json({ error: 'Error fetching practice quizzes' });
     }
 });
 
@@ -1252,6 +1252,69 @@ app.delete('/api/unit-quizzes/:id', async (req, res) => {
     } catch (err) {
         console.error('Error deleting unit quiz:', err);
         res.status(500).json({ error: 'Error deleting unit quiz' });
+    }
+});
+
+// --- Solo Quizzes --- (Practice Mode)
+app.get('/api/solo-quizzes', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM solo_quizzes ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error fetching solo quizzes:', err);
+        res.status(500).json({ error: 'Error fetching solo quizzes', details: err.message });
+    }
+});
+
+app.get('/api/solo-quizzes/:id', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM solo_quizzes WHERE id = $1', [req.params.id]);
+        if (result.rowCount === 0) return res.status(404).send('Solo Quiz not found');
+        res.json(result.rows[0]);
+    } catch (err: any) {
+        console.error('Error fetching solo quiz:', err);
+        res.status(500).json({ error: 'Error fetching solo quiz', details: err.message });
+    }
+});
+
+app.post('/api/solo-quizzes', async (req, res) => {
+    try {
+        const { title, questions, level, time_limit } = req.body;
+        const id = uuidv4();
+        await query(
+            'INSERT INTO solo_quizzes (id, title, questions, level, time_limit) VALUES ($1, $2, $3, $4, $5)',
+            [id, title, Array.isArray(questions) ? JSON.stringify(questions) : questions, level || 'Beginner', time_limit || 30]
+        );
+        res.json({ id, title, questions: Array.isArray(questions) ? questions : JSON.parse(questions), level: level || 'Beginner', time_limit: time_limit || 30 });
+    } catch (err) {
+        console.error('Error creating solo quiz:', err);
+        res.status(500).json({ error: 'Error creating solo quiz' });
+    }
+});
+
+app.put('/api/solo-quizzes/:id', async (req, res) => {
+    try {
+        const { title, questions, level, time_limit } = req.body;
+        const { id } = req.params;
+        await query(
+            'UPDATE solo_quizzes SET title = $1, questions = $2, level = $3, time_limit = $4 WHERE id = $5',
+            [title, Array.isArray(questions) ? JSON.stringify(questions) : questions, level || 'Beginner', time_limit || 30, id]
+        );
+        res.json({ id, title, questions: Array.isArray(questions) ? questions : JSON.parse(questions), level: level || 'Beginner', time_limit: time_limit || 30 });
+    } catch (err) {
+        console.error('Error updating solo quiz:', err);
+        res.status(500).json({ error: 'Error updating solo quiz' });
+    }
+});
+
+app.delete('/api/solo-quizzes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM solo_quizzes WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err) {
+        console.error('Error deleting solo quiz:', err);
+        res.status(500).json({ error: 'Error deleting solo quiz' });
     }
 });
 
@@ -1948,13 +2011,29 @@ app.get('/api/manager/settings', async (req, res) => {
     }
 });
 
+// Public: Get System Setting
+app.get('/api/settings/:key', async (req, res) => {
+    try {
+        const { key } = req.params;
+        const result = await query('SELECT value FROM system_settings WHERE key = $1', [key]);
+        if (result.rowCount === 0) {
+            return res.json({ value: null });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error fetching public setting:', err);
+        res.status(500).json({ error: 'Xatolik yuz berdi' });
+    }
+});
+
 app.put('/api/manager/settings/:key', async (req, res) => {
     try {
         const { key } = req.params;
         const { value } = req.body;
+        // Use ON CONFLICT to ensure the setting is created if it doesn't exist
         await query(
-            'UPDATE system_settings SET value = $1, updated_at = NOW() WHERE key = $2',
-            [JSON.stringify(value), key]
+            'INSERT INTO system_settings (key, value, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()',
+            [key, JSON.stringify(value)]
         );
         res.json({ success: true, key, value });
     } catch (err) {
@@ -1962,6 +2041,18 @@ app.put('/api/manager/settings/:key', async (req, res) => {
         res.status(500).json({ error: 'Xatolik yuz berdi' });
     }
 });
+
+// Initialize essential settings
+const initSettings = async () => {
+    try {
+        await query(
+            "INSERT INTO system_settings (key, value, description) VALUES ('solo_quiz_status', '\"on\"', 'SoloQuiz (Mashqlar) bo''limining holati (on/off)') ON CONFLICT (key) DO NOTHING"
+        );
+    } catch (err) {
+        console.error('Error initializing settings:', err);
+    }
+};
+initSettings();
 
 app.put('/api/student/:id/avatar', async (req, res) => {
     try {

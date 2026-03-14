@@ -268,25 +268,25 @@ export default function PlayerGame() {
         if (isUnitMode) {
             setTimeout(() => { navigate('/student/dashboard', { replace: true }); }, 100);
             return (
-                <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-brand-dark">
+                <div className="flex flex-col items-center justify-center min-h-screen p-6 transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
                     <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
                 </div>
             );
         }
 
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-6">
-                <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border border-slate-200">
+            <div className="flex flex-col items-center justify-center min-h-screen p-6 transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
+                <div className="rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                     <div className="w-24 h-24 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl">
                         <CheckCircle2 className="text-white" size={48} />
                     </div>
-                    <h1 className="text-4xl font-black text-slate-800 mb-2">Test Yakunlandi!</h1>
-                    <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-10">Muvaffaqiyatli topshirildi</p>
-                    <div className="mb-10 bg-sky-50 border border-sky-100 rounded-[2rem] px-8 py-10">
-                        <Info className="text-sky-600 mx-auto mb-4" size={24} />
-                        <p className="text-sky-800 font-bold">Natijalar o'qituvchingizga yuborildi.</p>
+                    <h1 className="text-4xl font-black mb-2" style={{ color: 'var(--text-color)' }}>Test Yakunlandi!</h1>
+                    <p className="font-bold text-xs uppercase tracking-widest mb-10 opacity-50" style={{ color: 'var(--text-color)' }}>Muvaffaqiyatli topshirildi</p>
+                    <div className="mb-10 border rounded-[2rem] px-8 py-10 transition-colors" style={{ backgroundColor: 'color-mix(in srgb, var(--primary-color), transparent 90%)', borderColor: 'var(--border-color)' }}>
+                        <Info className="mx-auto mb-4" size={24} style={{ color: 'var(--primary-color)' }} />
+                        <p className="font-bold" style={{ color: 'var(--text-color)' }}>Natijalar o'qituvchingizga yuborildi.</p>
                     </div>
-                    <button onClick={() => window.location.href = '/'} className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl">ASOSIY MENYUGA QAYTISH</button>
+                    <button onClick={() => window.location.href = '/'} className="w-full text-white font-black py-4 rounded-2xl shadow-lg transition-transform active:scale-95" style={{ backgroundColor: 'var(--primary-color)' }}>ASOSIY MENYUGA QAYTISH</button>
                 </div>
             </div>
         );
@@ -294,15 +294,15 @@ export default function PlayerGame() {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-brand-dark text-center">
-                <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl">
+            <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
+                <div className="rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                     <div className="w-24 h-24 bg-red-100 rounded-[2rem] flex items-center justify-center mx-auto mb-8 animate-bounce">
                         <XCircle className="text-red-500" size={48} />
                     </div>
-                    <h2 className="text-3xl font-black text-slate-900 mb-2">Xatolik</h2>
-                    <p className="text-slate-500 font-medium mb-10">{error}</p>
-                    <button onClick={() => window.location.reload()} className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl mb-4">QAYTADAN URINISH</button>
-                    <button onClick={() => navigate('/student/dashboard')} className="w-full text-slate-400 font-bold text-xs uppercase tracking-widest">DASHBOARDGA QAYTISH</button>
+                    <h2 className="text-3xl font-black mb-2" style={{ color: 'var(--text-color)' }}>Xatolik</h2>
+                    <p className="font-medium mb-10 opacity-60" style={{ color: 'var(--text-color)' }}>{error}</p>
+                    <button onClick={() => window.location.reload()} className="w-full text-white font-black py-4 rounded-2xl mb-4 shadow-lg" style={{ backgroundColor: 'var(--primary-color)' }}>QAYTADAN URINISH</button>
+                    <button onClick={() => navigate('/student/dashboard')} className="w-full font-bold text-xs uppercase tracking-widest opacity-40" style={{ color: 'var(--text-color)' }}>DASHBOARDGA QAYTISH</button>
                 </div>
             </div>
         );
@@ -320,7 +320,7 @@ export default function PlayerGame() {
 
     if (view === 'WAITING' || (view === 'ANSWERED' && !isUnitMode)) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-6">
+            <div className="flex flex-col items-center justify-center min-h-screen p-6 transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
                 <div className="flex flex-col items-center gap-8">
                     <div className="relative">
                         <div className="w-32 h-32 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin"></div>
@@ -329,10 +329,10 @@ export default function PlayerGame() {
                         </div>
                     </div>
                     <div className="text-center">
-                        <h2 className="text-3xl font-black text-slate-900 mb-2">
+                        <h2 className="text-3xl font-black mb-2" style={{ color: 'var(--text-color)' }}>
                             {view === 'WAITING' ? "Tayyor turing!" : "Javob yuborildi!"}
                         </h2>
-                        <p className="text-slate-500 font-bold text-xs uppercase tracking-[0.2em] animate-pulse">
+                        <p className="font-bold text-xs uppercase tracking-[0.2em] animate-pulse opacity-50" style={{ color: 'var(--text-color)' }}>
                             {view === 'WAITING' ? "Savol yuklanmoqda..." : "Keyingi savolni kuting"}
                         </p>
                     </div>
@@ -343,31 +343,31 @@ export default function PlayerGame() {
 
     if (view === 'UNIT_SUMMARY') {
         return (
-            <div className="min-h-screen flex flex-col p-6">
-                <div className="w-full max-w-2xl mx-auto bg-white rounded-[3rem] p-8 shadow-xl border border-slate-200 flex-1 flex flex-col">
-                    <h2 className="text-3xl font-black text-slate-800 mb-2 text-center">Xulosa</h2>
-                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-8 text-center italic">Javoblaringizni tekshiring</p>
+            <div className="min-h-screen flex flex-col p-6 transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
+                <div className="w-full max-w-2xl mx-auto rounded-[3rem] p-8 shadow-xl border flex-1 flex flex-col transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                    <h2 className="text-3xl font-black mb-2 text-center" style={{ color: 'var(--text-color)' }}>Xulosa</h2>
+                    <p className="font-bold text-xs uppercase tracking-widest mb-8 text-center italic opacity-40" style={{ color: 'var(--text-color)' }}>Javoblaringizni tekshiring</p>
                     <div className="flex-1 overflow-y-auto space-y-3 pr-2 scroll-hide">
                         {unitQuestions.map((q, idx) => (
-                            <button key={idx} onClick={() => goToQuestion(idx)} className="w-full flex items-center justify-between p-5 rounded-2xl border border-slate-100 bg-slate-50">
+                            <button key={idx} onClick={() => goToQuestion(idx)} className="w-full flex items-center justify-between p-5 rounded-2xl border transition-colors" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-slate-400">{idx + 1}</div>
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black opacity-30" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-color)' }}>{idx + 1}</div>
                                     <div className="text-left">
-                                        <p className="text-sm font-bold text-slate-700 line-clamp-1">{q.text}</p>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase mt-0.5">
+                                        <p className="text-sm font-bold line-clamp-1" style={{ color: 'var(--text-color)' }}>{q.text}</p>
+                                        <p className="text-[10px] font-black uppercase mt-0.5">
                                             {q.type === 'info-slide' ? <span className="text-blue-400">Mavzu</span> : unitAnswers[idx] !== undefined ? <span className="text-emerald-500">Javob berilgan</span> : <span className="text-orange-400">Javobsiz</span>}
                                         </p>
                                     </div>
                                 </div>
-                                <div className="text-slate-300">→</div>
+                                <div className="opacity-30" style={{ color: 'var(--text-color)' }}>→</div>
                             </button>
                         ))}
                     </div>
                     <div className="mt-8 space-y-3">
-                        <button onClick={finalizeSubmission} disabled={isSubmitting} className="w-full py-6 rounded-[2rem] font-black text-2xl bg-indigo-600 text-white shadow-xl">
+                        <button onClick={finalizeSubmission} disabled={isSubmitting} className="w-full py-6 rounded-[2rem] font-black text-2xl text-white shadow-xl" style={{ backgroundColor: 'var(--primary-color)' }}>
                             {isSubmitting ? "YUBORILMOQDA..." : "TESTNI TUGATISH"}
                         </button>
-                        <button onClick={() => goToQuestion(0)} className="w-full text-slate-400 font-bold text-xs uppercase">Savollarga qaytish</button>
+                        <button onClick={() => goToQuestion(0)} className="w-full font-bold text-xs uppercase opacity-40" style={{ color: 'var(--text-color)' }}>Savollarga qaytish</button>
                     </div>
                 </div>
             </div>
@@ -418,17 +418,17 @@ export default function PlayerGame() {
 
             return (
                 <div className="w-full max-w-4xl mx-auto space-y-6">
-                    <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
+                    <div className="rounded-[2.5rem] p-8 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                         {isReview && (
                             <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isAllCorrect ? 'bg-emerald-50 text-emerald-600' : (earned > 0 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600')}`}>
                                 NATIJA: {earned}/{total}
                             </div>
                         )}
 
-                        <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">Fill in the blanks from the box</h2>
+                        <h2 className="text-center text-xl font-bold opacity-30 italic mb-8" style={{ color: 'var(--text-color)' }}>Fill in the blanks from the box</h2>
 
                         {/* Word Box - clickable words */}
-                        <div className="flex flex-wrap justify-center gap-2 mb-10 p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 min-h-[100px]">
+                        <div className="flex flex-wrap justify-center gap-2 mb-10 p-4 rounded-2xl border-2 border-dashed min-h-[100px] transition-colors" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}>
                             {question.options.map((opt, i) => {
                                 const isUsed = usedWords.has(opt);
                                 return (
@@ -443,9 +443,14 @@ export default function PlayerGame() {
                                         whileTap={{ scale: 0.95 }}
                                         className={`px-4 py-2 rounded-xl border font-bold shadow-sm transition-all
                                             ${isUsed
-                                                ? 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through'
-                                                : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 active:scale-95 cursor-pointer'
+                                                ? 'opacity-20 cursor-not-allowed line-through'
+                                                : 'shadow-md active:scale-95 cursor-pointer'
                                             }`}
+                                        style={{ 
+                                            backgroundColor: isUsed ? 'transparent' : 'var(--card-bg)', 
+                                            borderColor: isUsed ? 'var(--border-color)' : 'var(--primary-color)',
+                                            color: isUsed ? 'var(--text-color)' : 'var(--primary-color)'
+                                        }}
                                     >
                                         {opt}
                                     </motion.button>
@@ -454,7 +459,7 @@ export default function PlayerGame() {
                         </div>
 
                         {/* Question text with blank slots */}
-                        <div className="text-xl md:text-2xl text-slate-800 leading-loose text-center">
+                        <div className="text-xl md:text-2xl leading-loose text-center" style={{ color: 'var(--text-color)' }}>
                             {parts.map((part, i) => (
                                 <span key={i}>
                                     {part}
@@ -473,8 +478,13 @@ export default function PlayerGame() {
                                                             ? (currentAnswersList[i]?.toLowerCase().trim() === question.acceptedAnswers?.[i]?.toLowerCase().trim()
                                                                 ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
                                                                 : 'bg-red-50 border-red-400 text-red-700')
-                                                            : 'bg-indigo-50 border-indigo-400 text-indigo-700 hover:bg-red-50 hover:border-red-300 hover:text-red-600'
+                                                            : 'hover:bg-red-50 hover:border-red-300 hover:text-red-600'
                                                         }`}
+                                                    style={{ 
+                                                        backgroundColor: isReview ? '' : 'color-mix(in srgb, var(--primary-color), transparent 90%)',
+                                                        borderColor: isReview ? '' : 'var(--primary-color)',
+                                                        color: isReview ? '' : 'var(--primary-color)'
+                                                    }}
                                                     title={!isReview ? "O'chirish uchun bosing" : undefined}
                                                 >
                                                     {currentAnswersList[i]}
@@ -506,19 +516,19 @@ export default function PlayerGame() {
 
             return (
                 <div className="w-full max-w-4xl mx-auto space-y-6">
-                    <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
+                    <div className="rounded-[2.5rem] p-8 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                         {isReview && (
                             <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isAllCorrect ? 'bg-emerald-50 text-emerald-600' : (earned > 0 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600')}`}>
                                 NATIJA: {earned}/{total}
                             </div>
                         )}
 
-                        <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">Match the items</h2>
+                        <h2 className="text-center text-xl font-bold opacity-30 italic mb-8" style={{ color: 'var(--text-color)' }}>Match the items</h2>
 
                         <div className="space-y-4">
                             {question.options.map((opt, i) => (
                                 <div key={i} className="flex items-center gap-4">
-                                    <div className="flex-1 bg-slate-50 p-4 rounded-2xl font-bold text-slate-700 border border-slate-100">
+                                    <div className="flex-1 p-4 rounded-2xl font-bold border transition-colors" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}>
                                         {opt}
                                     </div>
                                     <div className="text-slate-300">→</div>
@@ -538,8 +548,13 @@ export default function PlayerGame() {
                                             onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)}
                                             className={`w-full p-4 rounded-2xl border-2 font-bold transition-all outline-none ${isReview
                                                 ? (normalizeAnswer(currentAnswersList[i]) === normalizeAnswer(question.acceptedAnswers?.[i] || '') ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-red-200 bg-red-50 text-red-600')
-                                                : 'bg-white border-slate-100 focus:border-indigo-500'
+                                                : ''
                                                 }`}
+                                            style={{ 
+                                                backgroundColor: isReview ? '' : 'var(--card-bg)',
+                                                borderColor: isReview ? '' : 'var(--border-color)',
+                                                color: 'var(--text-color)'
+                                            }}
                                             placeholder="Match..."
                                         />
                                     </div>
@@ -565,10 +580,10 @@ export default function PlayerGame() {
                 const parts = question.text.split('[...]');
                 const currentAnswersList = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
                 return (
-                    <div className="w-full max-w-4xl mx-auto bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-200">
-                        {isReview && <div className="mb-6 p-4 rounded-2xl bg-slate-50 text-center font-black">{correctInfo?.acceptedAnswers?.join('+')}</div>}
-                        <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">Fill in the blanks</h2>
-                        <div className="text-xl md:text-2xl text-slate-800 leading-loose text-center">
+                    <div className="w-full max-w-4xl mx-auto rounded-[2.5rem] p-8 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                        {isReview && <div className="mb-6 p-4 rounded-2xl bg-slate-50/10 text-center font-black" style={{ color: 'var(--text-color)' }}>{correctInfo?.acceptedAnswers?.join('+')}</div>}
+                        <h2 className="text-center text-xl font-bold opacity-30 italic mb-8" style={{ color: 'var(--text-color)' }}>Fill in the blanks</h2>
+                        <div className="text-xl md:text-2xl leading-loose text-center" style={{ color: 'var(--text-color)' }}>
                             {parts.map((part, i) => (
                                 <span key={i}>
                                     {part}
@@ -589,16 +604,16 @@ export default function PlayerGame() {
 
             const aiFeedback = isReview ? unitAIFeedback[currentUnitIndex] : null;
             return (
-                <div className="w-full max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200">
+                <div className="w-full max-w-2xl mx-auto rounded-[2.5rem] p-8 md:p-12 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                     {isReview && <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isCorrect ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{isCorrect ? "TO'G'RI!" : 'XATO!'}</div>}
-                    <h2 className="text-center text-xl font-bold opacity-60 italic mb-8">{question.type}</h2>
-                    <div className="text-xl md:text-2xl font-bold text-center mb-10 leading-relaxed">{question.text}</div>
+                    <h2 className="text-center text-xl font-bold opacity-30 italic mb-8" style={{ color: 'var(--text-color)' }}>{question.type}</h2>
+                    <div className="text-xl md:text-2xl font-bold text-center mb-10 leading-relaxed" style={{ color: 'var(--text-color)' }}>{question.text}</div>
                     <textarea rows={2} value={isReview ? (playerAns || '') : textAnswer} readOnly={isReview} onChange={(e) => {
                         const val = e.target.value;
                         setTextAnswer(val);
                         e.target.style.height = 'auto';
                         e.target.style.height = `${e.target.scrollHeight}px`;
-                    }} onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer.trim())} className="w-full border-2 rounded-2xl px-6 py-4 text-center text-xl font-bold mb-6 resize-none" placeholder="Javobingizni yozing..." />
+                    }} onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer.trim())} className="w-full border-2 rounded-2xl px-6 py-4 text-center text-xl font-bold mb-6 resize-none transition-colors" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }} placeholder="Javobingizni yozing..." />
                     {isReview && aiFeedback && <div className="bg-blue-50 p-4 rounded-2xl mb-4 text-sm font-bold text-blue-700">AI: {aiFeedback}</div>}
                     {isReview && !isCorrect && <div className="bg-indigo-50 p-4 rounded-2xl text-indigo-600 font-bold">To'g'ri: {correctInfo?.acceptedAnswers?.join('+')}</div>}
                 </div>
@@ -618,9 +633,9 @@ export default function PlayerGame() {
                     animate={{ opacity: 1, y: 0 }}
                     className="w-full max-w-4xl mx-auto space-y-8"
                 >
-                    <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-200">
+                    <div className="rounded-[2.5rem] p-8 md:p-12 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                         <div className="text-center space-y-6">
-                            <h2 className="text-3xl md:text-5xl font-black text-slate-800 leading-tight">{question.text}</h2>
+                            <h2 className="text-3xl md:text-5xl font-black leading-tight" style={{ color: 'var(--text-color)' }}>{question.text}</h2>
                         </div>
                         <div className="mt-12 flex flex-nowrap justify-start md:justify-center gap-2 w-full overflow-x-auto pb-4 scroll-hide items-center touch-pan-x">
                             {displayChars.map((char, i) => {
@@ -682,7 +697,12 @@ export default function PlayerGame() {
                                                 }
                                             }
                                         }}
-                                        className={`flex-shrink-0 ${boxWidth} ${boxHeight} ${fontSize} font-black text-center rounded-lg md:rounded-2xl border-2 transition-all outline-none uppercase shadow-sm ${isReview ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-red-50 border-red-500 text-red-600') : (currentVal[i] ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20')}`}
+                                        className={`flex-shrink-0 ${boxWidth} ${boxHeight} ${fontSize} font-black text-center rounded-lg md:rounded-2xl border-2 transition-all outline-none uppercase shadow-sm ${isReview ? (isCorrect ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'bg-red-50 border-red-500 text-red-600') : (currentVal[i] ? 'border-primary shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-white/10 focus:border-indigo-500')}`}
+                                        style={{ 
+                                            backgroundColor: isReview ? '' : 'var(--bg-color)',
+                                            borderColor: !isReview && currentVal[i] ? 'var(--primary-color)' : '',
+                                            color: isReview ? '' : 'var(--text-color)'
+                                        }}
                                     />
                                 );
                             })}
@@ -699,7 +719,7 @@ export default function PlayerGame() {
             const isFalseCorrect = isReview && correctInfo?.correctIndex === 1;
             return (
                 <div className="flex flex-col h-full space-y-6">
-                    <div className="text-xl md:text-2xl font-bold text-center leading-relaxed px-4">{question.text}</div>
+                    <div className="text-xl md:text-2xl font-bold text-center leading-relaxed px-4" style={{ color: 'var(--text-color)' }}>{question.text}</div>
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button onClick={() => !isReview && sendAnswer(0)} disabled={isReview} className={`rounded-[2rem] flex flex-col items-center justify-center p-8 transition-all shadow-xl border-4 ${isReview ? (isTrueCorrect ? 'bg-emerald-500 border-yellow-400' : currentAns === 0 ? 'bg-red-500' : 'bg-slate-200 opacity-30') : (isUnitMode && currentAns === 0 ? 'bg-blue-600 border-yellow-400 shadow-blue-500/40' : 'bg-blue-500 border-transparent shadow-blue-500/20 active:scale-95')}`}>
                             <CheckCircle2 size={48} className="text-white mb-4" />
@@ -717,11 +737,11 @@ export default function PlayerGame() {
         if (question.type === 'info-slide') {
             return (
                 <div className="flex items-center justify-center h-full">
-                    <div className="w-full max-w-2xl bg-white rounded-[2.5rem] p-8 shadow-2xl border border-blue-100 text-center relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-blue-500"></div>
-                        <Info className="text-blue-500 mx-auto mb-6" size={32} />
-                        <h2 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mb-4">Information</h2>
-                        <p className="text-2xl md:text-3xl font-black text-slate-800 leading-tight">{question.text}</p>
+                    <div className="w-full max-w-2xl rounded-[2.5rem] p-8 shadow-2xl border text-center relative overflow-hidden transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                        <div className="absolute top-0 left-0 w-full h-2" style={{ backgroundColor: 'var(--primary-color)' }}></div>
+                        <Info className="mx-auto mb-6" size={32} style={{ color: 'var(--primary-color)' }} />
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] mb-4 opacity-40" style={{ color: 'var(--text-color)' }}>Information</h2>
+                        <p className="text-2xl md:text-3xl font-black leading-tight" style={{ color: 'var(--text-color)' }}>{question.text}</p>
                     </div>
                 </div>
             );
@@ -731,17 +751,17 @@ export default function PlayerGame() {
         const currentAnsMCQ = unitAnswers[currentUnitIndex];
         return (
             <div className="flex flex-col h-full space-y-6">
-                <div className="text-xl md:text-2xl font-bold text-center leading-relaxed px-4">{question.text}</div>
+                <div className="text-xl md:text-2xl font-bold text-center leading-relaxed px-4" style={{ color: 'var(--text-color)' }}>{question.text}</div>
                 <div className="flex-1 grid grid-cols-2 gap-4">
                     {[0, 1, 2, 3].map(i => {
                         const isCorrect = isReview && correctInfo?.correctIndex === i;
                         const isWrongSelection = isReview && currentAnsMCQ === i && !isCorrect;
                         return (
-                            <button key={i} onClick={() => !isReview && sendAnswer(i)} disabled={isReview} className={`border-4 rounded-3xl flex flex-col items-center justify-center p-4 transition-all shadow-xl ${isReview ? (isCorrect ? 'bg-emerald-500 border-yellow-400 text-white' : isWrongSelection ? 'bg-red-500 text-white' : 'bg-slate-50 opacity-30') : (isUnitMode && currentAnsMCQ === i ? 'border-yellow-400 bg-slate-50' : 'border-slate-100 bg-white active:scale-95')}`}>
+                            <button key={i} onClick={() => !isReview && sendAnswer(i)} disabled={isReview} className={`border-4 rounded-3xl flex flex-col items-center justify-center p-4 transition-all shadow-xl ${isReview ? (isCorrect ? 'bg-emerald-500 border-yellow-400 text-white' : isWrongSelection ? 'bg-red-500 text-white' : 'opacity-30') : (isUnitMode && currentAnsMCQ === i ? 'border-primary' : 'border-transparent active:scale-95')}`} style={{ backgroundColor: isReview ? '' : 'var(--card-bg)', borderColor: isReview ? '' : (isUnitMode && currentAnsMCQ === i ? 'var(--primary-color)' : 'var(--border-color)') }}>
                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white mb-2 ${i === 0 ? 'bg-blue-500' : i === 1 ? 'bg-emerald-500' : i === 2 ? 'bg-orange-500' : 'bg-indigo-500'}`}>
                                     <span>{i === 0 ? '▲' : i === 1 ? '◆' : i === 2 ? '●' : '■'}</span>
                                 </div>
-                                <span className="text-sm md:text-lg font-bold text-center leading-tight">{question.options[i]}</span>
+                                <span className="text-sm md:text-lg font-bold text-center leading-tight" style={{ color: 'var(--text-color)' }}>{question.options[i]}</span>
                             </button>
                         );
                     })}
@@ -751,12 +771,12 @@ export default function PlayerGame() {
     };
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-transparent">
-            <header className="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center border-b border-slate-200 shrink-0">
+        <div className="flex flex-col h-[100dvh] transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
+            <header className="backdrop-blur-md p-4 flex justify-between items-center border-b shrink-0 transition-colors" style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--border-color)' }}>
                 <div className="flex items-center gap-3">
-                    <div className="bg-indigo-50 border border-indigo-100 px-4 py-1.5 rounded-xl">
-                        <span className="text-[10px] font-black text-indigo-300 uppercase block">{isUnitMode ? 'Unit' : 'Savol'}</span>
-                        <div className="text-lg font-black text-indigo-600">
+                    <div className="border px-4 py-1.5 rounded-xl transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                        <span className="text-[10px] font-black uppercase block opacity-40" style={{ color: 'var(--text-color)' }}>{isUnitMode ? 'Unit' : 'Savol'}</span>
+                        <div className="text-lg font-black" style={{ color: 'var(--primary-color)' }}>
                             {isUnitMode ? (
                                 (() => {
                                     const nonInfoTotal = unitQuestions.filter(q => q.type !== 'info-slide').length;
@@ -768,7 +788,7 @@ export default function PlayerGame() {
                     </div>
                 </div>
                 <div className="flex-1 text-center">
-                    <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{question?.info || getCurrentTopic() || quizTitle}</h2>
+                    <h2 className="text-[10px] font-black uppercase tracking-widest opacity-40" style={{ color: 'var(--text-color)' }}>{question?.info || getCurrentTopic() || quizTitle}</h2>
                 </div>
             </header>
 
@@ -777,9 +797,9 @@ export default function PlayerGame() {
             </main>
 
             {isUnitMode && (view === 'PLAYING' || view === 'UNIT_REVIEW') && (
-                <footer className="p-4 bg-white/80 border-t border-slate-200 flex items-center justify-between shrink-0">
-                    <button onClick={() => { if (currentUnitIndex > 0) goToQuestion(currentUnitIndex - 1); }} disabled={currentUnitIndex === 0} className="px-6 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold disabled:opacity-30">← Orqaga</button>
-                    <div className="flex-1 flex justify-center">
+                <footer className="p-4 border-t flex items-center justify-between shrink-0 transition-colors" style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--border-color)' }}>
+                    <button onClick={() => { if (currentUnitIndex > 0) goToQuestion(currentUnitIndex - 1); }} disabled={currentUnitIndex === 0} className="px-6 py-3 rounded-2xl font-bold disabled:opacity-30 border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}>← Orqaga</button>
+                    <div className="flex-1 flex justify-center font-black" style={{ color: 'var(--text-color)', opacity: 0.5 }}>
                         {(() => {
                             const nonInfoTotal = unitQuestions.filter(q => q.type !== 'info-slide').length;
                             const nonInfoCurrent = unitQuestions.slice(0, currentUnitIndex + 1).filter(q => q.type !== 'info-slide').length;
@@ -787,9 +807,9 @@ export default function PlayerGame() {
                         })()}
                     </div>
                     {currentUnitIndex === unitQuestions.length - 1 ? (
-                        <button onClick={() => setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY')} className="px-6 py-3 rounded-2xl font-black bg-indigo-600 text-white">SUBMIT</button>
+                        <button onClick={() => setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY')} className="px-6 py-3 rounded-2xl font-black text-white shadow-lg" style={{ backgroundColor: 'var(--primary-color)' }}>SUBMIT</button>
                     ) : (
-                        <button onClick={() => goToQuestion(currentUnitIndex + 1)} className="px-6 py-3 bg-slate-800 text-white rounded-2xl font-bold">Keyingisi →</button>
+                        <button onClick={() => goToQuestion(currentUnitIndex + 1)} className="px-6 py-3 text-white rounded-2xl font-bold shadow-lg" style={{ backgroundColor: 'var(--primary-color)' }}>Keyingisi →</button>
                     )}
                 </footer>
             )}

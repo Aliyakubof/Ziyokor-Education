@@ -38,10 +38,45 @@ const ManagerDashboard: React.FC = () => {
     const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
     const [selectedGroupForResults, setSelectedGroupForResults] = useState<Group | null>(null);
     const [selectedGroupForContacts, setSelectedGroupForContacts] = useState<Group | null>(null);
+    const [soloQuizStatus, setSoloQuizStatus] = useState<'on' | 'off'>('on');
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
     useEffect(() => {
         fetchTeachers();
+        fetchSoloQuizStatus();
     }, []);
+
+    const fetchSoloQuizStatus = async () => {
+        try {
+            const res = await apiFetch('/api/settings/solo_quiz_status');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.value) setSoloQuizStatus(data.value);
+            }
+        } catch (err) {
+            console.error('Error fetching solo quiz status:', err);
+        }
+    };
+
+    const toggleSoloQuizStatus = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsUpdatingStatus(true);
+        const newStatus = soloQuizStatus === 'on' ? 'off' : 'on';
+        try {
+            const res = await apiFetch(`/api/manager/settings/solo_quiz_status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: newStatus })
+            });
+            if (res.ok) {
+                setSoloQuizStatus(newStatus);
+            }
+        } catch (err) {
+            console.error('Error toggling solo quiz status:', err);
+        } finally {
+            setIsUpdatingStatus(false);
+        }
+    };
 
     const fetchTeachers = async () => {
         setLoading(true);
@@ -114,6 +149,48 @@ const ManagerDashboard: React.FC = () => {
                         <p className="text-slate-500 font-medium text-sm mt-1 uppercase tracking-widest">
                             Natijalarni ko'rish uchun o'qituvchini tanlang
                         </p>
+                    </div>
+                </div>
+
+                {/* Quick Actions (SoloQuiz) */}
+                <div className="mb-10">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Tezkor Amallar</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div 
+                            className="group relative bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 shadow-xl shadow-indigo-100 transition-all overflow-hidden"
+                        >
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div 
+                                        onClick={() => navigate('/admin/create-quiz?type=solo')}
+                                        className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white group-hover:scale-110 transition-transform cursor-pointer"
+                                    >
+                                        <Shield size={24} />
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <button
+                                            onClick={toggleSoloQuizStatus}
+                                            disabled={isUpdatingStatus}
+                                            className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ${soloQuizStatus === 'on' ? 'bg-emerald-400' : 'bg-white/20'}`}
+                                        >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${soloQuizStatus === 'on' ? 'translate-x-7' : 'translate-x-1'}`} />
+                                        </button>
+                                        <span className={`text-[9px] font-black uppercase tracking-widest ${soloQuizStatus === 'on' ? 'text-emerald-300' : 'text-white/50'}`}>
+                                            {soloQuizStatus === 'on' ? 'ONLINE' : 'MAINTENANCE'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div 
+                                    onClick={() => navigate('/admin/create-quiz?type=solo')}
+                                    className="cursor-pointer"
+                                >
+                                    <h4 className="text-white font-black text-xl mb-1">SoloQuiz Yaratish</h4>
+                                    <p className="text-white/70 text-sm font-medium">Talabalar uchun mustaqil mashq testi yaratish</p>
+                                </div>
+                            </div>
+                            {/* Decorative element */}
+                            <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all pointer-events-none"></div>
+                        </div>
                     </div>
                 </div>
 

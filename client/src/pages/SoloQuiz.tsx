@@ -1,37 +1,87 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
-import { BookOpen, ChevronLeft, Zap, Clock, ChevronRight, CheckCircle, XCircle, Swords, Trophy, Coins, History } from 'lucide-react';
+import { 
+    BookOpen, ChevronLeft, Zap, Clock, ChevronRight, CheckCircle, 
+    Coins, Info, CheckCircle2, AlertCircle 
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+
+interface QuestionData {
+    info?: string;
+    text: string;
+    options: string[];
+    timeLimit: number;
+    type: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching' | 'vocabulary';
+    acceptedAnswers?: string[];
+}
+
+const normalizeAnswer = (val: string | number): string => {
+    let s = String(val).toLowerCase().trim();
+    // Replace all non-alphanumeric characters with space to ignore symbols in scoring
+    s = s.replace(/[^a-z0-9]/g, " ");
+    s = s.replace(/\s+/g, " ");
+    return s.trim();
+};
+
+const countCorrectParts = (studentAns: string | number, acceptedAnswers: string[]): number => {
+    if (!studentAns) return 0;
+    const sParts = String(studentAns).split('+').map(p => normalizeAnswer(p));
+    const aParts = acceptedAnswers.map(p => normalizeAnswer(p));
+    let count = 0;
+    for (let i = 0; i < aParts.length; i++) {
+        if (sParts[i] === aParts[i]) {
+            count++;
+        }
+    }
+    return count;
+};
 
 export default function SoloQuiz() {
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [quizzes, setQuizzes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Quiz & Battle State
+    // Quiz & Results State
     const [selectedQuiz, setSelectedQuiz] = useState<any | null>(null);
+    const [view, setView] = useState<'LIST' | 'PLAYING' | 'SUMMARY' | 'FINISHED' | 'OFF'>('LIST');
+    
+    const [currentQuestions, setCurrentQuestions] = useState<QuestionData[]>([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [answers, setAnswers] = useState<Record<number, any>>({});
     const [results, setResults] = useState<any | null>(null);
-    const [isBattleMode, setIsBattleMode] = useState(false);
-
-    // Vocab Battle Game State
-    const [battleQuestions, setBattleQuestions] = useState<any[]>([]);
-    const [currentIdx, setCurrentIdx] = useState(0);
-    const [totalXp, setTotalXp] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(15);
-    const [streak, setStreak] = useState(0);
-    const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-    const [isCorrectFeedback, setIsCorrectFeedback] = useState<boolean | null>(null);
-    const timerRef = useRef<any>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        if (!isBattleMode && !selectedQuiz && !results) {
+        checkStatus();
+    }, []);
+
+    const checkStatus = async () => {
+        try {
+            const res = await apiFetch('/api/settings/solo_quiz_status');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.value === 'off') {
+                    setView('OFF');
+                } else {
+                    fetchQuizzes();
+                }
+            } else {
+                fetchQuizzes();
+            }
+        } catch (err) {
             fetchQuizzes();
         }
-    }, [isBattleMode, selectedQuiz, results]);
+    };
+
+    useEffect(() => {
+        if (view === 'LIST') {
+            fetchQuizzes();
+        }
+    }, [view]);
 
     const fetchQuizzes = async () => {
+        setLoading(true);
         try {
             const res = await apiFetch(`/api/student/quizzes?studentId=${user?.id}`);
             if (res.ok) setQuizzes(await res.json());
@@ -43,347 +93,339 @@ export default function SoloQuiz() {
     };
 
     const handleStartNormal = (quiz: any) => {
+        const parsedQuestions = typeof quiz.questions === 'string' 
+            ? JSON.parse(quiz.questions) 
+            : quiz.questions;
+        
         setSelectedQuiz(quiz);
-        setResults(null);
+        setCurrentQuestions(parsedQuestions || []);
+        setCurrentIndex(0);
+        setAnswers({});
+        setView('PLAYING');
     };
 
-    const handleStartBattle = async () => {
-        try {
-            setLoading(true);
-            const res = await apiFetch(`/api/student/vocab-battle/generate?studentId=${user?.id}&count=15`);
-            if (res.ok) {
-                const data = await res.json();
-                setBattleQuestions(data.questions);
-                setIsBattleMode(true);
-                setCurrentIdx(0);
-                setTotalXp(0);
-                setStreak(0);
-                setTimeLeft(15);
-                setSelectedAnswer(null);
-                setIsCorrectFeedback(null);
-                startTimer();
-            } else {
-                alert("Lug'at savollarini yuklashda xatolik yoki hozircha yetarli so'zlar kiritilmagan.");
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
+    const saveAnswer = (val: any) => {
+        setAnswers(prev => ({ ...prev, [currentIndex]: val }));
     };
 
-    const startTimer = () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-        setTimeLeft(15);
-        timerRef.current = setInterval(() => {
-            setTimeLeft(prev => {
-                if (prev <= 1) {
-                    clearInterval(timerRef.current!);
-                    handleTimeOut();
-                    return 0;
+    const finalizeSubmission = () => {
+        setIsSubmitting(true);
+        
+        let totalScore = 0;
+        let maxScore = 0;
+
+        currentQuestions.forEach((q, idx) => {
+            if (q.type === 'info-slide') return;
+            
+            const studentAns = answers[idx];
+            const accepted = q.acceptedAnswers || [];
+            
+            if (q.type === 'multiple-choice' || q.type === 'true-false') {
+                maxScore += 1;
+                if (studentAns !== undefined && Number(studentAns) === (q as any).correctIndex) {
+                    totalScore += 1;
                 }
-                return prev - 1;
-            });
-        }, 1000);
-    };
-
-    const handleTimeOut = () => {
-        setStreak(0);
-        setIsCorrectFeedback(false);
-        setTimeout(() => nextQuestion(), 1500);
-    };
-
-    const handleAnswer = (option: string, answerLabel: string) => {
-        if (selectedAnswer || isCorrectFeedback !== null) return; // Prevent double clicks
-        if (timerRef.current) clearInterval(timerRef.current);
-        setSelectedAnswer(answerLabel);
-
-        const currentQ = battleQuestions[currentIdx];
-        const isCorrect = currentQ.options.indexOf(option) === currentQ.correctIndex;
-
-        setIsCorrectFeedback(isCorrect);
-
-        if (isCorrect) {
-            // XP Calculation
-            const baseXP = 100;
-            const speedBonus = timeLeft * 10;
-            const comboBonus = streak * 50;
-            const earnedXp = baseXP + speedBonus + comboBonus;
-
-            setTotalXp(prev => prev + earnedXp);
-            setStreak(prev => prev + 1);
-        } else {
-            setStreak(0);
-        }
-
-        setTimeout(() => nextQuestion(), 1500);
-    };
-
-    const nextQuestion = () => {
-        setSelectedAnswer(null);
-        setIsCorrectFeedback(null);
-        if (currentIdx + 1 < battleQuestions.length) {
-            setCurrentIdx(prev => prev + 1);
-            startTimer();
-        } else {
-            finishBattle();
-        }
-    };
-
-    const finishBattle = async () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-        try {
-            setLoading(true);
-            const res = await apiFetch(`/api/student/vocab-battle/submit`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ studentId: user?.id, totalXp })
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                setResults({
-                    type: 'battle',
-                    hidden: data.hidden,
-                    score: data.xpEarned || 0,
-                    coins: data.coinsEarned || 0,
-                    percentage: (totalXp / (battleQuestions.length * 250)) * 100 // Estimate max nominal XP
-                });
+            } else if (['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching'].includes(q.type)) {
+                const earned = countCorrectParts(studentAns, accepted);
+                totalScore += earned;
+                maxScore += accepted.length;
             }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-            setIsBattleMode(false);
-        }
+        });
+
+        const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 100;
+
+        setResults({
+            immediateScore: totalScore,
+            maxScore,
+            percentage
+        });
+
+        setView('FINISHED');
+        setIsSubmitting(false);
     };
 
-    useEffect(() => {
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
-    }, []);
+    const goToQuestion = (index: number) => {
+        if (index >= 0 && index < currentQuestions.length) {
+            setCurrentIndex(index);
+            setView('PLAYING');
+        }
+    };
 
     // -------- Renders --------
 
-    if (results) {
-        if (results.hidden) {
-            return (
-                <div className="min-h-screen bg-slate-50 font-sans p-6 flex items-center justify-center">
-                    <div className="max-w-md w-full bg-white rounded-[3rem] p-10 text-center shadow-xl border border-slate-100 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
-                        <div className="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-lg shadow-indigo-100 animate-float">
-                            <CheckCircle size={48} />
+    if (view === 'OFF') {
+        return (
+            <div className="min-h-screen font-sans p-6 flex flex-col items-center justify-center transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
+                <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in duration-700">
+                    <div className="relative inline-block">
+                        <div className="w-32 h-32 bg-indigo-50 rounded-[3rem] flex items-center justify-center text-indigo-600 shadow-inner">
+                            <Clock size={64} className="animate-pulse" />
+                        </div>
+                        <div className="absolute -right-2 -top-2 w-12 h-12 bg-amber-400 rounded-2xl flex items-center justify-center text-white shadow-lg rotate-12">
+                            <Zap size={24} fill="white" />
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h2 className="text-4xl font-black mb-4 tracking-tight" style={{ color: 'var(--text-color)' }}>Yaqinda...</h2>
+                        <p className="text-lg font-medium opacity-60 leading-relaxed" style={{ color: 'var(--text-color)' }}>
+                            Hozirda mashqlar bo'limi texnik ishlar sababli vaqtincha yopiq. <br/> 
+                            Tez orada eng sara testlar bilan qaytamiz! 🚀
+                        </p>
+                    </div>
+
+                    <div className="p-6 bg-white/50 backdrop-blur-sm rounded-3xl border border-white shadow-sm flex items-center gap-4 text-left">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shrink-0">
+                            <Info size={24} />
+                        </div>
+                        <p className="text-sm font-bold opacity-80" style={{ color: 'var(--text-color)' }}>
+                            Adminlar yangi savollar va qiziqarli mashqlar ustida ishlamoqda.
+                        </p>
+                    </div>
+
+                    <button 
+                        onClick={() => window.history.back()}
+                        className="px-8 py-4 bg-slate-900 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                    >
+                        Orqaga qaytish
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (view === 'FINISHED' && results) {
+        return (
+            <div className="min-h-screen font-sans p-6 flex flex-col items-center justify-center transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
+                <div className="max-w-md w-full space-y-6">
+                    <div className="rounded-[3rem] p-8 text-center shadow-xl border relative overflow-hidden transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                        <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-lg ${results.percentage > 59 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                            {results.percentage > 59 ? <CheckCircle2 size={40} /> : <AlertCircle size={40} />}
+                        </div>
+                        
+                        <h2 className="text-2xl font-black mb-1" style={{ color: 'var(--text-color)' }}>Natijangiz</h2>
+                        <div className="text-6xl font-black mb-4" style={{ color: results.percentage > 59 ? '#10b981' : '#f43f5e' }}>
+                            {results.percentage}%
+                        </div>
+                        
+                        <div className="text-xl font-bold mb-8 opacity-60" style={{ color: 'var(--text-color)' }}>
+                            {results.immediateScore} / {results.maxScore} ball
                         </div>
 
-                        <h2 className="text-3xl font-black text-slate-800 mb-2">Muvaffaqiyatli!</h2>
-                        <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-10">Sizning natijangiz</p>
-
-                        <div className="bg-sky-50 border border-sky-100 rounded-[2rem] p-8 mb-10">
-                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                                <History className="text-sky-600" size={24} />
+                        <div className="grid grid-cols-2 gap-4 mb-8">
+                            <div className="p-4 rounded-3xl border transition-colors" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}>
+                                <p className="text-[10px] uppercase font-black tracking-widest opacity-40 mb-1" style={{ color: 'var(--text-color)' }}>Status</p>
+                                <p className={`font-black ${results.percentage > 59 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                    {results.percentage > 59 ? "O'TDINGIZ" : "O'TMADINGIZ"}
+                                </p>
                             </div>
-                            <p className="text-sky-800 font-bold leading-relaxed">
-                                Natijalar va to'g'ri javoblar <span className="text-indigo-600">Telegram bot</span> orqali o'qituvchingizga yuborildi.
-                            </p>
+                            <div className="p-4 rounded-3xl border transition-colors" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}>
+                                <p className="text-[10px] uppercase font-black tracking-widest opacity-40 mb-1" style={{ color: 'var(--text-color)' }}>Savollar</p>
+                                <p className="font-black" style={{ color: 'var(--text-color)' }}>{currentQuestions.length} ta</p>
+                            </div>
                         </div>
 
                         <button
-                            onClick={() => { setResults(null); setSelectedQuiz(null); }}
-                            className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95"
+                            onClick={() => { setView('LIST'); setSelectedQuiz(null); setResults(null); }}
+                            className="w-full bg-indigo-600 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all"
                         >
-                            ASOSIY MENYUGA QAYTISH
+                            YANA URINISH
                         </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (view === 'SUMMARY') {
+        return (
+            <div className="min-h-screen font-sans p-6 transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
+                <div className="max-w-xl mx-auto h-full flex flex-col">
+                    <div className="rounded-[3rem] p-8 shadow-xl border flex-1 flex flex-col transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                        <h2 className="text-3xl font-black mb-2 text-center" style={{ color: 'var(--text-color)' }}>Xulosa</h2>
+                        <p className="font-bold text-xs uppercase tracking-widest mb-8 text-center italic opacity-40" style={{ color: 'var(--text-color)' }}>Javoblaringizni tekshiring</p>
+                        
+                        <div className="flex-1 overflow-y-auto space-y-3 pr-2 scroll-hide">
+                            {currentQuestions.map((q, idx) => (
+                                <button 
+                                    key={idx} 
+                                    onClick={() => goToQuestion(idx)} 
+                                    className="w-full flex items-center justify-between p-5 rounded-2xl border transition-colors group hover:border-indigo-300" 
+                                    style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black opacity-30 group-hover:opacity-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-color)' }}>
+                                            {idx + 1}
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-bold line-clamp-1" style={{ color: 'var(--text-color)' }}>{q.text}</p>
+                                            <p className="text-[10px] font-black uppercase mt-0.5">
+                                                {q.type === 'info-slide' 
+                                                    ? <span className="text-blue-400">Mavzu</span> 
+                                                    : answers[idx] !== undefined 
+                                                        ? <span className="text-emerald-500">Javob berilgan</span> 
+                                                        : <span className="text-orange-400">Javobsiz</span>}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={18} className="opacity-20 group-hover:opacity-100 transition-all" style={{ color: 'var(--text-color)' }} />
+                                </button>
+                            ))}
+                        </div>
+
+                         <div className="mt-8 space-y-3">
+                            <button 
+                                onClick={finalizeSubmission} 
+                                disabled={isSubmitting} 
+                                className="w-full py-6 rounded-[2rem] font-black text-2xl text-white shadow-xl bg-indigo-600 shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all"
+                            >
+                                {isSubmitting ? "YUBORILMOQDA..." : "TESTNI TUGATISH"}
+                            </button>
+                            <button 
+                                onClick={() => goToQuestion(currentIndex)} 
+                                className="w-full font-bold text-xs uppercase opacity-40 hover:opacity-100 transition-all" 
+                                style={{ color: 'var(--text-color)' }}
+                            >
+                                Savollarga qaytish
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (view === 'PLAYING' && currentQuestions.length > 0) {
+        const question = currentQuestions[currentIndex];
+        const playerAns = answers[currentIndex];
+
+        const renderQuestionContent = () => {
+            if (question.type === 'multiple-choice' || question.type === 'true-false') {
+                return (
+                    <div className="grid grid-cols-1 gap-4 w-full">
+                        {question.options.map((opt, i) => (
+                            <button
+                                key={i}
+                                onClick={() => saveAnswer(i)}
+                                className={`p-6 rounded-[2rem] text-left font-bold text-lg border-2 transition-all active:scale-95
+                                    ${Number(playerAns) === i 
+                                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-lg shadow-indigo-100' 
+                                        : 'border-slate-100 hover:border-indigo-200'}`}
+                                style={{ backgroundColor: Number(playerAns) === i ? '' : 'var(--card-bg)', color: Number(playerAns) === i ? '' : 'var(--text-color)' }}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black transition-colors ${Number(playerAns) === i ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                        {String.fromCharCode(65 + i)}
+                                    </div>
+                                    {opt}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                );
+            }
+
+            if (question.type === 'info-slide') {
+                return (
+                    <div className="text-center py-10 px-6 rounded-[3rem] bg-indigo-50/50 border-2 border-dashed border-indigo-200">
+                        <Info size={48} className="text-indigo-600 mx-auto mb-6" />
+                        <h3 className="text-2xl font-black text-slate-900 mb-4">{question.text}</h3>
+                        <p className="text-slate-600 font-medium">{question.info}</p>
+                    </div>
+                );
+            }
+
+            // Text input based question
+            return (
+                <div className="w-full space-y-6">
+                    <div className="p-8 rounded-[3rem] border-2 transition-colors border-indigo-100" style={{ backgroundColor: 'var(--card-bg)' }}>
+                        <p className="text-center text-sm font-black uppercase tracking-widest opacity-40 mb-6" style={{ color: 'var(--text-color)' }}>Javobingizni yozing</p>
+                        <input
+                            type="text"
+                            value={playerAns || ''}
+                            onChange={(e) => saveAnswer(e.target.value)}
+                            placeholder="Shu yerga yozing..."
+                            className="w-full bg-transparent border-b-4 border-indigo-600 text-center text-2xl font-black py-4 focus:outline-none transition-all"
+                            style={{ color: 'var(--text-color)' }}
+                            autoFocus
+                        />
                     </div>
                 </div>
             );
-        }
+        };
 
         return (
-            <div className="min-h-screen bg-slate-50 font-sans p-6">
-                <div className="max-w-md mx-auto space-y-6">
-                    <div className="bg-white rounded-3xl p-8 text-center shadow-xl border border-slate-100 relative overflow-hidden">
-                        {results.type === 'battle' ? (
-                            <>
-                                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500"></div>
-                                <div className="w-20 h-20 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                                    <Trophy size={40} className="fill-orange-600" />
-                                </div>
-                                <h2 className="text-2xl font-black text-slate-800 mb-1">Battle Natijasi!</h2>
-                                <div className="text-5xl font-black text-orange-600 mb-2">{results.score} <span className="text-2xl">XP</span></div>
-                                <div className="flex justify-center items-center gap-2 mb-6 text-yellow-600 font-bold bg-yellow-50 py-2 rounded-2xl">
-                                    <Coins size={20} />
-                                    +{results.coins} Coin Yutdingiz!
-                                </div>
-
-                                <button
-                                    onClick={() => { setResults(null); handleStartBattle(); }}
-                                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-200 mb-3 active:scale-95 transition-transform"
-                                >
-                                    Qayta Jang Qilish ⚔️
-                                </button>
-                                <button
-                                    onClick={() => { setResults(null); }}
-                                    className="w-full bg-slate-100 text-slate-700 font-bold py-4 rounded-2xl shadow-sm active:scale-95 transition-transform"
-                                >
-                                    Menyuga qaytish
-                                </button>
-                            </>
-                        ) : (
-                            // General quiz result
-                            <>
-                                <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Zap size={40} className="fill-indigo-600" />
-                                </div>
-                                <h2 className="text-2xl font-black text-slate-800 mb-1">Natija</h2>
-                                <div className="text-5xl font-black text-indigo-600 mb-2">
-                                    {results.immediateScore} / {results.maxScore}
-                                </div>
-                                <div className={`inline-block px-4 py-2 rounded-2xl text-sm font-black uppercase tracking-widest mb-6 ${results.percentage > 59
-                                    ? 'bg-emerald-100 text-emerald-600'
-                                    : 'bg-red-100 text-red-600'}`}>
-                                    {results.percentage > 59 ? (
-                                        <span className="flex items-center gap-2"><CheckCircle size={18} /> O'tdi (Passed)</span>
-                                    ) : (
-                                        <span className="flex items-center gap-2"><XCircle size={18} /> O'tmadi (Failed)</span>
-                                    )}
-                                </div>
-
-                                <button
-                                    onClick={() => { setResults(null); setSelectedQuiz(null); }}
-                                    className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-200"
-                                >
-                                    Dahshat! Yana o'ynash
-                                </button>
-                            </>
-                        )}
-
-                    </div>
-
-                    {results.type !== 'battle' && results.results && (
-                        <div className="space-y-3">
-                            <h3 className="font-bold text-slate-400 uppercase text-xs tracking-widest pl-2">Savollar tahlili</h3>
-                            {results.results.map((r: any, i: number) => (
-                                <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 flex gap-3">
-                                    {r.isCorrect ? (
-                                        <CheckCircle className="text-emerald-500 shrink-0" />
-                                    ) : r.score > 0 ? (
-                                        <Zap className="text-amber-500 shrink-0" />
-                                    ) : (
-                                        <XCircle className="text-red-500 shrink-0" />
-                                    )}
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-800 mb-1">{r.question}</p>
-                                        <p className={`text-xs font-semibold ${r.score > 0 && !r.isCorrect ? 'text-amber-600' : 'text-slate-500'} line-clamp-2`}>
-                                            {r.feedback}
-                                        </p>
-                                        {!r.isCorrect && r.score === 0 && r.correctAnswer && (
-                                            <p className="text-[10px] font-bold text-emerald-600 mt-1">To'g'ri javob: {r.correctAnswer}</p>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+            <div className="min-h-screen font-sans p-6 transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
+                <div className="max-w-2xl mx-auto">
+                    <header className="flex justify-between items-center mb-10">
+                        <button 
+                            onClick={() => setView('LIST')} 
+                            className="p-3 rounded-2xl shadow-sm border transition-all hover:bg-slate-50" 
+                            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
+                        >
+                            <ChevronLeft size={24} />
+                        </button>
+                        <div className="text-center">
+                            <h2 className="font-black text-sm opacity-40 uppercase tracking-widest" style={{ color: 'var(--text-color)' }}>{selectedQuiz.title}</h2>
+                            <p className="font-black text-xl" style={{ color: 'var(--text-color)' }}>{currentIndex + 1} / {currentQuestions.length}</p>
                         </div>
-                    )}
-                </div>
-            </div>
-        );
-    }
+                        <button 
+                            onClick={() => setView('SUMMARY')} 
+                            className="p-3 rounded-2xl shadow-sm border transition-all hover:bg-slate-50" 
+                            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
+                        >
+                            <CheckCircle size={24} className="text-indigo-600" />
+                        </button>
+                    </header>
 
-    if (isBattleMode && battleQuestions.length > 0) {
-        const q = battleQuestions[currentIdx];
-        const letters = ['A', 'B', 'C', 'D'];
-
-        return (
-            <div className="min-h-screen bg-slate-900 font-sans p-6 flex flex-col items-center justify-center text-white relative overflow-hidden">
-                {/* Background animations */}
-                <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-red-600 rounded-full blur-[100px] opacity-20 animate-pulse"></div>
-                <div className="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-orange-600 rounded-full blur-[100px] opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
-
-                <div className="w-full max-w-md relative z-10 flex flex-col h-full justify-between">
-
-                    {/* Header */}
-                    <div className="flex justify-between items-center mb-8 bg-white/10 p-4 rounded-2xl backdrop-blur-md">
-                        <div className="flex flex-col">
-                            <span className="text-xs font-bold text-orange-200 uppercase tracking-widest">XP Kiritildi</span>
-                            <span className="text-xl font-black text-white">{totalXp}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <FlameIcon />
-                            <span className="text-xl font-black text-orange-400">x{streak}</span>
-                        </div>
-                        <div className="flex flex-col text-right">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Savol</span>
-                            <span className="text-xl font-black text-white">{currentIdx + 1}/{battleQuestions.length}</span>
-                        </div>
-                    </div>
-
-                    {/* Timer Bar */}
-                    <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden mb-8 relative">
-                        <div
-                            className={`h-full rounded-full transition-all duration-1000 ease-linear ${timeLeft > 5 ? 'bg-emerald-400' : 'bg-red-500'}`}
-                            style={{ width: `${(timeLeft / 15) * 100}%` }}
+                    {/* Progress Bar */}
+                    <div className="w-full h-3 bg-slate-100 rounded-full mb-12 overflow-hidden">
+                        <motion.div 
+                            className="h-full bg-indigo-600"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${((currentIndex + 1) / currentQuestions.length) * 100}%` }}
                         />
                     </div>
 
-                    {/* Question Card */}
-                    <div className={`bg-white text-slate-900 rounded-[2.5rem] p-8 text-center shadow-2xl mb-8 transform transition-all duration-300 ${isCorrectFeedback === true ? 'scale-105 shadow-emerald-500/50' : isCorrectFeedback === false ? 'scale-95 shadow-red-500/50 shake-animation' : ''}`}>
-                        <h3 className="text-3xl font-black tracking-tight mb-2">{q.text}</h3>
-                        <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">To'g'ri tarjimani toping</p>
+                    <div className="mb-12">
+                        {question.info && (
+                            <div className="bg-amber-50 text-amber-800 p-4 rounded-2xl text-sm font-medium mb-6 flex gap-3">
+                                <Info size={20} className="shrink-0" />
+                                <p>{question.info}</p>
+                            </div>
+                        )}
+                        <h1 className="text-3xl font-black mb-8 leading-tight text-center" style={{ color: 'var(--text-color)' }}>
+                            {question.text}
+                        </h1>
+                        
+                        <div className="mt-10">
+                            {renderQuestionContent()}
+                        </div>
                     </div>
 
-                    {/* Options Grid */}
-                    <div className="grid grid-cols-1 gap-4 mb-10 mt-auto">
-                        {q.options.map((opt: string, i: number) => {
-                            const ltr = letters[i];
-                            const isSelected = selectedAnswer === ltr;
-                            const isActualCorrect = i === q.correctIndex;
-
-                            let btnClass = "bg-white/10 hover:bg-white/20 border border-white/20";
-                            if (isCorrectFeedback !== null) {
-                                if (isActualCorrect) btnClass = "bg-emerald-500 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.5)]";
-                                else if (isSelected && !isActualCorrect) btnClass = "bg-red-500 border-red-400";
-                                else btnClass = "bg-white/5 border-white/5 opacity-50";
-                            }
-
-                            return (
-                                <button
-                                    key={i}
-                                    onClick={() => handleAnswer(opt, ltr)}
-                                    disabled={isCorrectFeedback !== null}
-                                    className={`w-full flex items-center p-4 rounded-2xl transition-all duration-200 active:scale-95 ${btnClass}`}
-                                >
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg mr-4 ${isCorrectFeedback !== null && isActualCorrect ? 'bg-white/30 text-white' : 'bg-white/10 text-white'}`}>
-                                        {ltr}
-                                    </div>
-                                    <span className="text-lg font-bold text-white text-left flex-1 break-words">{opt}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (selectedQuiz) {
-        // Simple Quiz UI for Solo Mode
-        return (
-            <div className="min-h-screen bg-slate-50 font-sans p-6">
-                <div className="max-w-md mx-auto space-y-6">
-                    <header className="flex justify-between items-center mb-8">
-                        <button onClick={() => setSelectedQuiz(null)} className="p-2 bg-white rounded-xl shadow-sm border border-slate-100">
-                            <ChevronLeft size={24} />
+                    <div className="fixed bottom-10 left-0 right-0 px-6 max-w-2xl mx-auto flex gap-4">
+                        <button
+                            disabled={currentIndex === 0}
+                            onClick={() => setCurrentIndex(prev => prev - 1)}
+                            className="flex-1 bg-white border-2 border-slate-200 text-slate-400 font-black py-4 rounded-2xl disabled:opacity-30 transition-all hover:bg-slate-50 flex items-center justify-center gap-2 shadow-lg"
+                        >
+                            <ChevronLeft size={20} /> ORQAGA
                         </button>
-                        <h2 className="font-black text-slate-800 text-lg">{selectedQuiz.title}</h2>
-                        <div className="w-10"></div>
-                    </header>
-
-                    <div className="text-center py-20 px-10 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                        <Zap size={48} className="mx-auto text-indigo-200 mb-4" />
-                        <p className="text-slate-500 font-medium mb-8 text-sm">Mustaqil o'rganish rejimi hozirda faqat to'liq topshirishni qo'llab-quvvatlaydi. Savollarni diqqat bilan yeching.</p>
-                        <p className="text-red-500 font-bold">To'liq mustaqil savollar oqimi tez orada qo'shiladi!</p>
-                        <button onClick={() => setSelectedQuiz(null)} className="mt-4 text-indigo-600 font-bold">Orqaga qaytish</button>
+                        {currentIndex === currentQuestions.length - 1 ? (
+                            <button
+                                onClick={() => setView('SUMMARY')}
+                                className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all text-xl"
+                            >
+                                TUGATISH
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => setCurrentIndex(prev => prev + 1)}
+                                className="flex-[2] bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 text-xl"
+                            >
+                                KEYINGISI <ChevronRight size={20} />
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -391,112 +433,72 @@ export default function SoloQuiz() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-10 transition-colors duration-500">
-            <div 
-                className="pt-8 pb-16 px-6 text-white relative overflow-hidden transition-all duration-500"
-                style={{ background: `linear-gradient(to bottom right, var(--primary-color, #4338ca), var(--secondary-color, #1e1b4b))` }}
-            >
-                <button
-                    onClick={() => navigate(-1)}
-                    className="mb-6 p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
-                >
-                    <ChevronLeft size={24} />
-                </button>
-                <h1 className="text-3xl font-black mb-2 flex items-center gap-3">
-                    <BookOpen className="opacity-80" size={32} />
-                    Mashqlar
-                </h1>
-                <p className="text-white/80 font-medium font-sm">Bilimingizni mustahkamlang</p>
-            </div>
-
-            <div className="px-4 -mt-10 relative z-10 space-y-4">
-
-                {/* ⚡ Lug'at Battle Banner */}
-                <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-3xl p-1 shadow-lg shadow-orange-500/20 transform transition-transform hover:scale-[1.02]">
-                    <div className="bg-gradient-to-r from-orange-400 to-red-500 rounded-[22px] p-6 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="absolute top-[-50px] right-[-50px] w-32 h-32 bg-white/20 blur-2xl rounded-full"></div>
-                        <div className="relative z-10 text-white flex-1 text-center md:text-left">
-                            <span className="flex items-center justify-center md:justify-start gap-2 text-xs font-black uppercase tracking-widest text-orange-100 mb-2">
-                                <FlameIcon /> Qaynoq rejim
-                            </span>
-                            <h2 className="text-2xl font-black mb-1">Lug'at Battle</h2>
-                            <p className="text-orange-100 text-sm font-medium">Tezlik va xotirani sinash! 15 ta so'z, har biri uchun 15 soniya. Tezroq topsangiz ko'proq XP va Tanga!</p>
-                        </div>
-                        <button
-                            onClick={handleStartBattle}
-                            disabled={loading}
-                            className="relative z-10 w-full md:w-auto bg-white text-orange-600 font-black px-8 py-4 rounded-xl shadow-xl hover:bg-orange-50 transition-colors active:scale-95 flex items-center justify-center gap-2"
-                        >
-                            {loading && !isBattleMode ? (
-                                <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                                <>Jangni Boshlash <Swords size={20} /></>
-                            )}
-                        </button>
+        <div className="min-h-screen font-sans pb-10 transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
+            <div className="max-w-5xl mx-auto px-6 pt-10">
+                <header className="flex justify-between items-center mb-12">
+                    <div>
+                        <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4">
+                            <Zap className="text-indigo-600 fill-indigo-600" size={40} /> Mashqlar
+                        </h1>
+                        <p className="text-slate-500 font-bold mt-2 uppercase tracking-widest text-sm">O'zingizni sinab ko'ring</p>
                     </div>
-                </div>
+                    <div className="flex gap-4">
+                        <div className="p-4 bg-indigo-50 rounded-3xl flex items-center gap-3">
+                            <Coins size={24} className="text-indigo-600" />
+                            <span className="font-black text-indigo-700">{(user as any)?.coins || 0}</span>
+                        </div>
+                    </div>
+                </header>
 
-                <div className="flex items-center gap-4 py-2">
-                    <div className="h-px bg-slate-200 flex-1"></div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Oddiy Mashqlar</span>
-                    <div className="h-px bg-slate-200 flex-1"></div>
-                </div>
-
-                {loading && !isBattleMode ? (
-                    <div className="py-20 text-center glass-premium rounded-3xl">
-                        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-slate-400 font-medium">Testlar yuklanmoqda...</p>
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20 opacity-30">
+                        <div className="w-16 h-16 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
+                        <p className="font-black uppercase tracking-widest">Yuklanmoqda...</p>
+                    </div>
+                ) : quizzes.length === 0 ? (
+                    <div className="text-center py-20 px-10 rounded-[3rem] border-4 border-dashed border-slate-100">
+                        <BookOpen size={64} className="text-slate-200 mx-auto mb-6" />
+                        <h2 className="text-2xl font-black text-slate-400">Hozircha mashqlar mavjud emas</h2>
+                        <p className="text-slate-300 font-medium mt-2">O'qituvchingiz yangi mashqlar qo'shishini kuting</p>
                     </div>
                 ) : (
-                    quizzes.map((quiz) => (
-                        <div key={quiz.id} className="glass-premium rounded-3xl p-5 flex items-center justify-between group hover:border-indigo-200 transition-colors">
-                            <div className="flex-1">
-                                <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full uppercase mb-2 inline-block">Unit {quiz.unit}</span>
-                                <h3 className="font-bold text-slate-800 mb-1">{quiz.title}</h3>
-                                <div className="flex items-center gap-3 text-slate-400 text-xs font-semibold">
-                                    <span className="flex items-center gap-1"><Zap size={12} /> XP: 1000+</span>
-                                    <span className="flex items-center gap-1"><Clock size={12} /> {quiz.time_limit} daqiqa</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {quizzes.map((quiz) => (
+                            <div 
+                                key={quiz.id}
+                                className="group bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-50 transition-all cursor-pointer overflow-hidden flex flex-col"
+                                onClick={() => handleStartNormal(quiz)}
+                            >
+                                <div className="p-8 flex-1">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl group-hover:scale-110 transition-transform">
+                                            <Zap size={24} className="fill-indigo-600" />
+                                        </div>
+                                        <span className="px-4 py-1.5 bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-full">
+                                            Level {quiz.level || quiz.daraja || 'Any'}
+                                        </span>
+                                    </div>
+                                    <h3 className="text-2xl font-black text-slate-900 mb-4 line-clamp-2">{quiz.title}</h3>
+                                    <div className="flex items-center gap-6 mt-6 pt-6 border-t border-slate-50 opacity-50">
+                                        <div className="flex items-center gap-2">
+                                            <BookOpen size={16} />
+                                            <span className="text-sm font-bold">{typeof quiz.questions === 'string' ? JSON.parse(quiz.questions).length : (quiz.questions?.length || 0)} savol</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Clock size={16} />
+                                            <span className="text-sm font-bold">{quiz.time_limit || 20} min</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-4 px-8 bg-slate-50/50 group-hover:bg-indigo-600 transition-colors flex items-center justify-between">
+                                    <span className="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-white transition-colors">Start Practice</span>
+                                    <ChevronRight size={20} className="text-slate-300 group-hover:text-white transition-colors" />
                                 </div>
                             </div>
-                            <button
-                                onClick={() => handleStartNormal(quiz)}
-                                className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm"
-                            >
-                                <ChevronRight size={24} />
-                            </button>
-                        </div>
-                    ))
-                )}
-
-                {!loading && quizzes.length === 0 && !isBattleMode && (
-                    <div className="py-20 text-center bg-white rounded-3xl shadow-sm px-10">
-                        <BookOpen size={48} className="mx-auto mb-4 text-slate-200" />
-                        <p className="text-slate-400 font-medium">Hozircha darajangizga mos testlar yo'q</p>
+                        ))}
                     </div>
                 )}
             </div>
-
-            {/* Global shake animation style definition */}
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                @keyframes shake {
-                  0%, 100% { transform: translateX(0); }
-                  25% { transform: translateX(-5px); }
-                  50% { transform: translateX(5px); }
-                  75% { transform: translateX(-5px); }
-                }
-                .shake-animation {
-                  animation: shake 0.4s ease-in-out;
-                }
-            `}} />
         </div>
     );
-}
-
-function FlameIcon() {
-    return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-400">
-            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
-        </svg>
-    )
 }

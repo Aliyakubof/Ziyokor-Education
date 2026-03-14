@@ -149,7 +149,7 @@ export default function StudentDashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-24 md:pb-12 relative overflow-hidden">
+        <div className="min-h-screen font-sans pb-24 md:pb-12 relative overflow-hidden transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
             {/* Background Gradients */}
             <div 
                 className="absolute top-0 left-0 w-full h-full z-0 opacity-100 transition-colors duration-1000"
@@ -334,9 +334,9 @@ export default function StudentDashboard() {
                 {activeTab === 'home' && (
                     <>
                         {/* Action Card: Join Game */}
-                        <div className="bg-white rounded-3xl p-6 shadow-xl shadow-indigo-900/5 border border-white relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
-                            <h2 className="text-lg font-black text-slate-900 mb-4 relative z-10 flex items-center gap-2">
+                        <div className="rounded-3xl p-6 shadow-xl shadow-indigo-900/5 border relative overflow-hidden group transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                            <div className="absolute top-0 right-0 w-32 h-32 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500 opacity-20" style={{ backgroundColor: 'var(--primary-color)' }}></div>
+                            <h2 className="text-lg font-black mb-4 relative z-10 flex items-center gap-2" style={{ color: 'var(--text-color)' }}>
                                 Testga Kirish
                             </h2>
                             <form onSubmit={handleJoinGame} className="relative z-10">
@@ -345,9 +345,10 @@ export default function StudentDashboard() {
                                     placeholder="6 xonali PIN kiriting"
                                     value={pin}
                                     onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 font-mono text-lg font-bold text-center tracking-widest text-slate-800 placeholder:text-slate-300 focus:border-indigo-500 focus:outline-none transition-colors mb-3"
+                                    className="w-full border-2 rounded-xl px-4 py-3 font-mono text-lg font-bold text-center tracking-widest focus:outline-none transition-colors mb-3"
+                                    style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
                                 />
-                                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all active:scale-95">
+                                <button type="submit" className="w-full text-white font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95" style={{ backgroundColor: 'var(--primary-color)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
                                     <Zap size={20} className="fill-white" /> Boshlash
                                 </button>
                             </form>
@@ -355,22 +356,23 @@ export default function StudentDashboard() {
 
                         {/* Recent Stats Grid */}
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
-                                <div className="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mb-2">
+                            <div className="p-4 rounded-2xl shadow-sm border flex flex-col justify-center items-center text-center transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                                <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--primary-color)' }}>
                                     <Coins size={20} />
                                 </div>
-                                <span className="text-2xl font-black text-slate-800">{stats.coins.toLocaleString()}</span>
-                                <span className="text-xs font-bold text-slate-400">Tangalar</span>
+                                <span className="text-2xl font-black" style={{ color: 'var(--text-color)' }}>{stats.coins.toLocaleString()}</span>
+                                <span className="text-xs font-bold opacity-60" style={{ color: 'var(--text-color)' }}>Tangalar</span>
                             </div>
                             <button
                                 onClick={() => navigate('/student/vocab-battles')}
-                                className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center hover:bg-purple-50 transition-colors group"
+                                className="p-4 rounded-2xl shadow-sm border flex flex-col justify-center items-center text-center transition-colors group"
+                                style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
                             >
-                                <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--accent-color)' }}>
                                     <BookOpen size={20} />
                                 </div>
-                                <span className="text-lg font-black text-slate-800 leading-none">Vocab Battle</span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">O'ynash</span>
+                                <span className="text-lg font-black leading-none" style={{ color: 'var(--text-color)' }}>Vocab Battle</span>
+                                <span className="text-[10px] font-bold uppercase mt-1 opacity-60" style={{ color: 'var(--text-color)' }}>O'ynash</span>
                             </button>
                         </div>
 
@@ -378,61 +380,65 @@ export default function StudentDashboard() {
                         <div className="grid grid-cols-2 gap-3">
                             <button
                                 onClick={() => navigate('/student/leaderboard')}
-                                className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center gap-3 hover:bg-indigo-50 transition-colors group"
+                                className="p-6 rounded-3xl shadow-sm border flex flex-col items-center gap-3 transition-colors group"
+                                style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
                             >
-                                <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <div className="w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--primary-color)' }}>
                                     <Trophy size={24} />
                                 </div>
-                                <span className="font-bold text-sm text-slate-700">Peshqadamlar</span>
+                                <span className="font-bold text-sm" style={{ color: 'var(--text-color)' }}>Peshqadamlar</span>
                             </button>
                             <button
                                 onClick={() => navigate('/student/shop')}
-                                className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center gap-3 hover:bg-emerald-50 transition-colors group"
+                                className="p-6 rounded-3xl shadow-sm border flex flex-col items-center gap-3 transition-colors group"
+                                style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
                             >
-                                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <div className="w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--emerald-500, #10b981)' }}>
                                     <ShoppingBag size={24} />
                                 </div>
-                                <span className="font-bold text-sm text-slate-700">Do'kon</span>
+                                <span className="font-bold text-sm" style={{ color: 'var(--text-color)' }}>Do'kon</span>
                             </button>
                             <button
                                 onClick={() => navigate('/student/practice')}
-                                className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center gap-3 hover:bg-blue-50 transition-colors group"
+                                className="p-6 rounded-3xl shadow-sm border flex flex-col items-center gap-3 transition-colors group"
+                                style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
                             >
-                                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <div className="w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--primary-color)' }}>
                                     <BookOpen size={24} />
                                 </div>
-                                <span className="font-bold text-sm text-slate-700">Mashqlar</span>
+                                <span className="font-bold text-sm" style={{ color: 'var(--text-color)' }}>Mashqlar</span>
                             </button>
                             <button
                                 onClick={() => navigate('/student/duels')}
-                                className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center gap-3 hover:bg-rose-50 transition-colors group"
+                                className="p-6 rounded-3xl shadow-sm border flex flex-col items-center gap-3 transition-colors group"
+                                style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
                             >
-                                <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <div className="w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--rose-500, #f43f5e)' }}>
                                     <Swords size={24} />
                                 </div>
-                                <span className="font-bold text-sm text-slate-700">Duellar</span>
+                                <span className="font-bold text-sm" style={{ color: 'var(--text-color)' }}>Duellar</span>
                             </button>
                         </div>
 
                         {/* Rank card moved below or integrated */}
-                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between px-6 relative overflow-hidden">
+                        <div className="p-4 rounded-2xl shadow-sm border flex items-center justify-between px-6 relative overflow-hidden transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                             {stats.isHero && (
-                                <div className="absolute top-0 right-0 bg-yellow-400 text-[10px] font-black px-3 py-1 rounded-bl-xl shadow-md uppercase tracking-tighter">
+                                <div className="absolute top-0 right-0 bg-yellow-400 text-slate-900 text-[10px] font-black px-3 py-1 rounded-bl-xl shadow-md uppercase tracking-tighter">
                                     Hafta Qahramoni 🎖️
                                 </div>
                             )}
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 ${stats.hasTrophy ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'} rounded-2xl flex items-center justify-center`}>
+                                <div className={`w-12 h-12 ${stats.hasTrophy ? 'bg-amber-100 text-amber-600' : 'bg-slate-100/50 text-slate-400'} rounded-2xl flex items-center justify-center`}>
                                     <Trophy size={28} className={stats.hasTrophy ? 'animate-bounce' : ''} />
                                 </div>
                                 <div>
-                                    <h4 className="font-black text-slate-800">#{stats.rank}</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global O'rin</p>
+                                    <h4 className="font-black" style={{ color: 'var(--text-color)' }}>#{stats.rank}</h4>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-color)' }}>Global O'rin</p>
                                 </div>
                             </div>
                             <div className="text-right">
                                 <div className="text-sm font-black text-emerald-600">{stats.gamesPlayed}</div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">O'yinlar</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--text-color)' }}>O'yinlar</p>
                             </div>
                         </div>
 
@@ -465,24 +471,24 @@ export default function StudentDashboard() {
                         </h2>
                         {history.length > 0 ? (
                             history.map((game, idx) => (
-                                <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                                <div key={idx} className="p-4 rounded-2xl border shadow-sm flex items-center justify-between transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                                     <div>
-                                        <h4 className="font-bold text-slate-800 text-sm mb-1">{game.quiz_title}</h4>
-                                        <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+                                        <h4 className="font-bold text-sm mb-1" style={{ color: 'var(--text-color)' }}>{game.quiz_title}</h4>
+                                        <div className="flex items-center gap-2 text-xs font-medium opacity-50" style={{ color: 'var(--text-color)' }}>
                                             <Calendar size={12} />
                                             {formatDate(game.created_at)}
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-sm font-black text-indigo-600">+{game.score} XP</div>
+                                        <div className="text-sm font-black" style={{ color: 'var(--primary-color)' }}>+{game.score} XP</div>
                                         <div className="flex flex-col items-end gap-1 mt-1">
                                             <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${game.percentage > 59 ? 'bg-emerald-100 text-emerald-700' :
-                                                'bg-red-100 text-red-700'
+                                                'bg-rose-100 text-rose-700'
                                                 }`}>
                                                 {Math.round(game.percentage)}%
                                             </div>
                                             {game.total_questions > 0 && (
-                                                <span className="text-[10px] font-bold text-slate-400">
+                                                <span className="text-[10px] font-bold opacity-40" style={{ color: 'var(--text-color)' }}>
                                                     {Math.round(game.score)} / {game.total_questions}
                                                 </span>
                                             )}
@@ -500,10 +506,10 @@ export default function StudentDashboard() {
                 )}
 
                 {activeTab === 'profile' && (
-                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-center relative">
+                    <div className="rounded-3xl p-6 shadow-sm border text-center relative transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                         {/* Avatar Section */}
                         <div className="relative w-28 h-28 mx-auto mb-4 group inline-block">
-                            <div className="w-28 h-28 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-[2.5rem] flex items-center justify-center text-4xl font-black text-white shadow-xl shadow-indigo-500/30 overflow-hidden relative border-4 border-white">
+                            <div className="w-28 h-28 rounded-[2.5rem] flex items-center justify-center text-4xl font-black text-white shadow-xl overflow-hidden relative border-4 transition-all" style={{ background: `linear-gradient(to tr, var(--primary-color), var(--secondary-color))`, borderColor: 'var(--card-bg)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)' }}>
                                 {stats.avatarUrl ? (
                                     <img src={stats.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
@@ -531,7 +537,7 @@ export default function StudentDashboard() {
                                             className="w-full h-full flex flex-col items-center justify-center text-white cursor-pointer"
                                             onClick={() => navigate('/student/shop')}
                                         >
-                                            <Lock size={24} className="mb-1 text-red-400" />
+                                            <Lock size={24} className="mb-1 text-rose-400" />
                                             <span className="text-[10px] font-black uppercase text-center px-2 leading-tight">Do'kondan <br /> Oling</span>
                                         </div>
                                     )}
@@ -539,23 +545,23 @@ export default function StudentDashboard() {
                             </div>
                         </div>
 
-                        <h2 className="text-xl font-black text-slate-900 mb-1">{user?.name}</h2>
-                        <p className="text-slate-500 font-medium mb-6">{user?.groupName}</p>
+                        <h2 className="text-xl font-black mb-1" style={{ color: 'var(--text-color)' }}>{user?.name}</h2>
+                        <p className="font-medium mb-6 opacity-60" style={{ color: 'var(--text-color)' }}>{user?.groupName}</p>
 
                         <div className="space-y-2">
-                            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                                <span className="text-sm font-bold text-slate-500">ID Raqam</span>
-                                <span className="font-mono font-bold text-slate-900">{user?.id}</span>
+                            <div className="flex justify-between items-center p-3 rounded-xl transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
+                                <span className="text-sm font-bold opacity-50" style={{ color: 'var(--text-color)' }}>ID Raqam</span>
+                                <span className="font-mono font-bold" style={{ color: 'var(--text-color)' }}>{user?.id}</span>
                             </div>
-                            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                                <span className="text-sm font-bold text-slate-500">O'qituvchi</span>
-                                <span className="font-bold text-slate-900">{user?.teacherName}</span>
+                            <div className="flex justify-between items-center p-3 rounded-xl transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
+                                <span className="text-sm font-bold opacity-50" style={{ color: 'var(--text-color)' }}>O'qituvchi</span>
+                                <span className="font-bold" style={{ color: 'var(--text-color)' }}>{user?.teacherName}</span>
                             </div>
                         </div>
 
                         <button
                             onClick={logout}
-                            className="w-full mt-8 bg-red-50 text-red-600 font-bold py-3 rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                            className="w-full mt-8 bg-rose-500/10 text-rose-500 font-bold py-3 rounded-xl hover:bg-rose-500/20 transition-colors flex items-center justify-center gap-2"
                         >
                             <LogOut size={18} /> Chiqish
                         </button>
@@ -566,13 +572,14 @@ export default function StudentDashboard() {
             </div>
 
             {/* Bottom Navigation (Mobile Only) */}
-            <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-slate-200 px-6 py-2 z-50 pb-safe md:hidden">
+            <div className="fixed bottom-0 left-0 w-full border-t px-6 py-2 z-50 pb-safe md:hidden transition-colors duration-500" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 <div className="max-w-md mx-auto flex justify-between items-center">
                     <button
                         onClick={() => setActiveTab('home')}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'home' ? 'text-indigo-600 -translate-y-2' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'home' ? '-translate-y-2' : 'opacity-40 hover:opacity-100'}`}
+                        style={{ color: activeTab === 'home' ? 'var(--primary-color)' : 'var(--text-color)' }}
                     >
-                        <div className={`p-2 rounded-full ${activeTab === 'home' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : ''}`}>
+                        <div className={`p-2 rounded-full transition-all ${activeTab === 'home' ? 'text-white shadow-lg' : ''}`} style={{ backgroundColor: activeTab === 'home' ? 'var(--primary-color)' : 'transparent', boxShadow: activeTab === 'home' ? '0 10px 15px -3px rgba(0,0,0,0.1)' : 'none' }}>
                             <LayoutDashboard size={24} />
                         </div>
                         <span className="text-[10px] font-bold">Asosiy</span>
@@ -580,9 +587,10 @@ export default function StudentDashboard() {
 
                     <button
                         onClick={() => setActiveTab('history')}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'history' ? 'text-indigo-600 -translate-y-2' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'history' ? '-translate-y-2' : 'opacity-40 hover:opacity-100'}`}
+                        style={{ color: activeTab === 'history' ? 'var(--primary-color)' : 'var(--text-color)' }}
                     >
-                        <div className={`p-2 rounded-full ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : ''}`}>
+                        <div className={`p-2 rounded-full transition-all ${activeTab === 'history' ? 'text-white shadow-lg' : ''}`} style={{ backgroundColor: activeTab === 'history' ? 'var(--primary-color)' : 'transparent', boxShadow: activeTab === 'history' ? '0 10px 15px -3px rgba(0,0,0,0.1)' : 'none' }}>
                             <History size={24} />
                         </div>
                         <span className="text-[10px] font-bold">Tarix</span>
@@ -590,9 +598,10 @@ export default function StudentDashboard() {
 
                     <button
                         onClick={() => setActiveTab('profile')}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'profile' ? 'text-indigo-600 -translate-y-2' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === 'profile' ? '-translate-y-2' : 'opacity-40 hover:opacity-100'}`}
+                        style={{ color: activeTab === 'profile' ? 'var(--primary-color)' : 'var(--text-color)' }}
                     >
-                        <div className={`p-2 rounded-full ${activeTab === 'profile' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : ''}`}>
+                        <div className={`p-2 rounded-full transition-all ${activeTab === 'profile' ? 'text-white shadow-lg' : ''}`} style={{ backgroundColor: activeTab === 'profile' ? 'var(--primary-color)' : 'transparent', boxShadow: activeTab === 'profile' ? '0 10px 15px -3px rgba(0,0,0,0.1)' : 'none' }}>
                             <UserCircle size={24} />
                         </div>
                         <span className="text-[10px] font-bold">Profil</span>

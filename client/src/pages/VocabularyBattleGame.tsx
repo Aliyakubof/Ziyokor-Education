@@ -223,13 +223,13 @@ export default function VocabularyBattleGame() {
         }
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-slate-500 animate-pulse bg-slate-50">Yuklanmoqda...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-black transition-colors" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>Yuklanmoqda...</div>;
 
     if (!questions || questions.length === 0) {
-        return <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 text-center space-y-4">
+        return <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center space-y-4 transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
             <ShieldAlert size={64} className="text-rose-400" />
-            <h2 className="text-2xl font-black text-slate-800">Ushbu bosqichda savollar yo'q</h2>
-            <button onClick={() => navigate(-1)} className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl hover:-translate-y-1 transition-all">Orqaga</button>
+            <h2 className="text-2xl font-black" style={{ color: 'var(--text-color)' }}>Ushbu bosqichda savollar yo'q</h2>
+            <button onClick={() => navigate(-1)} className="px-6 py-3 text-white font-bold rounded-2xl shadow-xl hover:-translate-y-1 transition-all" style={{ backgroundColor: 'var(--primary-color)' }}>Orqaga</button>
         </div>;
     }
 
@@ -241,10 +241,10 @@ export default function VocabularyBattleGame() {
         const successBg = perc > 70 ? 'bg-emerald-500/10' : perc > 40 ? 'bg-amber-500/10' : 'bg-rose-500/10';
 
         return (
-            <div className="min-h-[100dvh] bg-[#fafafa] font-sans pb-32 flex flex-col items-center overflow-x-hidden">
+            <div className="min-h-[100dvh] font-sans pb-32 flex flex-col items-center overflow-x-hidden transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
                 {/* Hero Result Section */}
-                <div className="w-full bg-white border-b border-slate-200 pt-12 pb-10 px-6 shadow-sm flex flex-col items-center relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+                <div className="w-full border-b pt-12 pb-10 px-6 shadow-sm flex flex-col items-center relative overflow-hidden transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                    <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: 'var(--primary-color)' }}></div>
                     
                     <motion.div 
                         initial={{ scale: 0.5, opacity: 0 }}
@@ -260,13 +260,13 @@ export default function VocabularyBattleGame() {
                     </motion.div>
 
                     <h2 className={`text-6xl font-black ${successColor} tracking-tighter mb-2`}>{perc}%</h2>
-                    <p className="text-slate-400 font-black text-sm uppercase tracking-[0.3em] mb-4">Muvaffaqiyat</p>
+                    <p className="font-black text-sm uppercase tracking-[0.3em] mb-4 opacity-50" style={{ color: 'var(--text-color)' }}>Muvaffaqiyat</p>
                     
                     <div className="flex gap-3">
-                        <div className="bg-slate-900 px-5 py-2 rounded-2xl text-white font-black text-lg shadow-xl shadow-slate-900/20">
+                        <div className="px-5 py-2 rounded-2xl text-white font-black text-lg shadow-xl" style={{ backgroundColor: 'var(--primary-color)' }}>
                             {correctCount} / {total}
                         </div>
-                        <div className="bg-white border-2 border-slate-100 px-5 py-2 rounded-2xl text-slate-800 font-black text-lg shadow-sm">
+                        <div className="px-5 py-2 rounded-2xl font-black text-lg shadow-sm border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}>
                             TO'G'RI
                         </div>
                     </div>
@@ -275,8 +275,8 @@ export default function VocabularyBattleGame() {
                 {/* Results List */}
                 <div className="w-full max-w-2xl px-4 py-8 space-y-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-black text-slate-800 text-xl tracking-tight">Xatolar tahlili</h3>
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{results.length} SAVOL</span>
+                        <h3 className="font-black text-xl tracking-tight" style={{ color: 'var(--text-color)' }}>Xatolar tahlili</h3>
+                        <span className="text-xs font-bold uppercase tracking-widest opacity-40" style={{ color: 'var(--text-color)' }}>{results.length} SAVOL</span>
                     </div>
 
                     <div className="space-y-4">
@@ -286,9 +286,10 @@ export default function VocabularyBattleGame() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.05 }}
-                                className={`group p-6 rounded-[2.5rem] border-2 transition-all flex flex-col gap-4 bg-white
-                                    ${r.correct ? 'border-emerald-100/50 shadow-emerald-500/5' : 'border-rose-100 shadow-rose-500/5'}
+                                className={`group p-6 rounded-[2.5rem] border transition-all flex flex-col gap-4 shadow-sm
+                                    ${r.correct ? 'border-emerald-100/50' : 'border-rose-100'}
                                 `}
+                                style={{ backgroundColor: 'var(--card-bg)', borderColor: r.correct ? '' : 'var(--border-color)' }}
                             >
                                 <div className="flex justify-between items-start gap-4">
                                     <div className="font-black text-slate-900 text-xl sm:text-2xl leading-tight flex-1">
@@ -321,7 +322,8 @@ export default function VocabularyBattleGame() {
                     <div className="max-w-2xl mx-auto">
                         <button
                             onClick={() => navigate('/student/vocab-battles')}
-                            className="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-[2rem] text-xl shadow-2xl shadow-slate-900/30 transition-all flex items-center justify-center gap-3 active:scale-95"
+                            className="w-full py-5 text-white font-black rounded-[2rem] text-xl shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95"
+                            style={{ backgroundColor: 'var(--primary-color)' }}
                         >
                             <ArrowLeft size={24} /> BOSH SAHIFA
                         </button>
@@ -336,7 +338,7 @@ export default function VocabularyBattleGame() {
     const timePercentage = (timeLeft / (currentQ.timeLimit || 1)) * 100;
 
     return (
-        <div className="min-h-[100dvh] bg-[#020617] flex flex-col font-sans max-w-xl mx-auto w-full relative overflow-hidden text-slate-100">
+        <div className="min-h-[100dvh] flex flex-col font-sans max-w-xl mx-auto w-full relative overflow-hidden transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
             {/* Animated Background Elements */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px] animate-pulse" />
@@ -356,17 +358,17 @@ export default function VocabularyBattleGame() {
 
             {/* Header / Top Bar */}
             <div className="flex items-center justify-between p-6 pb-2 relative z-20">
-                <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-2xl font-black text-blue-400 tracking-widest text-sm shadow-xl">
-                    <span className="text-white/50">{qIndex + 1}</span> / {questions.length}
+                <div className="backdrop-blur-xl border px-4 py-2 rounded-2xl font-black tracking-widest text-sm shadow-xl transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--primary-color)' }}>
+                    <span style={{ color: 'var(--text-color)', opacity: 0.5 }}>{qIndex + 1}</span> / {questions.length}
                 </div>
 
                 {currentQ.timeLimit > 0 ? (
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-xl bg-slate-900/40 backdrop-blur-xl border-white/10 text-white">
-                        <Clock size={16} className="text-cyan-400 animate-pulse" />
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-xl backdrop-blur-xl transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}>
+                        <Clock size={16} className="animate-pulse" style={{ color: 'var(--primary-color)' }} />
                         <span className="tabular-nums">{timeLeft}s</span>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-xl bg-slate-900/20 backdrop-blur-xl border-white/5 text-white/30">
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-bold border shadow-xl backdrop-blur-xl opacity-30 transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}>
                         <TimerOff size={16} />
                         ∞
                     </div>
@@ -392,13 +394,14 @@ export default function VocabularyBattleGame() {
                 <motion.div 
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="bg-slate-900/50 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] p-10 rounded-[3rem] text-center mb-12 relative overflow-hidden"
+                    className="backdrop-blur-2xl border shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-10 rounded-[3rem] text-center mb-12 relative overflow-hidden transition-colors"
+                    style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
                 >
-                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
-                    <div className="text-[10px] font-black tracking-[0.2em] uppercase text-cyan-500/60 mb-6">
+                    <div className="absolute top-0 left-0 w-full h-[1px]" style={{ backgroundColor: 'var(--primary-color)', opacity: 0.3 }}></div>
+                    <div className="text-[10px] font-black tracking-[0.2em] uppercase mb-6 opacity-40" style={{ color: 'var(--text-color)' }}>
                         TARJIMA QILING
                     </div>
-                    <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+                    <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-tight" style={{ color: 'var(--text-color)' }}>
                         {currentQ.text}
                     </h2>
                 </motion.div>
@@ -487,8 +490,13 @@ export default function VocabularyBattleGame() {
                                                 className={`flex-shrink-0 ${boxWidth} ${boxHeight} ${fontSize} font-black text-center rounded-lg sm:rounded-2xl border-2 transition-all outline-none uppercase shadow-lg
                                                     ${selectedOption !== null 
                                                         ? (isCorrect ? 'bg-emerald-500 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] z-10 scale-105' : 'bg-rose-500 border-rose-400 text-white shadow-none opacity-50') 
-                                                        : (currentVal[i] ? 'bg-blue-900/30 border-blue-500 text-cyan-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-slate-900/40 border-white/10 text-white focus:border-cyan-500 focus:bg-slate-900/80')}
+                                                        : (currentVal[i] ? 'border-indigo-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'border-white/10 focus:border-indigo-500')}
                                                 `}
+                                                style={{ 
+                                                    backgroundColor: selectedOption !== null ? '' : 'var(--card-bg)',
+                                                    borderColor: selectedOption === null && currentVal[i] ? 'var(--primary-color)' : '',
+                                                    color: selectedOption !== null ? 'white' : 'var(--text-color)'
+                                                }}
                                             />
                                         );
                                     })}
@@ -502,7 +510,8 @@ export default function VocabularyBattleGame() {
                                     <button 
                                         onClick={handleVocabularySubmit} 
                                         disabled={selectedOption !== null || !textAnswer.trim()}
-                                        className="px-8 py-5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 font-black rounded-3xl text-xl shadow-[0_10px_30px_rgba(37,99,235,0.3)] transition-all hover:shadow-[0_15px_40px_rgba(37,99,235,0.5)] hover:-translate-y-1 active:scale-95 w-full uppercase tracking-widest"
+                                        className="px-8 py-5 text-white disabled:opacity-30 font-black rounded-3xl text-xl shadow-xl transition-all hover:-translate-y-1 active:scale-95 w-full uppercase tracking-widest"
+                                        style={{ backgroundColor: 'var(--primary-color)' }}
                                     >
                                         TASDIQLASH
                                     </button>
@@ -537,8 +546,20 @@ export default function VocabularyBattleGame() {
                                     disabled={selectedOption !== null}
                                     onClick={() => handleOptionSelect(i)}
                                     className={`
-                                        relative p-6 rounded-[2rem] text-xl font-bold transition-all duration-300 flex items-center justify-center text-center leading-tight min-h-[90px] border-2 shadow-2xl hover:-translate-y-1 active:scale-95 ${btnClass}
+                                        relative p-6 rounded-[2rem] text-xl font-bold transition-all duration-300 flex items-center justify-center text-center leading-tight min-h-[90px] border-2 shadow-2xl hover:-translate-y-1 active:scale-95
                                     `}
+                                    style={{ 
+                                        backgroundColor: selectedOption !== null 
+                                            ? (i === currentQ.correctIndex ? 'rgba(16,185,129,0.2)' : i === selectedOption ? 'rgba(244,63,94,0.2)' : 'var(--card-bg)') 
+                                            : 'var(--card-bg)',
+                                        borderColor: selectedOption !== null 
+                                            ? (i === currentQ.correctIndex ? '#10b981' : i === selectedOption ? '#f43f5e' : 'var(--border-color)') 
+                                            : 'var(--border-color)',
+                                        color: selectedOption !== null 
+                                            ? (i === currentQ.correctIndex ? '#10b981' : i === selectedOption ? '#f43f5e' : 'var(--text-color)') 
+                                            : 'var(--text-color)',
+                                        opacity: selectedOption !== null && i !== currentQ.correctIndex && i !== selectedOption ? 0.4 : 1
+                                    }}
                                 >
                                     <span className="relative z-10">{opt}</span>
                                     {icon && <div className="absolute right-6 z-20">{icon}</div>}

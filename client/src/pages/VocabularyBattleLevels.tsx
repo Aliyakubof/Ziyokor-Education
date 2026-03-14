@@ -73,15 +73,15 @@ export default function VocabularyBattleLevels() {
     });
 
     return (
-        <div className="min-h-screen bg-[#040d08] flex flex-col font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden">
+        <div className="min-h-screen flex flex-col font-sans selection:text-white relative overflow-hidden transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
             {/* Immersive Background System */}
             <div className="fixed inset-0 z-0">
                 {/* Deep Radial Gradient */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#0c3a21_0%,#040d08_70%)]" />
+                <div className="absolute inset-0 transition-opacity duration-500" style={{ background: `radial-gradient(circle at 50% -20%, var(--primary-color) 0%, var(--bg-color) 70%)`, opacity: 0.2 }} />
                 
                 {/* Nebula Glows */}
-                <div className="absolute top-[30%] -left-[10%] w-[60%] h-[60%] bg-emerald-900/10 blur-[150px] rounded-full mix-blend-screen" />
-                <div className="absolute bottom-[20%] -right-[10%] w-[50%] h-[50%] bg-teal-900/10 blur-[120px] rounded-full mix-blend-screen" />
+                <div className="absolute top-[30%] -left-[10%] w-[60%] h-[60%] blur-[150px] rounded-full mix-blend-screen opacity-10" style={{ backgroundColor: 'var(--primary-color)' }} />
+                <div className="absolute bottom-[20%] -right-[10%] w-[50%] h-[50%] blur-[120px] rounded-full mix-blend-screen opacity-10" style={{ backgroundColor: 'var(--secondary-color)' }} />
                 
                 {/* Dynamic Particles */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -92,16 +92,17 @@ export default function VocabularyBattleLevels() {
             </div>
 
             {/* Simple Premium Header */}
-            <header className="sticky top-0 z-40 bg-black/20 backdrop-blur-xl border-b border-white/5">
+                        <header className="sticky top-0 z-40 backdrop-blur-xl border-b transition-colors" style={{ backgroundColor: 'rgba(0,0,0,0.1)', borderColor: 'var(--border-color)' }}>
                 <div className="px-5 h-16 flex items-center justify-between mx-auto w-full max-w-lg">
                     <button
                         onClick={() => navigate('/student/dashboard')}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-emerald-400 hover:bg-white/10 transition-all active:scale-90"
+                        className="w-10 h-10 flex items-center justify-center rounded-xl border transition-all active:scale-90"
+                        style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--primary-color)' }}
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div className="flex-1 text-center">
-                        <h2 className="text-xl font-black text-white uppercase tracking-[0.2em] font-serif italic drop-shadow-2xl">
+                        <h2 className="text-xl font-black uppercase tracking-[0.2em] font-serif italic drop-shadow-2xl" style={{ color: 'var(--text-color)' }}>
                             Vocabulary battle
                         </h2>
                     </div>
@@ -135,8 +136,8 @@ export default function VocabularyBattleLevels() {
                             <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                                 <defs>
                                     <linearGradient id="neonPath" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#10b981" />
-                                        <stop offset="100%" stopColor="#059669" />
+                                        <stop offset="0%" stopColor="var(--primary-color)" />
+                                        <stop offset="100%" stopColor="var(--secondary-color)" />
                                     </linearGradient>
                                     <filter id="neonGlow">
                                         <feGaussianBlur stdDeviation="1.5" result="blur" />
@@ -180,20 +181,21 @@ export default function VocabularyBattleLevels() {
                                             onClick={() => node.battle && navigate(`/student/vocab-battle/play/${node.battle.id}`)}
                                             className={`
                                                 relative w-24 h-24 sm:w-28 sm:h-28 rounded-[2.5rem] flex flex-col items-center justify-center transition-all duration-500 group
-                                                shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)] border-t border-l border-white/10
+                                                shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)] border transition-colors
                                                 ${node.isLocked 
-                                                    ? 'bg-white/5 backdrop-blur-2xl text-white/5 cursor-not-allowed grayscale' 
-                                                    : 'bg-gradient-to-br from-white/10 to-transparent backdrop-blur-2xl text-white hover:scale-110 active:scale-95'
+                                                    ? 'opacity-20 cursor-not-allowed grayscale' 
+                                                    : 'hover:scale-110 active:scale-95'
                                                 }
                                             `}
+                                            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
                                         >
                                             <div className={`
                                                 absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[9px] font-black tracking-widest border transition-all duration-500
                                                 ${node.isLocked 
-                                                    ? 'bg-black/60 border-white/5 text-white/20' 
-                                                    : 'bg-emerald-500 border-white/20 text-white shadow-lg shadow-emerald-500/20'
+                                                    ? 'opacity-50' 
+                                                    : 'text-white shadow-lg'
                                                 }
-                                            `}>
+                                            `} style={{ backgroundColor: node.isLocked ? 'var(--bg-color)' : 'var(--primary-color)', borderColor: 'var(--border-color)' }}>
                                                 LVL {node.levelNumber}
                                             </div>
                                             
@@ -207,7 +209,8 @@ export default function VocabularyBattleLevels() {
                                                         <Star 
                                                             key={s} 
                                                             size={12} 
-                                                            className={s <= node.stars ? "fill-emerald-400 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" : "text-white/10 fill-transparent"} 
+                                                            className={s <= node.stars ? "drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" : "opacity-10 fill-transparent"} 
+                                                            style={{ color: s <= node.stars ? 'var(--primary-color)' : 'var(--text-color)', fill: s <= node.stars ? 'var(--primary-color)' : 'transparent' }}
                                                         />
                                                     ))}
                                                 </div>
@@ -249,7 +252,7 @@ export default function VocabularyBattleLevels() {
             </main>
 
             {/* Bottom Ambient Fade */}
-            <div className="fixed bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#040d08] to-transparent pointer-events-none z-30" />
+            <div className="fixed bottom-0 left-0 right-0 h-40 pointer-events-none z-30 transition-all duration-500" style={{ background: `linear-gradient(to top, var(--bg-color), transparent)` }} />
         </div>
     );
 }

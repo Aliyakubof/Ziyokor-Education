@@ -118,7 +118,7 @@ export default function Shop() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-10 transition-colors duration-500">
+        <div className="min-h-screen font-sans pb-10 transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
             {/* Header */}
             <div 
                 className="pt-8 pb-16 px-6 text-white relative overflow-hidden transition-all duration-500"
@@ -157,9 +157,9 @@ export default function Shop() {
                 )}
 
                 {loading ? (
-                    <div className="py-20 text-center glass-premium rounded-3xl">
-                        <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-slate-400 font-medium">Elementlar yuklanmoqda...</p>
+                    <div className="py-20 text-center rounded-3xl border shadow-sm transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                        <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderColor: 'var(--primary-color)' }}></div>
+                        <p className="font-medium opacity-50" style={{ color: 'var(--text-color)' }}>Elementlar yuklanmoqda...</p>
                     </div>
                 ) : items.length === 0 ? (
                     <div className="py-20 text-center bg-white rounded-3xl shadow-sm px-10">
@@ -173,8 +173,8 @@ export default function Shop() {
                             const isActive = activeThemeId === item.id;
 
                             return (
-                                <div key={item.id} className="glass-premium rounded-3xl p-4 flex flex-col items-center text-center group">
-                                    <div className="w-24 h-24 rounded-2xl bg-slate-50 mb-4 flex items-center justify-center overflow-hidden border border-slate-50 group-hover:scale-105 transition-transform duration-300">
+                                <div key={item.id} className="rounded-3xl p-4 flex flex-col items-center text-center group border shadow-sm transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                                    <div className="w-24 h-24 rounded-2xl mb-4 flex items-center justify-center overflow-hidden border group-hover:scale-105 transition-all duration-300" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}>
                                         {item.type === 'avatar' ? (
                                             <img
                                                 src={item.url?.startsWith('/') ? `${(window as any).VITE_BACKEND_URL || ''}${item.url}` : item.url}
@@ -193,8 +193,8 @@ export default function Shop() {
                                             </div>
                                         )}
                                     </div>
-                                    <h3 className="font-bold text-slate-800 text-sm mb-1">{item.name}</h3>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-4">{item.type === 'avatar' ? 'Avatar' : item.type === 'theme' ? 'Mavzu' : 'Ruxsat'}</p>
+                                    <h3 className="font-bold text-sm mb-1" style={{ color: 'var(--text-color)' }}>{item.name}</h3>
+                                    <p className="text-[10px] font-bold uppercase mb-4 opacity-50" style={{ color: 'var(--text-color)' }}>{item.type === 'avatar' ? 'Avatar' : item.type === 'theme' ? 'Mavzu' : 'Ruxsat'}</p>
 
                                     {isPurchased && item.is_one_time ? (
                                         item.type === 'theme' ? (
@@ -202,14 +202,15 @@ export default function Shop() {
                                                 onClick={() => handleApplyTheme(item.id)}
                                                 disabled={isActive || purchasing === item.id}
                                                 className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${isActive
-                                                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg active:scale-95'
+                                                    ? 'opacity-40 cursor-not-allowed'
+                                                    : 'text-white shadow-lg active:scale-95'
                                                     }`}
+                                                style={{ backgroundColor: isActive ? 'transparent' : 'var(--primary-color)', color: isActive ? 'var(--text-color)' : 'white' }}
                                             >
                                                 {isActive ? 'O\'rnatilgan' : 'O\'rnatish'}
                                             </button>
                                         ) : (
-                                            <div className="w-full py-2.5 bg-slate-50 text-slate-400 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5">
+                                            <div className="w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 opacity-50" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
                                                 <CheckCircle2 size={16} /> Sotib olingan
                                             </div>
                                         )

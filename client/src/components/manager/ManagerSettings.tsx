@@ -62,6 +62,21 @@ export default function ManagerSettings() {
         const val = setting.value;
         const type = typeof val;
 
+        if (setting.key.endsWith('_status')) {
+            const isOn = val === 'on';
+            return (
+                <button
+                    onClick={() => handleUpdate(setting.key, isOn ? 'off' : 'on')}
+                    className={`relative inline-flex h-10 w-20 items-center rounded-full transition-all duration-300 focus:outline-none shadow-sm ${isOn ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                >
+                    <span className={`inline-block h-8 w-8 transform rounded-full bg-white transition-transform duration-300 shadow-md ${isOn ? 'translate-x-11' : 'translate-x-1'}`} />
+                    <span className={`absolute text-[10px] font-black uppercase tracking-widest ${isOn ? 'left-3 text-white' : 'right-3 text-slate-500'}`}>
+                        {isOn ? 'ON' : 'OFF'}
+                    </span>
+                </button>
+            );
+        }
+
         if (Array.isArray(val)) {
             return (
                 <textarea

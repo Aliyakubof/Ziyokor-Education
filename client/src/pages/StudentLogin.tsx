@@ -77,36 +77,37 @@ export default function StudentLogin() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans">
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 font-sans transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
             <div className="w-full max-w-md">
                 {/* Logo & Header */}
                 <div className="text-center mb-8">
                     <img src={logo} alt="Ziyokor" className="h-20 w-auto mx-auto rounded-2xl shadow-lg mb-4" />
-                    <h1 className="text-3xl font-bold text-slate-900">O'quvchi Kabineti</h1>
-                    <p className="text-slate-500 mt-2">Shaxsiy natijalarni kuzatib boring</p>
+                    <h1 className="text-3xl font-bold" style={{ color: 'var(--text-color)' }}>O'quvchi Kabineti</h1>
+                    <p className="mt-2 opacity-60" style={{ color: 'var(--text-color)' }}>Shaxsiy natijalarni kuzatib boring</p>
                 </div>
 
                 {/* Card */}
-                <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+                <div className="rounded-2xl shadow-xl border overflow-hidden transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                     <div className="p-8">
                         {step === 'id' ? (
                             <form onSubmit={handleCheckId} className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                    <label className="block text-sm font-bold mb-2 opacity-70" style={{ color: 'var(--text-color)' }}>
                                         ID Raqamingiz
                                     </label>
                                     <div className="relative">
-                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 opacity-40" size={20} style={{ color: 'var(--text-color)' }} />
                                         <input
                                             type="text"
                                             value={id}
                                             onChange={(e) => setId(e.target.value.replace(/\D/g, '').slice(0, 7))}
                                             placeholder="1234567"
-                                            className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-lg font-bold text-slate-900 tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal"
+                                            className="w-full pl-12 pr-4 py-3.5 border rounded-xl font-mono text-lg font-bold tracking-widest focus:outline-none transition-all placeholder:opacity-30"
+                                            style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
                                             autoFocus
                                         />
                                     </div>
-                                    <p className="text-xs text-slate-400 mt-2 pl-1">
+                                    <p className="text-xs mt-2 pl-1 opacity-40" style={{ color: 'var(--text-color)' }}>
                                         7 xonali ID raqamingizni kiriting
                                     </p>
                                 </div>
@@ -114,7 +115,8 @@ export default function StudentLogin() {
                                 <button
                                     type="submit"
                                     disabled={loading || id.length < 7}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
+                                    className="w-full text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                                    style={{ backgroundColor: 'var(--primary-color)' }}
                                 >
                                     {loading ? (
                                         <Loader2 className="animate-spin" size={20} />
@@ -128,25 +130,26 @@ export default function StudentLogin() {
                         ) : (
                             <form onSubmit={handleLogin} className="space-y-6 animate-in slide-in-from-right fade-in duration-300">
                                 <div className="text-center mb-6">
-                                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 mb-3">
+                                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-3" style={{ backgroundColor: 'color-mix(in srgb, var(--primary-color), transparent 90%)', color: 'var(--primary-color)' }}>
                                         <User size={32} />
                                     </div>
-                                    <h3 className="text-xl font-bold text-slate-900">{studentName}</h3>
-                                    <p className="text-sm text-slate-500">ID: {id}</p>
+                                    <h3 className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{studentName}</h3>
+                                    <p className="text-sm opacity-60" style={{ color: 'var(--text-color)' }}>ID: {id}</p>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                    <label className="block text-sm font-bold mb-2 opacity-70" style={{ color: 'var(--text-color)' }}>
                                         {isFirstTime ? "Yangi Parol O'ylab Toping" : "Parolingizni Kiriting"}
                                     </label>
                                     <div className="relative">
-                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 opacity-40" size={20} style={{ color: 'var(--text-color)' }} />
                                         <input
                                             type="password"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             placeholder={isFirstTime ? "Yangi parol..." : "******"}
-                                            className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-lg font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                                            className="w-full pl-12 pr-4 py-3.5 border rounded-xl text-lg font-medium focus:outline-none transition-all"
+                                            style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
                                             autoFocus
                                         />
                                     </div>
@@ -164,14 +167,16 @@ export default function StudentLogin() {
                                             setStep('id');
                                             setPassword('');
                                         }}
-                                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3.5 rounded-xl transition-all"
+                                        className="flex-1 font-bold py-3.5 rounded-xl transition-all"
+                                        style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}
                                     >
                                         Ortga
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={loading || !password.trim()}
-                                        className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
+                                        className="flex-[2] text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                                        style={{ backgroundColor: 'var(--primary-color)' }}
                                     >
                                         {loading ? (
                                             <Loader2 className="animate-spin" size={20} />
@@ -185,8 +190,8 @@ export default function StudentLogin() {
                             </form>
                         )}
                     </div>
-                    <div className="bg-slate-50 p-4 text-center border-t border-slate-100">
-                        <Link to="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+                    <div className="p-4 text-center border-t transition-colors" style={{ backgroundColor: 'color-mix(in srgb, var(--card-bg), black 2%)', borderColor: 'var(--border-color)' }}>
+                        <Link to="/" className="text-sm font-medium opacity-60 hover:opacity-100 transition-opacity" style={{ color: 'var(--text-color)' }}>
                             Bosh sahifaga qaytish
                         </Link>
                     </div>

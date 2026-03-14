@@ -75,26 +75,26 @@ const UnitJoin = () => {
 
     if (joined) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-brand-dark">
+            <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/20 rounded-full blur-[100px]"></div>
-                    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-500/20 rounded-full blur-[100px]"></div>
+                    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/10 rounded-full blur-[100px]"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-500/10 rounded-full blur-[100px]"></div>
                 </div>
 
-                <div className="bg-white rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border border-slate-200 relative z-10">
+                <div className="rounded-[3rem] p-10 text-center max-w-md w-full shadow-xl border relative z-10 transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                     <div className="w-24 h-24 bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-emerald-500/20 animate-float">
                         <LogIn className="text-white" size={44} />
                     </div>
-                    <h1 className="text-4xl font-black text-slate-800 mb-4 tracking-tight">Siz kirdingiz!</h1>
-                    <p className="text-slate-500 mb-10 font-medium leading-relaxed">
+                    <h1 className="text-4xl font-black mb-4 tracking-tight" style={{ color: 'var(--text-color)' }}>Siz kirdingiz!</h1>
+                    <p className="mb-10 font-medium leading-relaxed opacity-60" style={{ color: 'var(--text-color)' }}>
                         O'qituvchi testni boshlashini kuting. <br />
-                        <span className="text-emerald-600 font-bold">Iltimos, bu oynadan chiqib ketmang!</span>
+                        <span className="font-bold" style={{ color: 'var(--primary-color)' }}>Iltimos, bu oynadan chiqib ketmang!</span>
                     </p>
 
-                    <div className="flex flex-col items-center gap-2 text-slate-500 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                    <div className="flex flex-col items-center gap-2 border p-5 rounded-2xl transition-colors" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}>
                         <div className="flex items-center gap-2">
-                            <AlertCircle size={16} className="text-slate-400" />
-                            <span className="text-xs font-semibold text-slate-400">Iltimos, bu sahifadan ketmang</span>
+                            <AlertCircle size={16} className="opacity-40" style={{ color: 'var(--text-color)' }} />
+                            <span className="text-xs font-semibold opacity-40 uppercase" style={{ color: 'var(--text-color)' }}>Iltimos, bu sahifadan ketmang</span>
                         </div>
                     </div>
                 </div>
@@ -103,43 +103,45 @@ const UnitJoin = () => {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-brand-dark">
+        <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/20 rounded-full blur-[100px]"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/20 rounded-full blur-[100px]"></div>
             </div>
 
             <div className="w-full max-w-md z-10">
-                <div className="bg-white rounded-[3rem] p-10 shadow-xl border border-slate-200">
+                <div className="rounded-[3rem] p-10 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                     <div className="flex flex-col items-center mb-10">
-                        <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-[1.5rem] flex items-center justify-center mb-6 shadow-xl shadow-blue-500/20 animate-float">
+                        <div className="w-20 h-20 rounded-[1.5rem] flex items-center justify-center mb-6 shadow-xl animate-float" style={{ backgroundColor: 'var(--primary-color)' }}>
                             <h1 className="text-white text-4xl font-black">Z</h1>
                         </div>
-                        <h1 className="text-3xl font-black text-slate-800 mb-2 tracking-tight">Ziyokor Unit</h1>
-                        <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.2em]">Test Tizimiga Kirish</p>
+                        <h1 className="text-3xl font-black mb-2 tracking-tight" style={{ color: 'var(--text-color)' }}>Ziyokor Unit</h1>
+                        <p className="font-bold text-xs uppercase tracking-[0.2em] opacity-40" style={{ color: 'var(--text-color)' }}>Test Tizimiga Kirish</p>
                     </div>
 
                     <form onSubmit={handleJoin} className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Guruh PIN</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest ml-4 opacity-40" style={{ color: 'var(--text-color)' }}>Guruh PIN</label>
                             <input
                                 type="text"
                                 value={pin}
                                 onChange={(e) => setPin(e.target.value)}
                                 placeholder="0000000"
-                                className="w-full bg-slate-50 border-2 border-slate-200 rounded-[2rem] px-6 py-5 text-slate-800 font-black text-center text-3xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-300 tracking-[0.2em]"
+                                className="w-full border-2 rounded-[2rem] px-6 py-5 font-black text-center text-3xl focus:outline-none transition-all tracking-[0.2em]"
+                                style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
                                 required
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Sizning ID raqamingiz</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest ml-4 opacity-40" style={{ color: 'var(--text-color)' }}>Sizning ID raqamingiz</label>
                             <input
                                 type="text"
                                 value={studentId}
                                 onChange={(e) => setStudentId(e.target.value)}
                                 placeholder="ID kiriting"
-                                className="w-full bg-slate-50 border-2 border-slate-200 rounded-[2rem] px-6 py-5 text-slate-800 font-black text-center text-2xl focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-300"
+                                className="w-full border-2 rounded-[2rem] px-6 py-5 font-black text-center text-2xl focus:outline-none transition-all"
+                                style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
                                 required
                             />
                         </div>
@@ -152,7 +154,8 @@ const UnitJoin = () => {
 
                         <button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-6 rounded-[2rem] text-xl transition-all shadow-xl shadow-blue-500/20 btn-premium flex items-center justify-center gap-3 mt-4 active:scale-95"
+                            className="w-full text-white font-black py-6 rounded-[2rem] text-xl transition-all shadow-xl flex items-center justify-center gap-3 mt-4 active:scale-95"
+                            style={{ backgroundColor: 'var(--primary-color)' }}
                         >
                             <span>TESTGA KIRISH</span>
                             <LogIn size={24} />
@@ -160,7 +163,7 @@ const UnitJoin = () => {
                     </form>
                 </div>
 
-                <p className="text-slate-400 text-[10px] text-center mt-10 font-bold uppercase tracking-widest">
+                <p className="text-[10px] text-center mt-10 font-bold uppercase tracking-widest opacity-40" style={{ color: 'var(--text-color)' }}>
                     7 xonali ID o'qituvchi tomonidan beriladi
                 </p>
             </div>

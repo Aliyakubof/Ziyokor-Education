@@ -56,6 +56,16 @@ CREATE TABLE IF NOT EXISTS unit_quizzes (
     questions JSONB NOT NULL
 );
 
+-- Solo Quizzes Table (Practice)
+CREATE TABLE IF NOT EXISTS solo_quizzes (
+    id UUID PRIMARY KEY,
+    level TEXT NOT NULL,
+    title TEXT NOT NULL,
+    time_limit INT DEFAULT 30,
+    questions JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Vocabulary Battles Table
 CREATE TABLE IF NOT EXISTS vocabulary_battles (
     id UUID PRIMARY KEY,

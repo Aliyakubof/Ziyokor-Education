@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, PlayCircle, Plus, ArrowLeft, LogOut, X, ChevronDown, Trash2, Send } from 'lucide-react';
+import { 
+    Users, Plus, Search, LogOut, ArrowLeft, Send, PlayCircle, 
+    MoreVertical, Trash2, Edit2, ChevronLeft, ChevronDown, 
+    BarChart3, UserPlus, Info, BookOpen, Clock, Zap, X
+} from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import logo from '../assets/logo.jpeg';
@@ -832,6 +836,26 @@ const TeacherDashboard = () => {
 
             {/* Main Content */}
             <div className="max-w-7xl mx-auto">
+                {/* Quick Actions (SoloQuiz) */}
+                <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Tezkor Amallar</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div 
+                            onClick={() => navigate('/admin/create-quiz?type=solo')}
+                            className="group relative bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 shadow-xl shadow-indigo-100 cursor-pointer hover:scale-[1.02] transition-all overflow-hidden"
+                        >
+                            <div className="relative z-10">
+                                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform">
+                                    <BarChart3 size={24} />
+                                </div>
+                                <h4 className="text-white font-black text-lg mb-1">SoloQuiz Yaratish</h4>
+                                <p className="text-white/70 text-xs font-medium">Mustaqil mashq testi yaratish</p>
+                            </div>
+                            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Desktop Table View */}
                 <div className="hidden md:block bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">

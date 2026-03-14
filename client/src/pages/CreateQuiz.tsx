@@ -18,11 +18,6 @@ export default function CreateQuiz() {
     const navigate = useNavigate();
     const { id } = useParams();
     const [searchParams] = useSearchParams();
-    const quizType = searchParams.get('type') || (location.pathname.includes('/edit-quiz/') ? 'unit' : 'unit'); // Default to unit if not specified
-    
-    // We can't easily know the type of an existing quiz from the URL alone if we use the same edit route.
-    // However, we can try to fetch from both or have a separate edit route.
-    // For now, let's assume if it's editing, we might need to check both or have a 'type' param in the edit link too.
     const actualType = searchParams.get('type') || 'unit';
 
     const { role } = useAuth();
@@ -44,7 +39,10 @@ export default function CreateQuiz() {
 
     const fetchAllQuizzes = async () => {
         try {
-            const endpoint = actualType === 'duel' ? '/api/duel-quizzes' : '/api/unit-quizzes';
+            let endpoint = '/api/unit-quizzes';
+            if (actualType === 'duel') endpoint = '/api/duel-quizzes';
+            else if (actualType === 'solo') endpoint = '/api/solo-quizzes';
+            
             const res = await apiFetch(endpoint);
             if (res.ok) {
                 const data = await res.json();
@@ -57,7 +55,10 @@ export default function CreateQuiz() {
 
     const fetchQuiz = async () => {
         try {
-            const endpoint = actualType === 'duel' ? `/api/duel-quizzes/${id}` : `/api/unit-quizzes/${id}`;
+            let endpoint = `/api/unit-quizzes/${id}`;
+            if (actualType === 'duel') endpoint = `/api/duel-quizzes/${id}`;
+            else if (actualType === 'solo') endpoint = `/api/solo-quizzes/${id}`;
+            
             const res = await apiFetch(endpoint);
             if (res.ok) {
                 const data = await res.json();
@@ -209,7 +210,10 @@ export default function CreateQuiz() {
 
         setIsSaving(true);
         try {
-            const baseEndpoint = actualType === 'duel' ? '/api/duel-quizzes' : '/api/unit-quizzes';
+            let baseEndpoint = '/api/unit-quizzes';
+            if (actualType === 'duel') baseEndpoint = '/api/duel-quizzes';
+            else if (actualType === 'solo') baseEndpoint = '/api/solo-quizzes';
+            
             const url = id ? `${baseEndpoint}/${id}` : baseEndpoint;
             const method = id ? 'PUT' : 'POST';
 
