@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { LogIn, Settings, Users, PlusCircle, ArrowRight, ChevronLeft, ChevronRight, Send, Swords } from 'lucide-react';
+import { LogIn, Settings, Users, PlusCircle, ArrowRight, ChevronLeft, ChevronRight, Send, Swords, Shield } from 'lucide-react';
 import { apiFetch } from '../api';
 import logo from '../assets/logo.jpeg';
 
@@ -15,6 +15,8 @@ export default function Home() {
         quizzes: 0
     });
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [soloQuizStatus, setSoloQuizStatus] = useState<'on' | 'off'>('on');
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
     const slides = [
         {
@@ -47,8 +49,44 @@ export default function Home() {
     useEffect(() => {
         if (isAuthenticated) {
             fetchStats();
+            if (role === 'admin' || role === 'teacher') {
+                fetchSoloQuizStatus();
+            }
         }
     }, [isAuthenticated, role, user]);
+
+    const fetchSoloQuizStatus = async () => {
+        try {
+            const res = await apiFetch('/api/settings/solo_quiz_status');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.value) setSoloQuizStatus(data.value);
+            }
+        } catch (err) {
+            console.error('Error fetching solo quiz status:', err);
+        }
+    };
+
+    const toggleSoloQuizStatus = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsUpdatingStatus(true);
+        const newStatus = soloQuizStatus === 'on' ? 'off' : 'on';
+        try {
+            const res = await apiFetch(`/api/manager/settings/solo_quiz_status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: newStatus })
+            });
+            if (res.ok) {
+                setSoloQuizStatus(newStatus);
+            }
+        } catch (err) {
+            console.error('Error toggling solo quiz status:', err);
+        } finally {
+            setIsUpdatingStatus(false);
+        }
+    };
 
     const fetchStats = async () => {
         try {
@@ -270,6 +308,39 @@ export default function Home() {
                                 Boshqarish
                             </span>
                         </Link>
+                    )}
+
+                    {/* SoloQuiz Create & Control - For Admin or Teacher */}
+                    {(role === 'admin' || role === 'teacher') && (
+                        <div className="w-full md:w-[280px] group bg-white border border-slate-200 hover:border-indigo-200 rounded-3xl p-8 transition-all hover:shadow-xl hover:shadow-indigo-500/10 flex flex-col items-center relative overflow-hidden">
+                            <div className="flex justify-between w-full mb-6">
+                                <div 
+                                    onClick={() => navigate('/admin/create-quiz?type=solo')}
+                                    className="bg-indigo-600 text-white p-4 rounded-xl cursor-pointer group-hover:scale-110 transition-transform shadow-lg shadow-indigo-100"
+                                >
+                                    <Shield size={32} />
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <button
+                                        onClick={toggleSoloQuizStatus}
+                                        disabled={isUpdatingStatus}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${soloQuizStatus === 'on' ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                                    >
+                                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-300 ${soloQuizStatus === 'on' ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
+                                    <span className={`text-[8px] font-black uppercase tracking-widest ${soloQuizStatus === 'on' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                        {soloQuizStatus === 'on' ? 'ONLINE' : 'OFFLINE'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div 
+                                onClick={() => navigate('/admin/create-quiz?type=solo')}
+                                className="text-center cursor-pointer"
+                            >
+                                <h3 className="text-lg font-bold text-slate-900 mb-2">SoloQuiz Yaratish</h3>
+                                <p className="text-slate-500 text-sm font-medium">Boshlamoqchi bo'lganlar uchun</p>
+                            </div>
+                        </div>
                     )}
 
                     {/* Telegram Bot Questions - For Admin or Teacher */}

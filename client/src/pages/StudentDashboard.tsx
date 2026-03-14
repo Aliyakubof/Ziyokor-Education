@@ -194,7 +194,10 @@ export default function StudentDashboard() {
                 </div>
 
                 {/* Level Progress */}
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xl min-h-[120px] mb-6">
+                <div 
+                    className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 min-h-[120px] mb-6 transition-shadow duration-500"
+                    style={{ boxShadow: `0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 0 40px -5px var(--primary-color)` }}
+                >
                     {isLoading && !stats.totalScore ? (
                         <div className="animate-skeleton space-y-3">
                             <div className="flex justify-between items-end">

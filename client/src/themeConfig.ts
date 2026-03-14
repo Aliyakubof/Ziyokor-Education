@@ -12,7 +12,7 @@ export const themes: Record<string, ThemeDefinition> = {
     'theme-indigo': {
         primary: '#6366f1',
         secondary: '#4338ca',
-        bg: '#eef2ff', // Indigo 50 // Saturated light
+        bg: '#f5f7ff', 
         text: '#1e1b4b',
         cardBg: '#ffffff',
         border: '#c7d2fe',
@@ -20,49 +20,58 @@ export const themes: Record<string, ThemeDefinition> = {
     },
     'theme-emerald': {
         primary: '#10b981',
-        secondary: '#047857',
-        bg: '#ecfdf5', // Saturated emerald
+        secondary: '#059669',
+        bg: '#f0fdf4',
         text: '#064e3b',
         cardBg: '#ffffff',
-        border: '#6EE7B7',
+        border: '#bbf7d0',
         accent: '#34d399'
     },
     'theme-sunset': {
-        primary: '#f97316',
-        secondary: '#c2410c',
-        bg: '#fff7ed', // Vibrant orange tint
-        text: '#431407',
+        primary: '#f59e0b',
+        secondary: '#d97706',
+        bg: '#fffbeb',
+        text: '#451a03',
         cardBg: '#ffffff',
-        border: '#fdba74',
-        accent: '#fb923c'
+        border: '#fef3c7',
+        accent: '#fbbf24'
     },
     'theme-cyber': {
-        primary: '#06b6d4',
+        primary: '#22d3ee',
         secondary: '#0891b2',
-        bg: '#0f172a', // Sleek dark blue
+        bg: '#020617', // Deeper black/dark
         text: '#f8fafc',
-        cardBg: '#1e293b',
-        border: '#334155',
-        accent: '#22d3ee'
+        cardBg: '#0f172a',
+        border: '#1e293b',
+        accent: '#06b6d4'
     },
     'theme-sakura': {
-        primary: '#ec4899',
-        secondary: '#be185d',
-        bg: '#fdf2f8', // Warm pink
-        text: '#500724',
+        primary: '#f472b6',
+        secondary: '#db2777',
+        bg: '#fff1f2',
+        text: '#4c0519',
         cardBg: '#ffffff',
-        border: '#f9a8d4',
+        border: '#ffe4e6',
         accent: '#fb7185'
     },
     'theme-ocean': {
-        primary: '#0ea5e9',
-        secondary: '#0369a1',
-        bg: '#0c4a6e', // Deep deep blue
+        primary: '#38bdf8',
+        secondary: '#0284c7',
+        bg: '#082f49', // Deep dark ocean
         text: '#f0f9ff',
-        cardBg: '#075985',
-        border: '#082f49',
-        accent: '#38bdf8'
+        cardBg: '#0c4a6e',
+        border: '#075985',
+        accent: '#0ea5e9'
+    },
+    'theme-general': {
+        primary: '#6d28d9',
+        secondary: '#5b21b6',
+        bg: '#fdfbff',
+        text: '#1e1b4b',
+        cardBg: '#ffffff',
+        border: '#ddd6fe',
+        accent: '#8b5cf6'
     }
 };
 
-export const defaultTheme = 'theme-indigo';
+export const defaultTheme = 'theme-general';

@@ -103,14 +103,18 @@ export default function BattleDetails() {
                 <motion.div
                     animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
                     transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                    className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[120px]"
+                    className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] opacity-20"
+                    style={{ backgroundColor: 'var(--primary-color)' }}
                 />
                 <motion.div
                     animate={{ x: [0, -40, 0], y: [0, 60, 0] }}
                     transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-                    className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-rose-600/10 rounded-full blur-[120px]"
+                    className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] opacity-20"
+                    style={{ backgroundColor: 'var(--secondary-color)' }}
                 />
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 mix-blend-overlay"></div>
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 md:opacity-20 mix-blend-overlay"></div>
+                {/* Dark overlay for extra intensity if needed */}
+                <div className="absolute inset-0 bg-black/40"></div>
             </div>
 
             {/* Header Section */}
