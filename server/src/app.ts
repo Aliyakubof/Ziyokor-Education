@@ -1124,9 +1124,14 @@ app.get('/api/student/vocab-battles/levels', async (req, res) => {
 
         // Fetch student's past results for these levels to calculate progress
         const historyRes = await query(`
-            SELECT quiz_title, (player_results->$1->>'score')::int as score, total_questions
-            FROM game_results
-            WHERE quiz_title LIKE $2 AND player_results->$1 IS NOT NULL
+            SELECT 
+                gr.quiz_title, 
+                (p->>'score')::int as score, 
+                gr.total_questions
+            FROM game_results gr
+            CROSS JOIN LATERAL jsonb_array_elements(gr.player_results) AS p
+            WHERE gr.quiz_title LIKE $2 
+              AND p->>'id' = $1
         `, [studentId, `Vocab Battle: ${daraja} - Level %`]);
 
         const levelScores: Record<number, number> = {}; // Best percentage per level
