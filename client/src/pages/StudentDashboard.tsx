@@ -168,10 +168,10 @@ export default function StudentDashboard() {
                 <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-8 lg:pt-12">
 
                     {/* Left Column / Header Section (Mobile: Top, Laptop: Aside) */}
-                    <header className="lg:col-span-4 px-6 pt-8 pb-6 text-white h-fit lg:sticky lg:top-8">
+                    <header className="lg:col-span-4 px-6 pt-8 pb-6 h-fit lg:sticky lg:top-8 transition-colors" style={{ color: 'var(--text-color)' }}>
                 <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border-2 border-white/30 shadow-lg overflow-hidden relative">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center border-2 shadow-lg overflow-hidden relative" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--primary-color)' }}>
                             {stats.avatarUrl ? (
                                 <img src={stats.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
@@ -182,21 +182,24 @@ export default function StudentDashboard() {
                         </div>
                         <div>
                             <h1 className="text-xl font-bold leading-none mb-1">{user?.name}</h1>
-                            <div className="flex items-center gap-2 text-indigo-200 text-sm font-medium">
-                                <span className="bg-white/10 px-2 py-0.5 rounded text-xs">ID: {user?.id}</span>
+                            <div className="flex items-center gap-2 text-sm font-medium opacity-60">
+                                <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--border-color)' }}>ID: {user?.id}</span>
                                 <span>{user?.groupName}</span>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-white/10 backdrop-blur-sm p-1.5 rounded-xl border border-white/10">
+                    <div className="p-1.5 rounded-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                         <img src={logo} alt="Logo" className="w-8 h-8 rounded-lg" />
                     </div>
                 </div>
 
-                {/* Level Progress */}
                 <div 
-                    className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 min-h-[120px] mb-6 transition-shadow duration-500"
-                    style={{ boxShadow: `0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 0 40px -5px var(--primary-color)` }}
+                    className="rounded-2xl p-4 border min-h-[120px] mb-6 transition-all duration-500"
+                    style={{ 
+                        backgroundColor: 'var(--card-bg)', 
+                        borderColor: 'var(--border-color)',
+                        boxShadow: `0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 0 40px -5px var(--primary-color)22` 
+                    }}
                 >
                     {isLoading && !stats.totalScore ? (
                         <div className="animate-skeleton space-y-3">
@@ -209,15 +212,15 @@ export default function StudentDashboard() {
                     ) : (
                         <>
                             <div className="flex justify-between items-end mb-2 relative z-10">
-                                <div className="drop-shadow-md">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">Daraja</span>
-                                    <div className="text-4xl font-black flex items-center gap-2 text-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                                        {level} <span className="text-sm font-bold opacity-80 mt-2">Level</span>
+                                <div>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Daraja</span>
+                                    <div className="text-4xl font-black flex items-center gap-2" style={{ color: 'var(--text-color)' }}>
+                                        {level} <span className="text-sm font-bold opacity-60 mt-2">Level</span>
                                     </div>
                                 </div>
-                                <div className="text-right filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                                    <span className="text-3xl font-black text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.4)]">{stats.totalScore.toLocaleString()}</span>
-                                    <span className="text-[10px] font-black text-white/90 block uppercase tracking-wider">Total XP</span>
+                                <div className="text-right">
+                                    <span className="text-3xl font-black" style={{ color: 'var(--primary-color)' }}>{stats.totalScore.toLocaleString()}</span>
+                                    <span className="text-[10px] font-black opacity-40 block uppercase tracking-wider">Total XP</span>
                                 </div>
                             </div>
                             <div className="w-full bg-black/20 rounded-full h-3 overflow-hidden">
@@ -226,7 +229,7 @@ export default function StudentDashboard() {
                                     style={{ width: `${progressPercent}%` }}
                                 ></div>
                             </div>
-                            <div className="flex justify-between text-[10px] font-black text-white/70 mt-1.5 uppercase tracking-widest filter drop-shadow-sm">
+                            <div className="flex justify-between text-[10px] font-black mt-1.5 uppercase tracking-widest opacity-40">
                                 <span>{currentLevelProgress} XP</span>
                                 <span>{1000 - currentLevelProgress} XP to Lvl {level + 1}</span>
                             </div>
