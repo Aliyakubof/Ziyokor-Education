@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Users, Plus, LogOut, ArrowLeft, PlayCircle, 
-    Trash2, ChevronDown, X, Calendar, CheckSquare, BookOpen
+    Trash2, ChevronDown, X, Calendar, CheckSquare, BookOpen,
+    FileText
 } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
@@ -921,6 +922,27 @@ const TeacherDashboard = () => {
         } catch (err) {}
     };
 
+    const handleDownloadWeeklyReport = async () => {
+        try {
+            const res = await apiFetch('/api/teacher/weekly-report');
+            if (res.ok) {
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `haftalik-hisobot-${new Date().toLocaleDateString('uz-UZ')}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } else {
+                alert("Hisobot yuklab olishda xatolik yuz berdi.");
+            }
+        } catch (err) {
+            console.error('Error downloading report:', err);
+            alert("Xatolik!");
+        }
+    };
+
     return (
         <div className="min-h-screen p-4 md:p-8 bg-slate-50 text-slate-900">
             {/* Header */}
@@ -968,6 +990,13 @@ const TeacherDashboard = () => {
                                 title="Mavzularni boshqarish"
                             >
                                 <BookOpen size={16} /> Mavzular
+                            </button>
+                            <button 
+                                onClick={handleDownloadWeeklyReport}
+                                className="px-3 py-2 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors text-sm font-bold flex items-center gap-2"
+                                title="Haftalik hisobotni PDF yuklab olish"
+                            >
+                                <FileText size={16} /> PDF Hisobot
                             </button>
                             <button onClick={() => { logout(); navigate('/login'); }} className="px-3 py-2 bg-white text-red-600 rounded-lg border border-red-100 hover:bg-red-50 transition-colors text-sm font-bold flex items-center gap-2">
                                 <LogOut size={16} /> Chiqish

@@ -290,7 +290,9 @@ async function sendTeacherWeeklyReport(ctx: any, teacherId: string) {
             SELECT s.name, SUM((p->>'score')::int) as weekly_score
             FROM game_results gr
             JOIN groups g ON gr.group_id = g.id
-            CROSS JOIN jsonb_array_elements(gr.player_results) p
+            CROSS JOIN jsonb_array_elements(
+                CASE WHEN jsonb_typeof(gr.player_results) = 'array' THEN gr.player_results ELSE '[]'::jsonb END
+            ) p
             JOIN students s ON p->>'id' = s.id
             WHERE g.teacher_id = $1
               AND gr.created_at >= NOW() - INTERVAL '7 days'
@@ -737,7 +739,9 @@ export async function sendWeeklyReports() {
                     SELECT s.name, SUM((p->>'score')::int) as weekly_score
                     FROM game_results gr
                     JOIN groups g ON gr.group_id = g.id
-                    CROSS JOIN jsonb_array_elements(gr.player_results) p
+                    CROSS JOIN jsonb_array_elements(
+                        CASE WHEN jsonb_typeof(gr.player_results) = 'array' THEN gr.player_results ELSE '[]'::jsonb END
+                    ) p
                     JOIN students s ON p->>'id' = s.id
                     WHERE g.teacher_id = $1
                       AND gr.created_at >= NOW() - INTERVAL '7 days'

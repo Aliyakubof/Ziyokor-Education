@@ -387,3 +387,97 @@ export const generateSoloQuizPDF = (
         doc.end();
     });
 };
+export const generateWeeklyTeacherReportPDF = (
+    teacherName: string,
+    startDate: string,
+    endDate: string,
+    bookings: any[]
+): Promise<Buffer> => {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 50 });
+        const buffers: Buffer[] = [];
+
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+        doc.on('error', reject);
+
+        const path = require('path');
+        const fs = require('fs');
+        const regularFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf'))
+            ? path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf')
+            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Regular.ttf');
+
+        const boldFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf'))
+            ? path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf')
+            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Bold.ttf');
+
+        const hasRegular = fs.existsSync(regularFontPath);
+        const hasBold = fs.existsSync(boldFontPath);
+
+        if (hasRegular) doc.registerFont('CustomRegular', regularFontPath);
+        if (hasBold) doc.registerFont('CustomBold', boldFontPath);
+
+        const fontRegular = hasRegular ? 'CustomRegular' : 'Helvetica';
+        const fontBold = hasBold ? 'CustomBold' : 'Helvetica-Bold';
+
+        // Header
+        doc.fontSize(24).font(fontBold).text('Ziyokor Education', { align: 'center' });
+        doc.fontSize(16).font(fontRegular).text('Haftalik o\'tilgan darslar hisoboti', { align: 'center' });
+        doc.moveDown();
+
+        doc.fontSize(12).font(fontBold).text(`O'qituvchi: ${teacherName}`);
+        doc.font(fontRegular).text(`Davr: ${startDate} - ${endDate}`);
+        doc.text(`Jami darslar: ${bookings.length}`);
+        doc.moveDown();
+
+        // Table Header
+        const tableTop = doc.y;
+        const col1 = 50;  // Date/Time
+        const col2 = 180; // Group
+        const col3 = 280; // Topic
+        const col4 = 450; // Student
+
+        doc.font(fontBold).fontSize(10);
+        doc.text('Sana va Vaqt', col1, tableTop);
+        doc.text('Guruh', col2, tableTop);
+        doc.text('Mavzu', col3, tableTop);
+        doc.text('O\'quvchi', col4, tableTop);
+
+        doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+        doc.font(fontRegular).fontSize(9);
+
+        let y = tableTop + 25;
+
+        bookings.forEach((b, index) => {
+            if (y > 700) {
+                doc.addPage();
+                y = 50;
+                doc.font(fontBold).fontSize(10);
+                doc.text('Sana va Vaqt', col1, y);
+                doc.text('Guruh', col2, y);
+                doc.text('Mavzu', col3, y);
+                doc.text('O\'quvchi', col4, y);
+                doc.moveTo(50, y + 15).lineTo(550, y + 15).stroke();
+                y += 25;
+                doc.font(fontRegular).fontSize(9);
+            }
+
+            const dateStr = new Date(b.created_at).toLocaleDateString('uz-UZ');
+            doc.text(`${dateStr} / ${b.time_slot}`, col1, y, { width: 120 });
+            doc.text(b.group_name || 'Noma\'lum', col2, y, { width: 90 });
+            doc.text(b.topic || '-', col3, y, { width: 160 });
+            doc.text(b.student_name || 'Noma\'lum', col4, y, { width: 100 });
+
+            const rowHeight = Math.max(
+                doc.heightOfString(`${dateStr} / ${b.time_slot}`, { width: 120 }),
+                doc.heightOfString(b.topic || '-', { width: 160 })
+            ) + 10;
+
+            y += rowHeight;
+            doc.moveTo(50, y - 5).lineTo(550, y - 5).strokeColor('#eeeeee').lineWidth(0.5).stroke();
+            doc.strokeColor('black');
+        });
+
+        doc.end();
+    });
+};

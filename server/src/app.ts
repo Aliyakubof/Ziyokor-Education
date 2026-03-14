@@ -19,7 +19,7 @@ import { query } from './db';
 import { schema } from './schema';
 import { Player, Question } from './types';
 import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyReports, sendBattleAlert, sendSoloQuizPDF } from './bot';
-import { generateQuizResultPDF, generateGroupContactPDF, generateSoloQuizPDF } from './pdfGenerator';
+import { generateQuizResultPDF, generateGroupContactPDF, generateSoloQuizPDF, generateWeeklyTeacherReportPDF } from './pdfGenerator';
 import { normalizeAnswer, checkAnswer, countCorrectParts } from './utils';
 import { checkAnswerWithAI, checkAnswersWithAIBatch } from './aiChecker';
 import { startCronJobs } from './cron';
@@ -183,6 +183,10 @@ async function initDb() {
         // Ensure students table has contact info columns
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS last_contacted_relative TEXT;');
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS last_contacted_at TIMESTAMPTZ;');
+
+        // Ensure groups table has extra class columns
+        await query('ALTER TABLE groups ADD COLUMN IF NOT EXISTS extra_class_days TEXT[];');
+        await query('ALTER TABLE groups ADD COLUMN IF NOT EXISTS extra_class_times TEXT[];');
         await query('ALTER TABLE teachers ADD COLUMN IF NOT EXISTS plain_password TEXT;');
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS plain_password TEXT;');
 
@@ -1603,6 +1607,43 @@ app.patch('/api/extra-class-bookings/:id/complete', async (req, res) => {
     } catch (err) {
         console.error('Error updating booking:', err);
         res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
+app.get('/api/teacher/weekly-report', requireRole('teacher'), async (req, res) => {
+    try {
+        const teacherId = (req as any).user.id;
+        const teacherName = (req as any).user.name;
+
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+        const startDateStr = startDate.toLocaleDateString('uz-UZ');
+        const endDateStr = new Date().toLocaleDateString('uz-UZ');
+
+        const bookingsRes = await query(`
+            SELECT ecb.*, g.name as group_name, s.name as student_name
+            FROM extra_class_bookings ecb
+            JOIN groups g ON ecb.group_id = g.id
+            JOIN students s ON ecb.student_id = s.id
+            WHERE g.teacher_id = $1 
+              AND ecb.is_completed = true
+              AND ecb.created_at >= NOW() - INTERVAL '7 days'
+            ORDER BY ecb.created_at DESC
+        `, [teacherId]);
+
+        const pdfBuffer = await generateWeeklyTeacherReportPDF(
+            teacherName,
+            startDateStr,
+            endDateStr,
+            bookingsRes.rows
+        );
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=weekly-report-${teacherName}.pdf`);
+        res.send(pdfBuffer);
+    } catch (err: any) {
+        console.error('Error generating weekly report:', err);
+        res.status(500).json({ error: 'Xatolik', details: err.message });
     }
 });
 

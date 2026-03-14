@@ -984,7 +984,9 @@ export async function sendGroupWeeklyLeaderboard(bot: Telegraf) {
                         p->>'name' as name, 
                         SUM((p->>'score')::int) as total_xp
                     FROM game_results gr
-                    CROSS JOIN jsonb_array_elements(gr.player_results) p
+                    CROSS JOIN jsonb_array_elements(
+                        CASE WHEN jsonb_typeof(gr.player_results) = 'array' THEN gr.player_results ELSE '[]'::jsonb END
+                    ) p
                     WHERE gr.created_at >= NOW() - INTERVAL '7 days'
                       AND gr.quiz_title LIKE '[Telegram]%'
                       AND gr.group_id IN (
