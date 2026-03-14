@@ -261,6 +261,18 @@ async function initDb() {
         // Telegram Subscriber Role Migration
         await query('ALTER TABLE student_telegram_subscriptions ADD COLUMN IF NOT EXISTS role TEXT;');
 
+        // Carousel Slides Table Migration (Ensure table exists if migration didn't run via schema.ts yet)
+        await query(`
+            CREATE TABLE IF NOT EXISTS carousel_slides (
+                id UUID PRIMARY KEY,
+                image_url TEXT NOT NULL,
+                title TEXT,
+                description TEXT,
+                order_index INT DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
         // Backfill parent_id for existing students
         const studentsWithoutParentId = await query('SELECT id FROM students WHERE parent_id IS NULL');
         for (const row of studentsWithoutParentId.rows) {
@@ -3722,6 +3734,59 @@ function startWeeklySchedulers() {
         }
     }, 60 * 60 * 1000); // 1 hour
 }
+
+
+// Carousel Slides Management
+app.get('/api/carousel', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM carousel_slides ORDER BY order_index ASC, created_at DESC');
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error fetching carousel slides:', err);
+        res.status(500).json({ error: 'Error fetching slides', details: err.message });
+    }
+});
+
+app.post('/api/manager/carousel', requireRole('admin', 'manager'), upload.single('image'), async (req, res) => {
+    try {
+        const { title, description, order_index } = req.body;
+        if (!req.file) return res.status(400).json({ error: 'Rasm yuklanmadi' });
+
+        const id = uuidv4();
+        const imageUrl = `/uploads/${req.file.filename}`;
+        
+        await query(
+            'INSERT INTO carousel_slides (id, image_url, title, description, order_index) VALUES ($1, $2, $3, $4, $5)',
+            [id, imageUrl, title, description, parseInt(order_index) || 0]
+        );
+        
+        res.json({ id, image_url: imageUrl, title, description, order_index });
+    } catch (err: any) {
+        console.error('Error creating carousel slide:', err);
+        res.status(500).json({ error: 'Xatolik', details: err.message });
+    }
+});
+
+app.delete('/api/manager/carousel/:id', requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const slideRes = await query('SELECT image_url FROM carousel_slides WHERE id = $1', [id]);
+        
+        if (slideRes.rowCount && slideRes.rowCount > 0) {
+            const imageUrl = slideRes.rows[0].image_url;
+            const filePath = path.join(__dirname, '..', 'storage', 'uploads', path.basename(imageUrl));
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
+        await query('DELETE FROM carousel_slides WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err: any) {
+        console.error('Error deleting carousel slide:', err);
+        res.status(500).json({ error: 'Xatolik', details: err.message });
+    }
+});
 
 // Global Error Handler to prevent leaking stack traces
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

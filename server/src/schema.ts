@@ -197,4 +197,14 @@ CREATE INDEX IF NOT EXISTS idx_game_results_group ON game_results(group_id);
 CREATE INDEX IF NOT EXISTS idx_game_results_created ON game_results(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_students_last_activity ON students(last_activity_at DESC);
 CREATE INDEX IF NOT EXISTS idx_game_results_player_gin ON game_results USING GIN (player_results);
-`;
+
+-- Carousel Slides Table
+CREATE TABLE IF NOT EXISTS carousel_slides (
+    id UUID PRIMARY KEY,
+    image_url TEXT NOT NULL,
+    title TEXT,
+    description TEXT,
+    order_index INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+` ;

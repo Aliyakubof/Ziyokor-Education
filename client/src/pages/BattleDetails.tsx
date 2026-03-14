@@ -99,7 +99,7 @@ export default function BattleDetails() {
     return (
         <div className="min-h-screen font-sans pb-20 relative overflow-hidden transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
             {/* Animated Background Elements */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 transition-opacity duration-1000">
                 <motion.div
                     animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
                     transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
@@ -112,9 +112,9 @@ export default function BattleDetails() {
                     className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] opacity-20"
                     style={{ backgroundColor: 'var(--secondary-color)' }}
                 />
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 md:opacity-20 mix-blend-overlay"></div>
-                {/* Dark overlay for extra intensity if needed */}
-                <div className="absolute inset-0 bg-black/40"></div>
+                <div className="absolute inset-0 opacity-10 md:opacity-20" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/carbon-fibre.png')", mixBlendMode: 'overlay' }}></div>
+                {/* Dynamic overlay for extra intensity themed */}
+                <div className="absolute inset-0 opacity-40 transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}></div>
             </div>
 
             {/* Header Section */}
@@ -123,9 +123,10 @@ export default function BattleDetails() {
                     whileHover={{ scale: 1.1, x: -2 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => navigate(-1)}
-                    className="w-10 h-10 md:w-12 md:h-12 bg-white/5 backdrop-blur-xl rounded-xl md:rounded-2xl flex items-center justify-center border border-white/10 shadow-xl"
+                    className="w-10 h-10 md:w-12 md:h-12 backdrop-blur-xl rounded-xl md:rounded-2xl flex items-center justify-center border shadow-xl"
+                    style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
                 >
-                    <ChevronLeft className="text-white" size={20} />
+                    <ChevronLeft size={20} />
                 </motion.button>
 
                 <div className="flex flex-col items-center opacity-0 pointer-events-none">
@@ -155,7 +156,7 @@ export default function BattleDetails() {
                             <Timer size={14} className="animate-pulse" />
                             VAQT TUGASHIGA
                         </div>
-                        <div className="text-4xl md:text-7xl lg:text-8xl font-black italic tracking-tighter tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-white/20 drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                        <div className="text-4xl md:text-7xl lg:text-8xl font-black italic tracking-tighter tabular-nums drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]" style={{ color: 'var(--text-color)' }}>
                             {timeLeft}
                         </div>
                     </motion.div>
@@ -195,13 +196,13 @@ export default function BattleDetails() {
                                         <Zap size={20} className="text-indigo-400 fill-indigo-400 md:w-[24px]" />
                                     </motion.div>
                                 </div>
-                                <h2 className="text-xs md:text-xl font-black uppercase tracking-widest text-white/90 mb-1 md:mb-2 truncate px-4">{battle.group_a_name}</h2>
+                                <h2 className="text-xs md:text-xl font-black uppercase tracking-widest mb-1 md:mb-2 truncate px-4" style={{ color: 'var(--text-color)' }}>{battle.group_a_name}</h2>
                                 {battle.teacher_a_name && (
-                                    <div className="text-[10px] md:text-xs text-indigo-300/70 font-bold uppercase tracking-widest -mt-1 md:-mt-2 mb-2">
+                                    <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest -mt-1 md:-mt-2 mb-2 opacity-60">
                                         Ustoz: {battle.teacher_a_name}
                                     </div>
                                 )}
-                                <div className="text-3xl md:text-6xl font-black text-indigo-400 tabular-nums drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]">
+                                <div className="text-3xl md:text-6xl font-black tabular-nums drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ color: 'var(--primary-color)' }}>
                                     {battle.score_a.toLocaleString()}
                                 </div>
                             </motion.div>
@@ -215,9 +216,9 @@ export default function BattleDetails() {
                                     style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}
                                 >
                                     <span className="text-2xl md:text-4xl lg:text-5xl font-black italic bg-clip-text text-transparent bg-gradient-to-tr from-rose-500 to-indigo-500">VS</span>
-                                    <div className="absolute inset-0 rounded-full border border-white/10 animate-ping opacity-10" />
+                                    <div className="absolute inset-0 rounded-full border animate-ping opacity-10" style={{ borderColor: 'var(--primary-color)' }} />
                                 </motion.div>
-                                <div className="flex items-center gap-1 text-white/30 text-[8px] md:text-[10px] font-black tracking-widest uppercase">
+                                <div className="flex items-center gap-1 text-[8px] md:text-[10px] font-black tracking-widest uppercase opacity-30">
                                     <Sparkles size={10} className="md:w-[12px]" /> LIVE ARENA <Sparkles size={10} className="md:w-[12px]" />
                                 </div>
                             </div>
@@ -239,13 +240,13 @@ export default function BattleDetails() {
                                         <Target size={20} className="text-rose-400 fill-rose-400 md:w-[24px]" />
                                     </motion.div>
                                 </div>
-                                <h2 className="text-xs md:text-xl font-black uppercase tracking-widest text-white/90 mb-1 md:mb-2 truncate px-4">{battle.group_b_name}</h2>
+                                <h2 className="text-xs md:text-xl font-black uppercase tracking-widest mb-1 md:mb-2 truncate px-4" style={{ color: 'var(--text-color)' }}>{battle.group_b_name}</h2>
                                 {battle.teacher_b_name && (
-                                    <div className="text-[10px] md:text-xs text-rose-300/70 font-bold uppercase tracking-widest -mt-1 md:-mt-2 mb-2">
+                                    <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest -mt-1 md:-mt-2 mb-2 opacity-60">
                                         Ustoz: {battle.teacher_b_name}
                                     </div>
                                 )}
-                                <div className="text-3xl md:text-6xl font-black text-rose-400 tabular-nums drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]">
+                                <div className="text-3xl md:text-6xl font-black tabular-nums drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]" style={{ color: 'var(--rose-400)' }}>
                                     {battle.score_b.toLocaleString()}
                                 </div>
                             </motion.div>
@@ -315,15 +316,15 @@ export default function BattleDetails() {
                                                 {idx + 1}
                                             </div>
                                             <div className="overflow-hidden">
-                                                <div className="text-xs md:text-base font-black text-white uppercase tracking-tight truncate">{m.name}</div>
-                                                <div className="text-[9px] md:text-[10px] text-indigo-400 font-bold uppercase truncate">
+                                                <div className="text-xs md:text-base font-black uppercase tracking-tight truncate" style={{ color: 'var(--text-color)' }}>{m.name}</div>
+                                                <div className="text-[9px] md:text-[10px] font-bold uppercase truncate opacity-50">
                                                     {m.coins || 0} COINS
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0 ml-2">
-                                            <div className="text-sm md:text-xl font-black text-indigo-400 tracking-tighter">+{m.weekly_battle_score}</div>
-                                            <div className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">XP</div>
+                                            <div className="text-sm md:text-xl font-black tracking-tighter" style={{ color: 'var(--primary-color)' }}>+{m.weekly_battle_score}</div>
+                                            <div className="text-[8px] md:text-[9px] font-black opacity-30 uppercase tracking-widest">XP</div>
                                         </div>
                                     </motion.div>
                                 ))}
@@ -348,22 +349,23 @@ export default function BattleDetails() {
                                         whileInView={{ x: 0, opacity: 1 }}
                                         viewport={{ once: true }}
                                         transition={{ delay: 0.05 * idx }}
-                                        className="flex items-center justify-between bg-white/5 backdrop-blur-md p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] border border-white/5 hover:border-rose-500/30 hover:bg-rose-500/5 transition-all shadow-lg"
+                                        className="flex items-center justify-between p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] border hover:bg-rose-500/5 transition-all shadow-lg"
+                                        style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
                                     >
                                         <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
                                             <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-xl bg-rose-600/20 border border-rose-500/30 flex items-center justify-center font-black text-rose-400 text-xs md:text-sm">
                                                 {idx + 1}
                                             </div>
                                             <div className="overflow-hidden">
-                                                <div className="text-xs md:text-base font-black text-white uppercase tracking-tight truncate">{m.name}</div>
-                                                <div className="text-[9px] md:text-[10px] text-rose-400 font-bold uppercase truncate">
+                                                <div className="text-xs md:text-base font-black uppercase tracking-tight truncate" style={{ color: 'var(--text-color)' }}>{m.name}</div>
+                                                <div className="text-[9px] md:text-[10px] font-bold uppercase truncate opacity-50">
                                                     {m.coins || 0} COINS
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0 ml-2">
                                             <div className="text-sm md:text-xl font-black text-rose-400 tracking-tighter">+{m.weekly_battle_score}</div>
-                                            <div className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">XP</div>
+                                            <div className="text-[8px] md:text-[9px] font-black opacity-30 uppercase tracking-widest">XP</div>
                                         </div>
                                     </motion.div>
                                 ))}
@@ -390,9 +392,9 @@ export default function BattleDetails() {
                         </div>
                         <div className="flex-1">
                             <h3 className="font-black text-xl md:text-3xl lg:text-4xl text-amber-500 uppercase italic tracking-tighter mb-2 md:mb-3">VICTORY REWARDS</h3>
-                            <p className="text-[11px] md:text-base lg:text-lg text-amber-100/90 font-medium leading-relaxed max-w-2xl">
-                                G'olib guruh talabalari <span className="text-white font-black">+500 COINS</span>,
-                                maxsus <span className="text-amber-400 font-black">"CHAMPION"</span> unvoni va profil uchun oltin ramkaga ega bo'ladilar!
+                            <p className="text-[11px] md:text-base lg:text-lg font-medium leading-relaxed max-w-2xl opacity-90" style={{ color: 'var(--text-color)' }}>
+                                G'olib guruh talabalari <span className="font-black" style={{ color: 'var(--primary-color)' }}>+500 COINS</span>,
+                                maxsus <span className="font-black" style={{ color: 'var(--accent-color)' }}>"CHAMPION"</span> unvoni va profil uchun oltin ramkaga ega bo'ladilar!
                             </p>
                         </div>
                         <motion.button

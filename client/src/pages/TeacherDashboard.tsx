@@ -38,7 +38,7 @@ interface Battle {
 
 // --- Battle Status Component ---
 const BattleStatus = ({ battle, groupId, onViewDetails }: { battle: Battle | null; groupId: string; onViewDetails: (id: string) => void }) => {
-    if (!battle) return <span className="text-slate-300 text-xs italic">Battle yo'q</span>;
+    if (!battle) return <span className="text-slate-400 text-xs italic opacity-50">Battle yo'q</span>;
 
     const isA = battle.group_a_id === groupId;
     const myScore = isA ? battle.score_a : battle.score_b;
@@ -51,28 +51,28 @@ const BattleStatus = ({ battle, groupId, onViewDetails }: { battle: Battle | nul
     return (
         <div
             onClick={(e) => { e.stopPropagation(); onViewDetails(battle.id); }}
-            className="flex flex-col gap-1 min-w-[120px] cursor-pointer hover:bg-indigo-50 p-1 rounded-lg transition-colors group/battle"
+            className="flex flex-col gap-2 min-w-[140px] cursor-pointer p-2 rounded-xl transition-all border group/battle hover:shadow-lg bg-white border-slate-200"
         >
-            <div className="flex justify-between text-[10px] font-bold">
-                <span className="text-indigo-600 truncate max-w-[60px]">Siz</span>
+            <div className="flex justify-between text-[9px] font-black uppercase tracking-wider">
+                <span className="text-slate-400">Siz</span>
                 <div className="flex items-center gap-1">
-                    <span className="text-red-500 truncate max-w-[60px]">{oppName}</span>
-                    <ChevronDown size={10} className="-rotate-90 text-slate-300 group-hover/battle:text-indigo-400" />
+                    <span className="text-rose-500 truncate max-w-[60px]">{oppName}</span>
+                    <ChevronDown size={10} className="-rotate-90 opacity-30 group-hover/battle:opacity-100 text-slate-400" />
                 </div>
             </div>
-            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex border border-slate-200 shadow-inner">
                 <div
-                    className="h-full bg-indigo-500 transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all duration-1000 ease-out"
                     style={{ width: `${percentage}%` }}
                 />
                 <div
-                    className="h-full bg-red-400 transition-all duration-500"
+                    className="h-full bg-gradient-to-l from-rose-600 to-rose-400 transition-all duration-1000 ease-out"
                     style={{ width: `${100 - percentage}%` }}
                 />
             </div>
-            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                <span>{myScore} XP</span>
-                <span>{oppScore} XP</span>
+            <div className="flex justify-between text-[10px] font-black tabular-nums">
+                <span className="text-indigo-600">{myScore.toLocaleString()} XP</span>
+                <span className="text-slate-400">{oppScore.toLocaleString()} XP</span>
             </div>
         </div>
     );
@@ -240,16 +240,16 @@ const GroupRow = ({
     }, [unitQuizzes, selectedLevel]);
 
     return (
-        <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+        <tr className="border-b transition-colors group border-slate-100 hover:bg-slate-50/50">
             {/* Group Name */}
             <td className="p-4 cursor-pointer" onClick={() => navigate(isAdmin ? `/admin/group/${group.id}` : `/teacher/group/${group.id}`)}>
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg border shadow-sm bg-white border-slate-200 text-indigo-600">
                         {group.name.charAt(0)}
                     </div>
                     <div>
-                        <span className="font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors block">{group.name}</span>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{group.level || 'Beginner'}</span>
+                        <span className="font-black tracking-tight transition-colors block text-slate-800">{group.name}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{group.level || 'Beginner'}</span>
                     </div>
                 </div>
             </td>
@@ -747,36 +747,35 @@ const TeacherDashboard = () => {
     };
 
     return (
-        <div className="min-h-screen p-8 bg-transparent font-sans text-slate-900">
+        <div className="min-h-screen p-4 md:p-8 font-sans transition-colors duration-500 bg-slate-50 text-slate-900">
             {/* Header */}
-            <div className="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row justify-between items-center gap-6 border-b border-slate-200 pb-6">
+            <div className="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row justify-between items-center gap-6 border-b pb-6 border-slate-200">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate('/')}
-                        className="p-2 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors"
+                        className="p-2.5 rounded-xl border transition-all active:scale-95 shadow-sm bg-white border-slate-200 text-slate-600"
                     >
                         <ArrowLeft size={20} />
                     </button>
                     <div className="flex items-center gap-4">
-                        {/* Removed mobile search button as persistent search input will handle it */}
-                        <img src={logo} alt="Ziyokor Logo" className="h-16 w-auto object-contain rounded-2xl shadow-sm" />
+                        <img src={logo} alt="Ziyokor Logo" className="h-14 w-14 md:h-16 md:w-16 object-cover rounded-2xl shadow-lg border-2 border-slate-100" />
                         <div>
-                            <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                {role === 'admin' ? "Ziyokor - Barcha Guruhlar" : "Ziyokor - O'qituvchi Kabineti"}
+                            <h1 className="text-2xl md:text-3xl font-black tracking-tighter flex items-center gap-2 text-slate-900">
+                                {role === 'admin' ? "Barcha Guruhlar" : "O'qituvchi Kabineti"}
                             </h1>
                             <div className="flex items-center gap-3 mt-1 flex-wrap">
-                                <p className="text-slate-500 text-sm whitespace-nowrap">
-                                    {role === 'admin' ? "Tizimdagi barcha guruhlar ro'yxati" : "Guruhlar va testlarni boshqarish"}
+                                <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400">
+                                    {role === 'admin' ? "Tizim boshqaruvi" : "Testlar va guruhlar"}
                                 </p>
-                                <span className="text-slate-300 hidden sm:inline">•</span>
+                                <span className="opacity-20 hidden sm:inline">•</span>
                                 <a
                                     href="https://t.me/Z_education_bot?start=teacher"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 text-[#229ED9] hover:text-[#1d8dbd] font-bold text-xs transition-colors whitespace-nowrap"
+                                    className="flex items-center gap-1.5 text-[#229ED9] hover:text-[#1d8dbd] font-black text-[10px] md:text-xs transition-colors whitespace-nowrap uppercase tracking-wider"
                                 >
                                     <Send size={14} />
-                                    Telegram Botga ulanish
+                                    Telegram Bot
                                 </a>
                             </div>
                         </div>

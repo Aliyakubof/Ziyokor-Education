@@ -18,30 +18,56 @@ export default function Home() {
     const [soloQuizStatus, setSoloQuizStatus] = useState<'on' | 'off'>('on');
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-    const slides = [
+    const [staticSlides] = useState([
         {
-            image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop", // Mountains
+            image_url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop",
             title: "Interaktiv Ta'lim",
             description: "O'quvchilar uchun qiziqarli va samarali bilim olish tizimi"
         },
         {
-            image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1200&auto=format&fit=crop", // Forest
+            image_url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1200&auto=format&fit=crop",
             title: "Guruhlar Boshqaruvi",
             description: "O'qituvchilar uchun qulay va tezkor guruh nazorati"
         },
         {
-            image: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1200&auto=format&fit=crop", // Foggy landscape
+            image_url: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1200&auto=format&fit=crop",
             title: "Bilimni Sinash",
             description: "Zamonaviy testlar va natijalarni real vaqtda kuzatish"
         }
-    ];
+    ]);
+
+    const [slides, setSlides] = useState<any[]>([]);
 
     useEffect(() => {
+        const fetchSlides = async () => {
+            try {
+                const res = await apiFetch('/api/carousel');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        setSlides(data);
+                    } else {
+                        setSlides(staticSlides);
+                    }
+                } else {
+                    setSlides(staticSlides);
+                }
+            } catch (err) {
+                console.error('Error fetching slides:', err);
+                setSlides(staticSlides);
+            }
+        };
+
+        fetchSlides();
+    }, [staticSlides]);
+
+    useEffect(() => {
+        if (slides.length <= 1) return;
         const timer = setInterval(() => {
             setCurrentSlide(prev => (prev + 1) % slides.length);
         }, 5000);
         return () => clearInterval(timer);
-    }, []);
+    }, [slides]);
 
     const nextSlide = () => setCurrentSlide(prev => (prev + 1) % slides.length);
     const prevSlide = () => setCurrentSlide(prev => (prev - 1 + slides.length) % slides.length);
@@ -171,7 +197,7 @@ export default function Home() {
                                 }`}
                         >
                             <img
-                                src={slide.image}
+                                src={slide.image_url.startsWith('http') ? slide.image_url : `${import.meta.env.VITE_BACKEND_URL || ''}${slide.image_url}`}
                                 alt={slide.title}
                                 className="w-full h-full object-cover"
                             />

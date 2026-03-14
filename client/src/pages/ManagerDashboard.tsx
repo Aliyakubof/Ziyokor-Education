@@ -10,6 +10,7 @@ import ManagerGroupContactsModal from '../components/manager/ManagerGroupContact
 import ManagerShop from '../components/manager/ManagerShop';
 import ManagerVocabulary from '../components/manager/ManagerVocabulary';
 import ManagerSettings from '../components/manager/ManagerSettings';
+import ManagerCarousel from '../components/manager/ManagerCarousel';
 
 interface Teacher {
     id: string;
@@ -34,7 +35,7 @@ const ManagerDashboard: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     // View state management
-    const [activeTab, setActiveTab] = useState<'teachers' | 'shop' | 'vocabulary' | 'settings'>('teachers');
+    const [activeTab, setActiveTab] = useState<'teachers' | 'shop' | 'vocabulary' | 'settings' | 'carousel'>('teachers');
     const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
     const [selectedGroupForResults, setSelectedGroupForResults] = useState<Group | null>(null);
     const [selectedGroupForContacts, setSelectedGroupForContacts] = useState<Group | null>(null);
@@ -92,6 +93,7 @@ const ManagerDashboard: React.FC = () => {
         if (activeTab === 'shop') return <ManagerShop />;
         if (activeTab === 'vocabulary') return <ManagerVocabulary />;
         if (activeTab === 'settings') return <ManagerSettings />;
+        if (activeTab === 'carousel') return <ManagerCarousel />;
 
         if (selectedTeacher) {
             return (
@@ -206,6 +208,12 @@ const ManagerDashboard: React.FC = () => {
                                 className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'settings' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
                             >
                                 Sozlamalar
+                            </button>
+                            <button
+                                onClick={() => { setActiveTab('carousel'); setSelectedTeacher(null); }}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'carousel' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                            >
+                                Karusel
                             </button>
                         </nav>
                     </div>
