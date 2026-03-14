@@ -43,15 +43,9 @@ export default function ManagerShop() {
         formData.append('image', file);
 
         try {
-            // Note: apiFetch usually handles JSON, but for multipart/form-data we might need a manual fetch or adjust apiFetch
-            // In many boilerplate projects, apiFetch adds Content-Type: application/json automatically which breaks FormData.
-            // Let's use a standard fetch with authorization if apiFetch is restrictive.
-            const token = localStorage.getItem('token');
             const res = await fetch(`${(window as any).VITE_BACKEND_URL || ''}/api/manager/upload`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
+                credentials: 'include',
                 body: formData
             });
 

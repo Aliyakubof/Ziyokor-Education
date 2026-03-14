@@ -237,8 +237,8 @@ export default function VocabularyBattleGame() {
         const correctCount = results.filter(r => r.correct).length;
         const total = questions.length;
         const perc = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-        const successColor = perc > 70 ? 'text-emerald-500' : perc > 40 ? 'text-amber-500' : 'text-rose-500';
-        const successBg = perc > 70 ? 'bg-emerald-500/10' : perc > 40 ? 'bg-amber-500/10' : 'bg-rose-500/10';
+        const successColor = perc >= 75 ? 'text-emerald-500' : perc >= 50 ? 'text-amber-500' : 'text-rose-500';
+        const successBg = perc >= 75 ? 'bg-emerald-500/10' : perc >= 50 ? 'bg-amber-500/10' : 'bg-rose-500/10';
 
         return (
             <div className="min-h-[100dvh] font-sans pb-32 flex flex-col items-center overflow-x-hidden transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
@@ -522,18 +522,13 @@ export default function VocabularyBattleGame() {
                 ) : (
                     <div className="grid grid-cols-1 gap-4">
                         {currentQ.options.map((opt: string, i: number) => {
-                            let btnClass = "bg-slate-900/40 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-slate-800/60 hover:border-cyan-500/50 hover:text-white shadow-xl";
                             let icon = null;
 
                             if (selectedOption !== null) {
                                 if (i === currentQ.correctIndex) {
-                                    btnClass = "bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.2)] z-10 scale-105";
                                     icon = <CheckCircle2 size={24} className="text-emerald-400" />;
                                 } else if (i === selectedOption) {
-                                    btnClass = "bg-rose-500/20 border-rose-500 text-rose-400 opacity-90 scale-95";
                                     icon = <XCircle size={24} className="text-rose-400" />;
-                                } else {
-                                    btnClass = "bg-slate-950/40 border-white/5 text-slate-600 opacity-40";
                                 }
                             }
 

@@ -1151,14 +1151,14 @@ app.get('/api/student/vocab-battles/levels', async (req, res) => {
             
             // Determine Stars
             let stars = 0;
-            if (perc >= 90) stars = 3;
-            else if (perc >= 70) stars = 2;
-            else if (perc >= 50) stars = 1;
+            if (perc >= 95) stars = 3;
+            else if (perc >= 85) stars = 2;
+            else if (perc >= 75) stars = 1;
 
             const isLocked = !previousUnlockedComplete && levelNum > 1;
 
-            // Prepare for next level: must have >= 60%
-            previousUnlockedComplete = perc >= 60;
+            // Prepare for next level: must have >= 75%
+            previousUnlockedComplete = perc >= 75;
 
             return {
                 id: battle.id,
