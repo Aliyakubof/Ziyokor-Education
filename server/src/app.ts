@@ -1124,15 +1124,10 @@ app.get('/api/student/vocab-battles/levels', async (req, res) => {
 
         // Fetch student's past results for these levels to calculate progress
         const historyRes = await query(`
-            SELECT 
-                gr.quiz_title, 
-                (p->>'score')::int as score, 
-                gr.total_questions
-            FROM game_results gr
-            CROSS JOIN LATERAL jsonb_array_elements(gr.player_results) AS p
-            WHERE gr.quiz_title LIKE $2 
-              AND p->>'id' = $1
-        `, [studentId, `Vocab Battle: ${daraja} - Level %`]);
+            SELECT quiz_title, player_results, total_questions
+            FROM game_results
+            WHERE quiz_title LIKE $1
+        `, [`Vocab Battle: ${daraja} - Level %`]);
 
         const levelScores: Record<number, number> = {}; // Best percentage per level
 
@@ -1140,7 +1135,17 @@ app.get('/api/student/vocab-battles/levels', async (req, res) => {
             const match = row.quiz_title.match(/Level (\d+)/);
             if (match) {
                 const levelNum = parseInt(match[1]);
-                const perc = row.total_questions > 0 ? (row.score / row.total_questions) * 100 : 0;
+                
+                // Find student's score in player_results (which can be array or object)
+                let score = 0;
+                if (Array.isArray(row.player_results)) {
+                    const studentResult = row.player_results.find((p: any) => String(p.id) === String(studentId));
+                    if (studentResult) score = studentResult.score;
+                } else if (row.player_results && row.player_results[studentId]) {
+                    score = row.player_results[studentId].score;
+                }
+
+                const perc = row.total_questions > 0 ? (score / row.total_questions) * 100 : 0;
                 if (!levelScores[levelNum] || perc > levelScores[levelNum]) {
                     levelScores[levelNum] = perc;
                 }
