@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS unit_quizzes (
 CREATE TABLE IF NOT EXISTS solo_quizzes (
     id UUID PRIMARY KEY,
     level TEXT NOT NULL,
+    unit TEXT, -- Practice set or variant
     title TEXT NOT NULL,
     time_limit INT DEFAULT 30,
     questions JSONB NOT NULL,
@@ -109,6 +110,17 @@ CREATE TABLE IF NOT EXISTS shop_items (
     price INT NOT NULL DEFAULT 100,
     url TEXT,
     color TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_one_time BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Duel Quizzes Table
+CREATE TABLE IF NOT EXISTS duel_quizzes (
+    id UUID PRIMARY KEY,
+    title TEXT NOT NULL,
+    questions JSONB NOT NULL,
+    daraja TEXT NOT NULL, -- Using 'daraja' for level in duels
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT NOW()
 );

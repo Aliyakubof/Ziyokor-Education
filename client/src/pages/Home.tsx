@@ -315,7 +315,7 @@ export default function Home() {
                         <div className="w-full md:w-[280px] group bg-white border border-slate-200 hover:border-indigo-200 rounded-3xl p-8 transition-all hover:shadow-xl hover:shadow-indigo-500/10 flex flex-col items-center relative overflow-hidden">
                             <div className="flex justify-between w-full mb-6">
                                 <div 
-                                    onClick={() => navigate('/admin/create-quiz?type=solo')}
+                                    onClick={() => navigate('/create?type=solo')}
                                     className="bg-indigo-600 text-white p-4 rounded-xl cursor-pointer group-hover:scale-110 transition-transform shadow-lg shadow-indigo-100"
                                 >
                                     <Shield size={32} />
@@ -334,7 +334,7 @@ export default function Home() {
                                 </div>
                             </div>
                             <div 
-                                onClick={() => navigate('/admin/create-quiz?type=solo')}
+                                onClick={() => navigate('/create?type=solo')}
                                 className="text-center cursor-pointer"
                             >
                                 <h3 className="text-lg font-bold text-slate-900 mb-2">SoloQuiz Yaratish</h3>

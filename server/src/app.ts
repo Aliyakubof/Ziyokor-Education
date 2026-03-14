@@ -202,6 +202,21 @@ async function initDb() {
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS is_hero BOOLEAN DEFAULT FALSE;');
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS weekly_battle_score INT DEFAULT 0;');
 
+        // Solo Quizzes Migration
+        await query('ALTER TABLE solo_quizzes ADD COLUMN IF NOT EXISTS unit TEXT;');
+        
+        // Duel Quizzes Table Fix
+        await query(`
+            CREATE TABLE IF NOT EXISTS duel_quizzes (
+                id UUID PRIMARY KEY,
+                title TEXT NOT NULL,
+                questions JSONB NOT NULL,
+                daraja TEXT NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
         await query(`
             CREATE TABLE IF NOT EXISTS vocabulary_battles (
                 id UUID PRIMARY KEY,
@@ -1279,13 +1294,13 @@ app.get('/api/solo-quizzes/:id', async (req, res) => {
 
 app.post('/api/solo-quizzes', async (req, res) => {
     try {
-        const { title, questions, level, time_limit } = req.body;
+        const { title, questions, level, unit, time_limit } = req.body;
         const id = uuidv4();
         await query(
-            'INSERT INTO solo_quizzes (id, title, questions, level, time_limit) VALUES ($1, $2, $3, $4, $5)',
-            [id, title, Array.isArray(questions) ? JSON.stringify(questions) : questions, level || 'Beginner', time_limit || 30]
+            'INSERT INTO solo_quizzes (id, title, questions, level, unit, time_limit) VALUES ($1, $2, $3, $4, $5, $6)',
+            [id, title, Array.isArray(questions) ? JSON.stringify(questions) : questions, level || 'Beginner', unit || '', time_limit || 30]
         );
-        res.json({ id, title, questions: Array.isArray(questions) ? questions : JSON.parse(questions), level: level || 'Beginner', time_limit: time_limit || 30 });
+        res.json({ id, title, questions: Array.isArray(questions) ? questions : JSON.parse(questions), level, unit, time_limit: time_limit || 30 });
     } catch (err) {
         console.error('Error creating solo quiz:', err);
         res.status(500).json({ error: 'Error creating solo quiz' });
@@ -1294,13 +1309,13 @@ app.post('/api/solo-quizzes', async (req, res) => {
 
 app.put('/api/solo-quizzes/:id', async (req, res) => {
     try {
-        const { title, questions, level, time_limit } = req.body;
+        const { title, questions, level, unit, time_limit } = req.body;
         const { id } = req.params;
         await query(
-            'UPDATE solo_quizzes SET title = $1, questions = $2, level = $3, time_limit = $4 WHERE id = $5',
-            [title, Array.isArray(questions) ? JSON.stringify(questions) : questions, level || 'Beginner', time_limit || 30, id]
+            'UPDATE solo_quizzes SET title = $1, questions = $2, level = $3, unit = $4, time_limit = $5 WHERE id = $6',
+            [title, Array.isArray(questions) ? JSON.stringify(questions) : questions, level || 'Beginner', unit || '', time_limit || 30, id]
         );
-        res.json({ id, title, questions: Array.isArray(questions) ? questions : JSON.parse(questions), level: level || 'Beginner', time_limit: time_limit || 30 });
+        res.json({ id, title, questions: Array.isArray(questions) ? questions : JSON.parse(questions), level, unit, time_limit: time_limit || 30 });
     } catch (err) {
         console.error('Error updating solo quiz:', err);
         res.status(500).json({ error: 'Error updating solo quiz' });
