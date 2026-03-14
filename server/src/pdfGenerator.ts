@@ -296,3 +296,94 @@ export const generateGroupContactPDF = (
         doc.end();
     });
 };
+
+export const generateSoloQuizPDF = (
+    quizTitle: string,
+    studentName: string,
+    score: number,
+    maxScore: number,
+    percentage: number,
+    questions: any[],
+    answers: Record<number, any>
+): Promise<Buffer> => {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 50 });
+        const buffers: Buffer[] = [];
+
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+        doc.on('error', reject);
+
+        const path = require('path');
+        const fs = require('fs');
+        const regularFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf'))
+            ? path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf')
+            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Regular.ttf');
+
+        const boldFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf'))
+            ? path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf')
+            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Bold.ttf');
+
+        const hasRegular = fs.existsSync(regularFontPath);
+        const hasBold = fs.existsSync(boldFontPath);
+
+        if (hasRegular) doc.registerFont('CustomRegular', regularFontPath);
+        if (hasBold) doc.registerFont('CustomBold', boldFontPath);
+
+        const fontRegular = hasRegular ? 'CustomRegular' : 'Helvetica';
+        const fontBold = hasBold ? 'CustomBold' : 'Helvetica-Bold';
+
+        doc.fontSize(24).font(fontBold).text('Ziyokor Education', { align: 'center' });
+        doc.fontSize(16).font(fontRegular).text('Solo Quiz Natijasi', { align: 'center' });
+        doc.moveDown();
+
+        doc.fontSize(12).font(fontBold).text(`O'quvchi: ${studentName}`);
+        doc.font(fontRegular).text(`Test: ${quizTitle}`);
+        doc.text(`Natija: ${percentage}% (${score} / ${maxScore} ball)`);
+        doc.text(`Sana: ${new Date().toLocaleString('uz-UZ')}`);
+        doc.moveDown();
+
+        doc.fontSize(14).font(fontBold).text('Batafsil natijalar:', { align: 'left' });
+        doc.moveDown(0.5);
+
+        let actualIdx = 1;
+        questions.forEach((q, idx) => {
+            if (q.type === 'info-slide') return;
+
+            if (doc.y > 650) {
+                doc.addPage();
+                doc.font(fontRegular);
+            }
+
+            const studentAns = answers[idx];
+            let isCorrect = false;
+            let displayAns = studentAns !== undefined ? String(studentAns) : 'Javob berilmagan';
+
+            if (q.type === 'multiple-choice' || q.type === 'true-false') {
+                isCorrect = studentAns !== undefined && Number(studentAns) === q.correctIndex;
+                if (studentAns !== undefined && q.options) {
+                    displayAns = q.options[Number(studentAns)] || displayAns;
+                }
+            } else {
+                const earned = countCorrectParts(studentAns, q.acceptedAnswers || []);
+                isCorrect = earned === (q.acceptedAnswers?.length || 1);
+            }
+
+            doc.fontSize(11).font(fontBold).text(`${actualIdx}. ${q.text}`);
+            const statusColor = isCorrect ? '#059669' : '#dc2626';
+            doc.fontSize(10).font(fontRegular).fillColor(statusColor).text(`Sizning javobingiz: ${displayAns} ${isCorrect ? '(TO\'G\'RI)' : '(NOTO\'G\'RI)'}`);
+            
+            if (!isCorrect) {
+                const correct = (q.type === 'multiple-choice' || q.type === 'true-false') 
+                    ? (q.options ? q.options[q.correctIndex] : 'N/A')
+                    : (q.acceptedAnswers?.join(' | ') || 'N/A');
+                doc.fillColor('#4b5563').text(`To'g'ri javob: ${correct}`);
+            }
+
+            doc.fillColor('black').moveDown();
+            actualIdx++;
+        });
+
+        doc.end();
+    });
+};

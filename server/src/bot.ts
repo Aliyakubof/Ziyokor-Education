@@ -618,6 +618,7 @@ export async function notifyTeacher(chatId: string, message: string) {
     }
 }
 
+
 /**
  * Sends a notification to a student's subscribers.
  */
@@ -633,6 +634,44 @@ export async function notifyStudentSubscribers(studentId: string, message: strin
         }
     } catch (err) {
         console.error(`[Bot] notifyStudentSubscribers error for ${studentId}:`, err);
+    }
+}
+
+/**
+ * Sends a Solo Quiz result PDF to subscribers.
+ */
+export async function sendSoloQuizPDF(studentId: string, pdfBuffer: Buffer, filename: string, caption: string) {
+    try {
+        const subs = await query('SELECT telegram_chat_id FROM student_telegram_subscriptions WHERE student_id = $1', [studentId]);
+        
+        // Also find group teacher and notify them
+        const teacherRes = await query(`
+            SELECT t.telegram_chat_id 
+            FROM teachers t
+            JOIN groups g ON g.teacher_id = t.id
+            JOIN students s ON s.group_id = g.id
+            WHERE s.id = $1 AND t.telegram_chat_id IS NOT NULL
+        `, [studentId]);
+
+        const allChatIds = new Set<string>();
+        subs.rows.forEach((s: any) => allChatIds.add(s.telegram_chat_id));
+        teacherRes.rows.forEach((t: any) => allChatIds.add(t.telegram_chat_id));
+
+        for (const chatId of allChatIds) {
+            try {
+                await bot.telegram.sendDocument(chatId, {
+                    source: pdfBuffer,
+                    filename: filename
+                }, {
+                    caption: caption,
+                    parse_mode: 'HTML'
+                });
+            } catch (e) {
+                console.error(`Error sending PDF to ${chatId}:`, e);
+            }
+        }
+    } catch (err) {
+        console.error('[Bot] sendSoloQuizPDF error:', err);
     }
 }
 

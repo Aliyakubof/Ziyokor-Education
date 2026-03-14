@@ -51,6 +51,7 @@ export default function SoloQuiz() {
     const [answers, setAnswers] = useState<Record<number, any>>({});
     const [results, setResults] = useState<any | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
     useEffect(() => {
         checkStatus();
@@ -80,6 +81,24 @@ export default function SoloQuiz() {
         }
     }, [view]);
 
+    // Timer Logic
+    useEffect(() => {
+        if (view === 'PLAYING' && timeLeft !== null && timeLeft > 0) {
+            const timer = setInterval(() => {
+                setTimeLeft(prev => (prev !== null && prev > 0) ? prev - 1 : 0);
+            }, 1000);
+            return () => clearInterval(timer);
+        } else if (view === 'PLAYING' && timeLeft === 0) {
+            finalizeSubmission();
+        }
+    }, [view, timeLeft]);
+
+    const formatTime = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    };
+
     const fetchQuizzes = async () => {
         setLoading(true);
         try {
@@ -101,6 +120,7 @@ export default function SoloQuiz() {
         setCurrentQuestions(parsedQuestions || []);
         setCurrentIndex(0);
         setAnswers({});
+        setTimeLeft((quiz.time_limit || 20) * 60); // In seconds
         setView('PLAYING');
     };
 
@@ -108,7 +128,8 @@ export default function SoloQuiz() {
         setAnswers(prev => ({ ...prev, [currentIndex]: val }));
     };
 
-    const finalizeSubmission = () => {
+    const finalizeSubmission = async () => {
+        if (isSubmitting) return;
         setIsSubmitting(true);
         
         let totalScore = 0;
@@ -133,6 +154,28 @@ export default function SoloQuiz() {
         });
 
         const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 100;
+
+        try {
+            // Send to backend for PDF and notification
+            const res = await apiFetch('/api/solo-quizzes/submit', {
+                method: 'POST',
+                body: JSON.stringify({
+                    quizId: selectedQuiz.id,
+                    quizTitle: selectedQuiz.title,
+                    studentId: user?.id,
+                    studentName: user?.name,
+                    answers,
+                    score: totalScore,
+                    maxScore,
+                    percentage,
+                    questions: currentQuestions
+                })
+            });
+            
+            if (!res.ok) console.error('Failed to send PDF notification');
+        } catch (err) {
+            console.error('Submission error:', err);
+        }
 
         setResults({
             immediateScore: totalScore,
@@ -368,6 +411,12 @@ export default function SoloQuiz() {
                         <div className="text-center">
                             <h2 className="font-black text-sm opacity-40 uppercase tracking-widest" style={{ color: 'var(--text-color)' }}>{selectedQuiz.title}</h2>
                             <p className="font-black text-xl" style={{ color: 'var(--text-color)' }}>{currentIndex + 1} / {currentQuestions.length}</p>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl border-2 transition-all ${timeLeft !== null && timeLeft < 60 ? 'border-rose-500 bg-rose-50 text-rose-600 animate-pulse' : 'border-indigo-100 text-indigo-600'}`}>
+                                <Clock size={20} />
+                                <span className="font-black font-mono text-lg">{timeLeft !== null ? formatTime(timeLeft) : '0:00'}</span>
+                            </div>
                         </div>
                         <button 
                             onClick={() => setView('SUMMARY')} 

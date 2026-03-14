@@ -18,8 +18,8 @@ import { store, generatePin, generateStudentId, generateParentId } from './store
 import { query } from './db';
 import { schema } from './schema';
 import { Player, Question } from './types';
-import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyReports, sendBattleAlert } from './bot';
-import { generateQuizResultPDF, generateGroupContactPDF } from './pdfGenerator';
+import { bot, launchBot, notifyTeacher, notifyStudentSubscribers, sendWeeklyReports, sendBattleAlert, sendSoloQuizPDF } from './bot';
+import { generateQuizResultPDF, generateGroupContactPDF, generateSoloQuizPDF } from './pdfGenerator';
 import { normalizeAnswer, checkAnswer, countCorrectParts } from './utils';
 import { checkAnswerWithAI, checkAnswersWithAIBatch } from './aiChecker';
 import { startCronJobs } from './cron';
@@ -1271,6 +1271,34 @@ app.delete('/api/unit-quizzes/:id', async (req, res) => {
 });
 
 // --- Solo Quizzes --- (Practice Mode)
+app.post('/api/solo-quizzes/submit', async (req, res) => {
+    try {
+        const { quizId, quizTitle, studentId, studentName, answers, score, maxScore, percentage, questions } = req.body;
+        
+        // 1. Generate PDF (In-memory)
+        const pdfBuffer = await generateSoloQuizPDF(
+            quizTitle,
+            studentName,
+            score,
+            maxScore,
+            percentage,
+            questions,
+            answers
+        );
+
+        // 2. Send PDF to Telegram
+        const filename = `${studentName.replace(/\s+/g, '_')}_SoloQuiz_${new Date().getTime()}.pdf`;
+        const caption = `📊 <b>Solo Quiz Natijasi</b>\n\n👤 O'quvchi: ${studentName}\n📝 Test: ${quizTitle}\n🏆 Natija: ${percentage}% (${score}/${maxScore} ball)`;
+        
+        await sendSoloQuizPDF(studentId, pdfBuffer, filename, caption);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Submission processing error:', err);
+        res.status(500).json({ error: 'Failed to process submission' });
+    }
+});
+
 app.get('/api/solo-quizzes', async (req, res) => {
     try {
         const result = await query('SELECT * FROM solo_quizzes ORDER BY created_at DESC');
