@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { apiFetch } from './api';
 
 interface User {
     id?: string;
@@ -15,7 +16,7 @@ interface AuthContextType {
     user: User | null;
     role: UserRole | null;
     activeThemeId: string | null;
-    login: (token: string, userData: User, role: UserRole) => void;
+    login: (userData: User, role: UserRole) => void;
     logout: () => void;
     setActiveThemeId: (themeId: string) => void;
     isAuthenticated: boolean;
@@ -45,15 +46,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('ziyokor_theme', themeId);
     };
 
-    const login = (token: string, userData: User, userRole: UserRole) => {
+    const login = (userData: User, userRole: UserRole) => {
         setUser(userData);
         setRole(userRole);
-        localStorage.setItem('ziyokor_token', token);
         localStorage.setItem('ziyokor_user', JSON.stringify(userData));
         localStorage.setItem('ziyokor_role', userRole);
     };
 
-    const logout = () => {
+    const logout = async () => {
         setUser(null);
         setRole(null);
         localStorage.removeItem('ziyokor_token');
@@ -63,6 +63,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('role');
+
+        try {
+            await apiFetch('/api/logout', { method: 'POST' });
+        } catch (err) {
+            console.error('Logout error:', err);
+        }
     };
 
     return (

@@ -26,6 +26,8 @@ import { startCronJobs } from './cron';
 import { Worker } from 'worker_threads';
 import path from 'path';
 import fs from 'fs';
+import jwt from 'jsonwebtoken';
+import cookieParser from 'cookie-parser';
 
 import multer from 'multer';
 
@@ -89,6 +91,13 @@ app.use(compression());
 
 // Limit payload size to 50mb (increased to allow saving large quizzes)
 app.use(express.json({ limit: '50mb' }));
+app.use(cookieParser());
+
+const JWT_SECRET = process.env.JWT_SECRET || 'ziyokor_fallback_secret';
+
+function generateToken(payload: any) {
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+}
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -131,28 +140,27 @@ Promise.all([pubClient.connect(), subClient.connect()])
 const ADMIN_ID = '00000000-0000-0000-0000-000000000000';
 const MANAGER_ID = '00000000-0000-0000-0000-000000000001';
 
-// Simple role-based auth middleware using request headers
-// Client sends: { 'x-user-role': 'admin', 'x-user-phone': '...' }
+// Secure JWT and role-based auth middleware
 function requireRole(...roles: string[]) {
     return (req: express.Request, res: express.Response, next: express.NextFunction) => {
-        const role = req.headers['x-user-role'] as string;
-        const phone = String(req.headers['x-user-phone'] || '').replace(/\D/g, '');
+        const token = req.cookies.ziyokor_token;
 
-        if (!role || !roles.includes(role)) {
-            return res.status(403).json({ error: 'Ruxsat yo\'q (Insufficient permissions)' });
+        if (!token) {
+            return res.status(401).json({ error: 'Avtorizatsiyadan o\'tilmagan (No token)' });
         }
 
-        // Verify caller is actually admin or manager by comparing phone
-        if (role === 'admin') {
-            const adminPhone = (process.env.ADMIN_PHONE || '998901234567').replace(/\D/g, '');
-            if (phone !== adminPhone) return res.status(403).json({ error: 'Ruxsat yo\'q' });
-        }
-        if (role === 'manager') {
-            const managerPhone = (process.env.MANAGER_PHONE || '998947212531').replace(/\D/g, '');
-            if (phone !== managerPhone) return res.status(403).json({ error: 'Ruxsat yo\'q' });
-        }
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET) as any;
+            (req as any).user = decoded;
 
-        next();
+            if (roles.length > 0 && !roles.includes(decoded.role)) {
+                return res.status(403).json({ error: 'Ruxsat yo\'q (Forbidden)' });
+            }
+
+            next();
+        } catch (err) {
+            return res.status(401).json({ error: 'Sessiya muddati tugagan yoki noto\'g\'ri token' });
+        }
     };
 }
 
@@ -377,19 +385,28 @@ app.post('/api/login', async (req, res) => {
 
     // Admin Login (from env)
     if (phone === adminPhone && password === adminPassword) {
-        return res.json({
-            user: { id: ADMIN_ID, name: 'Admin', phone: adminPhone },
-            role: 'admin'
+        const user = { id: ADMIN_ID, name: 'Admin', phone: adminPhone, role: 'admin' };
+        const token = generateToken(user);
+        res.cookie('ziyokor_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
+        return res.json({ user, role: 'admin' });
     }
 
     // Manager Login (from env)
     if (phone === managerPhone && password === managerPassword) {
-        return res.json({
-            token: 'mock-manager-token',
-            user: { id: MANAGER_ID, name: 'Menejer', phone: managerPhone },
-            role: 'manager'
+        const user = { id: MANAGER_ID, name: 'Menejer', phone: managerPhone, role: 'manager' };
+        const token = generateToken(user);
+        res.cookie('ziyokor_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
+        return res.json({ user, role: 'manager' });
     }
 
     // Teacher Login from Database (bcrypt only)
@@ -401,15 +418,19 @@ app.post('/api/login', async (req, res) => {
 
         if (result.rowCount && result.rowCount > 0) {
             const teacher = result.rows[0];
-            // Only bcrypt comparison — no plaintext fallback (security fix)
             const match = await bcrypt.compare(password, teacher.password).catch(() => false);
 
             if (match) {
                 const { password: _, ...teacherPayload } = teacher;
-                return res.json({
-                    user: teacherPayload,
-                    role: 'teacher'
+                const user = { ...teacherPayload, role: 'teacher' };
+                const token = generateToken(user);
+                res.cookie('ziyokor_token', token, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'strict',
+                    maxAge: 7 * 24 * 60 * 60 * 1000
                 });
+                return res.json({ user, role: 'teacher' });
             }
         }
 
@@ -418,6 +439,11 @@ app.post('/api/login', async (req, res) => {
         console.error('Teacher login error:', err);
         res.status(500).json({ error: 'Serverda xatolik yuz berdi' });
     }
+});
+
+app.post('/api/logout', (req, res) => {
+    res.clearCookie('ziyokor_token');
+    res.json({ success: true });
 });
 
 // Admin: Teachers
@@ -1791,16 +1817,25 @@ app.post('/api/student/login', async (req, res) => {
             await query('UPDATE students SET password = $1 WHERE id = $2', [hashedPassword, id]);
         }
 
+        const user = {
+            id: student.id,
+            name: student.name,
+            groupId: student.group_id,
+            groupName: student.group_name,
+            teacherName: student.teacher_name,
+            role: 'student'
+        };
+        const token = generateToken(user);
+        res.cookie('ziyokor_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         res.json({
-            token: 'mock-jwt-token', // In real app use JWT
-            user: {
-                id: student.id,
-                name: student.name,
-                groupId: student.group_id,
-                groupName: student.group_name,
-                teacherName: student.teacher_name,
-                role: 'student'
-            }
+            user,
+            role: 'student'
         });
     } catch (err) {
         console.error('Login error:', err);

@@ -63,7 +63,7 @@ const Login = () => {
             // /api/login: res.json({ token, user: {...}, role: 'admin'|'teacher' })
 
             const userRole = data.role || data.user.role;
-            login(data.token || 'mock-token', data.user, userRole);
+            login(data.user, userRole);
 
             if (userRole === 'student') {
                 navigate('/student/dashboard');

@@ -62,7 +62,7 @@ export default function StudentLogin() {
 
             if (res.ok) {
                 const data = await res.json();
-                login(data.token, data.user, 'student');
+                login(data.user, 'student');
                 navigate('/student/dashboard');
             } else {
                 const error = await res.json();
