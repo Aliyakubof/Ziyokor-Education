@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    Users, Plus, LogOut, ArrowLeft, Send, PlayCircle, 
-    Trash2, ChevronDown, X
+    Users, Plus, LogOut, ArrowLeft, PlayCircle, 
+    Trash2, ChevronDown, X, Calendar, CheckSquare, BookOpen
 } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
@@ -14,6 +14,8 @@ interface Group {
     teacher_name?: string;
     teacher_id?: string;
     level?: string;
+    extra_class_days?: string[];
+    extra_class_times?: string[];
 }
 
 interface UnitQuiz {
@@ -141,7 +143,6 @@ const StudentModal = ({
                             />
                         </div>
 
-                        {/* Additional Fields (Hidden logic if needed, but requested to be enhanced) */}
                         <div>
                             <label className="text-sm font-bold text-slate-700 block mb-1">O'quvchi Raqami</label>
                             <input
@@ -197,10 +198,188 @@ const StudentModal = ({
     );
 };
 
+// --- Extra Class Schedule Modal ---
+const ScheduleModal = ({
+    isOpen,
+    onClose,
+    group,
+    onForcedBook,
+    onDeleteBooking
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    group: Group | null;
+    onForcedBook: (studentId: string, slot: string) => void;
+    onDeleteBooking: (id: string) => void;
+}) => {
+    const [bookings, setBookings] = useState<any[]>([]);
+    const [students, setStudents] = useState<any[]>([]);
+    const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+    const [isAddingManually, setIsAddingManually] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && group) {
+            fetchData();
+        }
+    }, [isOpen, group]);
+
+    const fetchData = async () => {
+        if(!group) return;
+        try {
+            const [bRes, sRes] = await Promise.all([
+                apiFetch(`/api/groups/${group.id}/extra-class-bookings`),
+                apiFetch(`/api/groups/${group.id}/students`) 
+            ]);
+            if (bRes.ok) setBookings(await bRes.json());
+            if (sRes.ok) setStudents(await sRes.json());
+        } catch (e) { }
+    };
+
+    if (!isOpen || !group) return null;
+
+    const generateSlots = () => {
+        if (!group.extra_class_times) return [];
+        const slots: string[] = [];
+        group.extra_class_times.forEach((range: string) => {
+            const parts = range.split('-');
+            if (parts.length < 2) return;
+            const start = parts[0];
+            const end = parts[1];
+            let current = new Date(`2000-01-01T${start}:00`);
+            const endLimit = new Date(`2000-01-01T${end}:00`);
+            while (current < endLimit) {
+                slots.push(current.toTimeString().slice(0, 5));
+                current.setMinutes(current.getMinutes() + 30);
+            }
+        });
+        return slots;
+    };
+
+    const slots = generateSlots();
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="flex justify-between items-center p-6 border-b bg-slate-50">
+                    <div>
+                        <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                            <Calendar className="text-indigo-600" size={24} />
+                            {group.name} - Jadval
+                        </h3>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                            {group.extra_class_days?.join(', ')} kunlari
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-xl text-slate-500 transition-colors">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    {slots.length > 0 ? (
+                        slots.map(slot => {
+                            const slotBookings = bookings.filter(b => b.time_slot === slot);
+                            return (
+                                <div key={slot} className="p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-lg font-black text-indigo-600">{slot}</span>
+                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${slotBookings.length >= 5 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                            {slotBookings.length}/5 band
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-3">
+                                        {slotBookings.map(b => (
+                                            <div key={b.id} className={`flex items-center gap-3 px-3 py-2 rounded-xl border-2 shadow-sm transition-all ${b.is_completed ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-100'}`}>
+                                                <div className="flex flex-col">
+                                                    <span className={`text-xs font-black ${b.is_completed ? 'text-emerald-700 line-through opacity-50' : 'text-slate-800'}`}>
+                                                        {b.student_name}
+                                                    </span>
+                                                    {b.topic && (
+                                                        <span className="text-[9px] font-bold text-slate-400 italic">
+                                                            Topic: {b.topic}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1.5 ml-auto border-l pl-2 border-slate-100">
+                                                    <button
+                                                        onClick={async () => {
+                                                            const res = await apiFetch(`/api/extra-class-bookings/${b.id}/complete`, {
+                                                                method: 'PATCH',
+                                                                body: JSON.stringify({ isCompleted: !b.is_completed })
+                                                            });
+                                                            if (res.ok) fetchData();
+                                                        }}
+                                                        className={`p-1 rounded-lg transition-all ${b.is_completed ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400 hover:bg-emerald-100 hover:text-emerald-500'}`}
+                                                        title={b.is_completed ? "Tugallanmagan" : "Bajarildi"}
+                                                    >
+                                                        <CheckSquare size={14} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={async () => {
+                                                            await onDeleteBooking(b.id);
+                                                            fetchData();
+                                                        }}
+                                                        className="p-1 rounded-lg bg-slate-100 text-rose-400 hover:bg-rose-100 hover:text-rose-600 transition-all"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <button 
+                                            onClick={() => { setSelectedSlot(slot); setIsAddingManually(true); }}
+                                            className="w-10 h-10 rounded-xl border-2 border-dashed border-indigo-200 text-indigo-400 flex items-center justify-center hover:bg-indigo-50 hover:border-indigo-400 transition-all"
+                                        >
+                                            <Plus size={20} />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="text-center py-12 text-slate-400 italic">
+                            Kunlar va vaqtlarni kiriting.
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {isAddingManually && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+                    <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl">
+                        <h4 className="text-lg font-black text-slate-800 mb-4">{selectedSlot} ga qo'shish</h4>
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                            {students.map(s => (
+                                <button
+                                    key={s.id}
+                                    onClick={() => {
+                                        if (selectedSlot) {
+                                            onForcedBook(s.id, selectedSlot);
+                                            setIsAddingManually(false);
+                                            setTimeout(fetchData, 500);
+                                        }
+                                    }}
+                                    className="w-full text-left p-3 hover:bg-indigo-50 rounded-xl transition-colors font-bold text-sm text-slate-700 flex justify-between items-center group"
+                                >
+                                    {s.name}
+                                    <Plus className="opacity-0 group-hover:opacity-100 text-indigo-400" size={16} />
+                                </button>
+                            ))}
+                        </div>
+                        <button onClick={() => setIsAddingManually(false)} className="w-full mt-4 py-3 text-slate-500 font-bold text-sm">Bekor qilish</button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// --- Group Row Component ---
 const GroupRow = ({
     group,
     unitQuizzes,
     onOpenStudents,
+    onOpenSchedule,
     onLaunch,
     onEdit,
     onDelete,
@@ -211,6 +390,7 @@ const GroupRow = ({
     group: Group;
     unitQuizzes: UnitQuiz[];
     onOpenStudents: (group: Group) => void;
+    onOpenSchedule: (group: Group) => void;
     onLaunch: (quizId: string, groupId: string) => void;
     onEdit: (group: Group) => void;
     onDelete?: (groupId: string) => void;
@@ -222,13 +402,11 @@ const GroupRow = ({
     const [selectedUnit, setSelectedUnit] = useState<string>('');
     const [selectedQuizId, setSelectedQuizId] = useState<string>('');
 
-    // Extract unique levels
     const levels = useMemo(() => {
         const uniqueLevels = Array.from(new Set(unitQuizzes.map(q => q.level))).sort();
         return uniqueLevels;
     }, [unitQuizzes]);
 
-    // Extract unique units based on selected level
     const units = useMemo(() => {
         if (!selectedLevel) return [];
         const uniqueUnits = Array.from(new Set(
@@ -241,7 +419,6 @@ const GroupRow = ({
 
     return (
         <tr className="border-b transition-colors group border-slate-100 hover:bg-slate-50/50">
-            {/* Group Name */}
             <td className="p-4 cursor-pointer" onClick={() => navigate(isAdmin ? `/admin/group/${group.id}` : `/teacher/group/${group.id}`)}>
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg border shadow-sm bg-white border-slate-200 text-indigo-600">
@@ -254,7 +431,6 @@ const GroupRow = ({
                 </div>
             </td>
 
-            {/* Battle Status */}
             {!isAdmin && (
                 <td className="p-4">
                     <BattleStatus
@@ -265,7 +441,6 @@ const GroupRow = ({
                 </td>
             )}
 
-            {/* Teacher Name (Admin Only) */}
             {isAdmin && (
                 <td className="p-4">
                     <div className="flex items-center gap-2 text-slate-600">
@@ -275,7 +450,6 @@ const GroupRow = ({
                 </td>
             )}
 
-            {/* Level Selection */}
             <td className="p-4">
                 <div className="relative max-w-[150px]">
                     <select
@@ -285,7 +459,7 @@ const GroupRow = ({
                             setSelectedUnit('');
                             setSelectedQuizId('');
                         }}
-                        className="w-full bg-white border border-slate-300 rounded-lg pl-3 pr-8 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer"
+                        className="w-full bg-white border border-slate-300 rounded-lg pl-3 pr-8 py-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none cursor-pointer"
                     >
                         <option value="">Daraja...</option>
                         {levels.map(level => (
@@ -296,7 +470,6 @@ const GroupRow = ({
                 </div>
             </td>
 
-            {/* Unit Selection */}
             <td className="p-4">
                 <div className="relative max-w-[150px]">
                     <select
@@ -304,12 +477,11 @@ const GroupRow = ({
                         onChange={(e) => {
                             const newUnit = e.target.value;
                             setSelectedUnit(newUnit);
-                            // Auto-select the quiz for this level and unit
                             const quiz = unitQuizzes.find(q => q.level === selectedLevel && q.unit === newUnit);
                             setSelectedQuizId(quiz ? quiz.id : '');
                         }}
                         disabled={!selectedLevel}
-                        className="w-full bg-white border border-slate-300 rounded-lg pl-3 pr-8 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none cursor-pointer disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed"
+                        className="w-full bg-white border border-slate-300 rounded-lg pl-3 pr-8 py-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none disabled:opacity-50"
                     >
                         <option value="">Unit...</option>
                         {units.map(unit => (
@@ -320,9 +492,15 @@ const GroupRow = ({
                 </div>
             </td>
 
-            {/* Actions */}
             <td className="p-4">
                 <div className="flex gap-2 justify-end">
+                    <button
+                        onClick={() => onOpenSchedule(group)}
+                        className="p-2 rounded-lg text-slate-500 hover:bg-white hover:text-emerald-600 hover:shadow-sm border border-transparent hover:border-slate-200 transition-all"
+                        title="Jadval"
+                    >
+                        <Calendar size={20} />
+                    </button>
                     <button
                         onClick={() => onOpenStudents(group)}
                         className="p-2 rounded-lg text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm border border-transparent hover:border-slate-200 transition-all"
@@ -349,7 +527,6 @@ const GroupRow = ({
                         <button
                             onClick={() => onDelete(group.id)}
                             className="p-2 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors border border-transparent hover:border-red-100"
-                            title="Guruhni o'chirish"
                         >
                             <Trash2 size={20} />
                         </button>
@@ -360,15 +537,18 @@ const GroupRow = ({
     );
 };
 
+// --- Mobile Group Card Component ---
 const MobileGroupCard = ({
     group,
     unitQuizzes,
     onLaunch,
+    onOpenSchedule,
     onEdit
 }: {
     group: Group;
     unitQuizzes: UnitQuiz[];
     onLaunch: (quizId: string, groupId: string) => void;
+    onOpenSchedule: (group: Group) => void;
     onEdit: (group: Group) => void;
 }) => {
     const [selectedLevel, setSelectedLevel] = useState<string>('');
@@ -389,69 +569,75 @@ const MobileGroupCard = ({
     }, [unitQuizzes, selectedLevel]);
 
     return (
-        <div className="grid grid-cols-2 gap-3">
-            <div className="relative">
-                <select
-                    value={selectedLevel}
-                    onChange={(e) => {
-                        setSelectedLevel(e.target.value);
-                        setSelectedUnit('');
-                        setSelectedQuizId('');
-                    }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-8 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none"
-                >
-                    <option value="">Daraja...</option>
-                    {levels.map(level => (
-                        <option key={level} value={level}>{level}</option>
-                    ))}
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
+                    <select
+                        value={selectedLevel}
+                        onChange={(e) => {
+                            setSelectedLevel(e.target.value);
+                            setSelectedUnit('');
+                            setSelectedQuizId('');
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-8 py-2.5 text-sm font-medium text-slate-700 outline-none appearance-none"
+                    >
+                        <option value="">Daraja...</option>
+                        {levels.map(level => (
+                            <option key={level} value={level}>{level}</option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                </div>
+
+                <div className="relative">
+                    <select
+                        value={selectedUnit}
+                        onChange={(e) => {
+                            const newUnit = e.target.value;
+                            setSelectedUnit(newUnit);
+                            const quiz = unitQuizzes.find(q => q.level === selectedLevel && q.unit === newUnit);
+                            setSelectedQuizId(quiz ? quiz.id : '');
+                        }}
+                        disabled={!selectedLevel}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-8 py-2.5 text-sm font-medium text-slate-700 outline-none appearance-none disabled:opacity-50"
+                    >
+                        <option value="">Unit...</option>
+                        {units.map(unit => (
+                            <option key={unit} value={unit}>Unit {unit}</option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                </div>
             </div>
 
-            <div className="relative">
-                <select
-                    value={selectedUnit}
-                    onChange={(e) => {
-                        const newUnit = e.target.value;
-                        setSelectedUnit(newUnit);
-                        const quiz = unitQuizzes.find(q => q.level === selectedLevel && q.unit === newUnit);
-                        setSelectedQuizId(quiz ? quiz.id : '');
-                    }}
-                    disabled={!selectedLevel}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-8 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none disabled:opacity-50"
+            <div className="flex gap-2">
+                <button
+                    onClick={() => onOpenSchedule(group)}
+                    className="flex-1 py-3 rounded-xl bg-emerald-50 text-emerald-600 font-bold border border-emerald-100 hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
                 >
-                    <option value="">Unit...</option>
-                    {units.map(unit => (
-                        <option key={unit} value={unit}>Unit {unit}</option>
-                    ))}
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
-            </div>
-
-            <div className="col-span-2 flex gap-2">
+                    <Calendar size={18} />
+                    Jadval
+                </button>
                 <button
                     onClick={() => selectedQuizId && onLaunch(selectedQuizId, group.id)}
                     disabled={!selectedQuizId}
-                    className="flex-[2] py-3 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+                    className="flex-[2] py-3 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                     <PlayCircle size={18} />
-                    Testni Boshlash
+                    Boshlash
                 </button>
                 <button
                     onClick={() => onEdit(group)}
-                    className="flex-1 py-3 rounded-lg bg-white border border-slate-200 text-indigo-600 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                    className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors flex items-center justify-center"
                 >
                     <Plus className="rotate-45" size={18} />
-                    Edit
                 </button>
-                {/* Note: In mobile view we might want to expose delete in the parent card header instead of here for better UX, 
-                    but adding here for completion if passed. */}
             </div>
         </div>
     );
 };
 
-// --- Student Search Dropdown ---
+// --- Student Search Component ---
 const StudentSearchInput = ({ navigate }: { navigate: any }) => {
     const { user, role } = useAuth();
     const [query, setQuery] = useState('');
@@ -487,22 +673,15 @@ const StudentSearchInput = ({ navigate }: { navigate: any }) => {
         if (!query.trim()) return;
         setLoading(true);
         setIsOpen(true);
-        console.log(`[Search] Frontend - Q: "${query}", Role: ${role}, UserID: ${user?.id}`);
         try {
-            // Encode role and teacherId to be safe
             const url = `/api/students/search?q=${encodeURIComponent(query)}&teacherId=${encodeURIComponent(user?.id || '')}&role=${encodeURIComponent(role || '')}`;
-
-            console.log(`[Search] Fetching URL: ${url}`);
             const res = await apiFetch(url);
             if (res.ok) {
                 const data = await res.json();
                 setResults(Array.isArray(data) ? data : []);
-                console.log(`[Search] Success: Found ${data.length} results`);
-            } else {
-                console.error(`[Search] Server error: ${res.status}`);
             }
         } catch (err) {
-            console.error('[Search] Network error:', err);
+            console.error('[Search] Error:', err);
         } finally {
             setLoading(false);
         }
@@ -514,13 +693,10 @@ const StudentSearchInput = ({ navigate }: { navigate: any }) => {
                 <input
                     type="text"
                     value={query}
-                    onChange={(e) => {
-                        setQuery(e.target.value);
-                        if (!isOpen) setIsOpen(true);
-                    }}
+                    onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => query && setIsOpen(true)}
-                    placeholder="Qidirish..."
-                    className="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-4 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                    placeholder="O'quvchi qidirish..."
+                    className="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-4 py-2 text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
                 />
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                     {loading ? <div className="animate-spin h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full" /> : <Users size={16} />}
@@ -528,7 +704,7 @@ const StudentSearchInput = ({ navigate }: { navigate: any }) => {
             </div>
 
             {isOpen && (query || results.length > 0) && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 max-h-[400px] overflow-y-auto overflow-x-hidden">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 max-h-[400px] overflow-y-auto">
                     {results.length > 0 ? (
                         <div className="py-1">
                             {results.map((student) => (
@@ -542,9 +718,9 @@ const StudentSearchInput = ({ navigate }: { navigate: any }) => {
                                     className="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0"
                                 >
                                     <p className="font-bold text-slate-800 text-sm">{student.name}</p>
-                                    <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500 mt-0.5">
-                                        <span className="font-mono bg-slate-100 px-1 rounded">ID: {student.id}</span>
+                                    <div className="flex justify-between items-center text-xs text-slate-500 mt-0.5">
                                         <span className="text-indigo-600 font-medium">{student.group_name}</span>
+                                        <span className="opacity-50">ID: {student.id}</span>
                                     </div>
                                 </div>
                             ))}
@@ -559,7 +735,6 @@ const StudentSearchInput = ({ navigate }: { navigate: any }) => {
         </div>
     );
 };
-
 
 const TeacherDashboard = () => {
     const navigate = useNavigate();
@@ -579,6 +754,10 @@ const TeacherDashboard = () => {
     const [editGroupName, setEditGroupName] = useState('');
     const [editGroupLevel, setEditGroupLevel] = useState('');
     const [editGroupTeacherId, setEditGroupTeacherId] = useState('');
+    const [editExtraClassDays, setEditExtraClassDays] = useState<string[]>([]);
+    const [editExtraClassTimes, setEditExtraClassTimes] = useState<string[]>([]);
+    const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+    const [isTopicsModalOpen, setIsTopicsModalOpen] = useState(false);
     const [allTeachers, setAllTeachers] = useState<any[]>([]);
 
     useEffect(() => {
@@ -591,27 +770,21 @@ const TeacherDashboard = () => {
         fetchUnitQuizzes();
     }, [user, role]);
 
-    // Fetch all teachers for admin
     const fetchAllTeachers = async () => {
         try {
             const res = await apiFetch('/api/admin/teachers');
             const data = await res.json();
             setAllTeachers(Array.isArray(data) ? data : []);
-        } catch (err) {
-            console.error('Error fetching all teachers:', err);
-        }
+        } catch (err) {}
     };
 
-    // Fetch all groups for admin
     const fetchAllGroups = async () => {
         try {
             const res = await apiFetch('/api/admin/groups');
             const data = await res.json();
             setGroups(Array.isArray(data) ? data : []);
             if (data.length > 0) fetchBattles(data.map((g: any) => g.id));
-        } catch (err) {
-            console.error('Error fetching all groups:', err);
-        }
+        } catch (err) {}
     };
 
     const fetchBattles = async (groupIds: string[]) => {
@@ -626,7 +799,6 @@ const TeacherDashboard = () => {
         setBattles(battleMap);
     };
 
-    // Fetch Groups for teacher
     const fetchGroups = async () => {
         if (!user?.id) return;
         try {
@@ -634,36 +806,28 @@ const TeacherDashboard = () => {
             const data = await res.json();
             setGroups(Array.isArray(data) ? data : []);
             if (data.length > 0) fetchBattles(data.map((g: any) => g.id));
-        } catch (err) {
-            console.error('Error fetching groups:', err);
-        }
+        } catch (err) {}
     };
 
-    // Fetch Quizzes
     const fetchUnitQuizzes = async () => {
         try {
             const res = await apiFetch('/api/unit-quizzes');
             const data = await res.json();
             setUnitQuizzes(Array.isArray(data) ? data : []);
-        } catch (err) {
-            console.error('Error fetching unit quizzes:', err);
-        }
+        } catch (err) {}
     };
-
 
     const handleCreateGroup = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user?.id || !newGroupName.trim()) return;
-
         const res = await apiFetch('/api/groups', {
             method: 'POST',
             body: JSON.stringify({ name: newGroupName, teacherId: user.id, level: newGroupLevel })
         });
-
         if (res.ok) {
             setNewGroupName('');
             setNewGroupLevel('Beginner');
-            fetchGroups();
+            if (role === 'admin') fetchAllGroups(); else fetchGroups();
         }
     };
 
@@ -672,28 +836,29 @@ const TeacherDashboard = () => {
         setEditGroupName(group.name);
         setEditGroupLevel(group.level || 'Beginner');
         setEditGroupTeacherId(group.teacher_id || '');
+        setEditExtraClassDays(group.extra_class_days || []);
+        setEditExtraClassTimes(group.extra_class_times || []);
         setIsEditModalOpen(true);
     };
 
     const handleUpdateGroup = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedGroup || !editGroupName.trim()) return;
-
         const res = await apiFetch(`/api/groups/${selectedGroup.id}`, {
             method: 'PUT',
             body: JSON.stringify({
                 name: editGroupName,
                 level: editGroupLevel,
-                teacherId: role === 'admin' ? editGroupTeacherId : undefined
+                teacherId: role === 'admin' ? editGroupTeacherId : undefined,
+                extraClassDays: editExtraClassDays,
+                extraClassTimes: editExtraClassTimes
             })
         });
-
         if (res.ok) {
             setIsEditModalOpen(false);
-            if (role === 'admin') fetchAllGroups();
-            else fetchGroups();
+            if (role === 'admin') fetchAllGroups(); else fetchGroups();
         } else {
-            alert("Xatolik yuz berdi!");
+            alert("Xatolik!");
         }
     };
 
@@ -702,20 +867,43 @@ const TeacherDashboard = () => {
         setIsModalOpen(true);
     };
 
+    const handleOpenSchedule = (group: Group) => {
+        setSelectedGroup(group);
+        setIsScheduleOpen(true);
+    };
+
     const handleAddStudent = async (data: any) => {
         if (!selectedGroup) return;
-
         const res = await apiFetch('/api/students', {
             method: 'POST',
             body: JSON.stringify({ ...data, groupId: selectedGroup.id })
         });
-
         if (res.ok) {
-            alert("O'quvchi muvaffaqiyatli qo'shildi!");
+            alert("O'quvchi qo'shildi!");
             setIsModalOpen(false);
         } else {
-            alert("Xatolik yuz berdi!");
+            alert("Xatolik!");
         }
+    };
+
+    const handleForcedBook = async (studentId: string, slot: string) => {
+        if (!selectedGroup) return;
+        try {
+            const res = await apiFetch(`/api/students/${studentId}/book-extra-class`, {
+                method: 'POST',
+                body: JSON.stringify({ groupId: selectedGroup.id, timeSlot: slot, isForced: true })
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                alert(data.error || "Xatolik");
+            }
+        } catch (e) {}
+    };
+
+    const handleDeleteBooking = async (id: string) => {
+        try {
+            await apiFetch(`/api/extra-class-bookings/${id}`, { method: 'DELETE' });
+        } catch (e) {}
     };
 
     const handleLaunchQuiz = (quizId: string, groupId: string) => {
@@ -723,108 +911,65 @@ const TeacherDashboard = () => {
     };
 
     const handleDeleteGroup = async (groupId: string) => {
-        if (!window.confirm("Bu guruhni o'chirmoqchimisiz? Barcha o'quvchilar va natijalar o'chib ketishi mumkin.")) {
-            return;
-        }
-
+        if (!window.confirm("O'chirmoqchimisiz?")) return;
         try {
-            const res = await apiFetch(`/api/groups/${groupId}`, {
-                method: 'DELETE'
-            });
-
+            const res = await apiFetch(`/api/groups/${groupId}`, { method: 'DELETE' });
             if (res.ok) {
-                // Refresh list
-                const newGroups = groups.filter(g => g.id !== groupId);
-                setGroups(newGroups);
-                alert("Guruh o'chirildi!");
-            } else {
-                alert("Xatolik yuz berdi!");
+                setGroups(groups.filter(g => g.id !== groupId));
+                alert("O'chirildi!");
             }
-        } catch (err) {
-            console.error(err);
-            alert("Server bilan bog'lanishda xatolik!");
-        }
+        } catch (err) {}
     };
 
     return (
-        <div className="min-h-screen p-4 md:p-8 font-sans transition-colors duration-500 bg-slate-50 text-slate-900">
+        <div className="min-h-screen p-4 md:p-8 bg-slate-50 text-slate-900">
             {/* Header */}
-            <div className="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row justify-between items-center gap-6 border-b pb-6 border-slate-200">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate('/')}
-                        className="p-2.5 rounded-xl border transition-all active:scale-95 shadow-sm bg-white border-slate-200 text-slate-600"
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
+            <div className="max-w-7xl mx-auto mb-10 border-b pb-6 border-slate-200">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-4">
-                        <img src={logo} alt="Ziyokor Logo" className="h-14 w-14 md:h-16 md:w-16 object-cover rounded-2xl shadow-lg border-2 border-slate-100" />
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-black tracking-tighter flex items-center gap-2 text-slate-900">
-                                {role === 'admin' ? "Barcha Guruhlar" : "O'qituvchi Kabineti"}
-                            </h1>
-                            <div className="flex items-center gap-3 mt-1 flex-wrap">
-                                <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400">
-                                    {role === 'admin' ? "Tizim boshqaruvi" : "Testlar va guruhlar"}
-                                </p>
-                                <span className="opacity-20 hidden sm:inline">•</span>
-                                <a
-                                    href="https://t.me/Z_education_bot?start=teacher"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 text-[#229ED9] hover:text-[#1d8dbd] font-black text-[10px] md:text-xs transition-colors whitespace-nowrap uppercase tracking-wider"
-                                >
-                                    <Send size={14} />
-                                    Telegram Bot
-                                </a>
+                        <button onClick={() => navigate('/')} className="p-2.5 rounded-xl border bg-white border-slate-200 text-slate-600 shadow-sm">
+                            <ArrowLeft size={20} />
+                        </button>
+                        <div className="flex items-center gap-4">
+                            <img src={logo} alt="Logo" className="h-14 w-14 object-cover rounded-2xl border-2 border-slate-100 shadow-lg" />
+                            <div>
+                                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                                    {role === 'admin' ? "Barcha Guruhlar" : "O'qituvchi Kabineti"}
+                                </h1>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tizim boshqaruvi</p>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="flex flex-col-reverse md:flex-row items-center gap-4 w-full md:w-auto">
-                    {/* Global Student Search */}
-                    <div className="w-full md:w-auto">
+                    <div className="flex flex-col-reverse md:flex-row items-center gap-4 w-full md:w-auto">
                         <StudentSearchInput navigate={navigate} />
-                    </div>
+                        
+                        <form onSubmit={handleCreateGroup} className="flex gap-2 w-full md:w-auto">
+                            <input
+                                type="text"
+                                value={newGroupName}
+                                onChange={(e) => setNewGroupName(e.target.value)}
+                                placeholder="Guruh nomi..."
+                                className="bg-white border border-slate-300 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-40"
+                            />
+                            <button type="submit" className="bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                                <Plus size={20} />
+                            </button>
+                        </form>
 
-                    <form onSubmit={handleCreateGroup} className="flex gap-2 w-full md:w-auto items-center">
-                        <input
-                            type="text"
-                            value={newGroupName}
-                            onChange={(e) => setNewGroupName(e.target.value)}
-                            placeholder="Guruh nomi..."
-                            className="bg-white border border-slate-300 rounded-lg px-4 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full md:w-48"
-                        />
-                        <select
-                            value={newGroupLevel}
-                            onChange={(e) => setNewGroupLevel(e.target.value)}
-                            className="bg-white border border-slate-300 rounded-lg px-2 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-28 appearance-none cursor-pointer"
-                        >
-                            {['Beginner', 'Elementary', 'Pre-Intermediate', 'Intermediate', 'Pre-IELTS', 'IELTS'].map(lvl => (
-                                <option key={lvl} value={lvl}>{lvl}</option>
-                            ))}
-                        </select>
-                        <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg text-white transition-colors shadow-sm shrink-0">
-                            <Plus size={20} />
-                        </button>
-                    </form>
-
-                    <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
                         <div className="flex items-center gap-3">
                             <div className="text-right">
-                                <p className="text-sm font-bold text-slate-800 leading-tight">{user?.name}</p>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    {role === 'admin' ? 'Adminstrator' : "O'qituvchi"}
-                                </p>
+                                <p className="text-sm font-bold">{user?.name}</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{role}</p>
                             </div>
-                            <button
-                                onClick={() => {
-                                    logout();
-                                    navigate('/login');
-                                }}
-                                className="px-4 py-2 bg-white text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200 text-sm font-medium flex items-center gap-2"
+                            <button 
+                                onClick={() => setIsTopicsModalOpen(true)}
+                                className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors text-sm font-bold flex items-center gap-2"
+                                title="Mavzularni boshqarish"
                             >
+                                <BookOpen size={16} /> Mavzular
+                            </button>
+                            <button onClick={() => { logout(); navigate('/login'); }} className="px-3 py-2 bg-white text-red-600 rounded-lg border border-red-100 hover:bg-red-50 transition-colors text-sm font-bold flex items-center gap-2">
                                 <LogOut size={16} /> Chiqish
                             </button>
                         </div>
@@ -832,210 +977,287 @@ const TeacherDashboard = () => {
                 </div>
             </div>
 
-            {/* Main Content */}
+            {/* Content */}
             <div className="max-w-7xl mx-auto">
-                {/* Desktop Table View */}
-                <div className="hidden md:block bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-xs font-semibold tracking-wider">
-                                    <th className="p-4 w-1/4">Guruh Nomi</th>
-                                    {role === 'admin' ? (
-                                        <th className="p-4 w-1/4">O'qituvchi</th>
-                                    ) : (
-                                        <th className="p-4 w-1/4">Haftalik Battle</th>
-                                    )}
-                                    <th className="p-4 w-1/4">Daraja</th>
-                                    <th className="p-4 w-1/4">Unit</th>
-                                    <th className="p-4 w-1/4 text-right">Amallar</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {groups.length > 0 ? (
-                                    groups.map(group => (
-                                        <GroupRow
-                                            key={group.id}
-                                            group={group}
-                                            unitQuizzes={unitQuizzes}
-                                            onOpenStudents={handleOpenStudentModal}
-                                            onLaunch={handleLaunchQuiz}
-                                            onEdit={handleEditGroup}
-                                            onDelete={handleDeleteGroup}
-                                            navigate={navigate}
-                                            isAdmin={role === 'admin'}
-                                            battle={battles[group.id] || null}
-                                        />
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={5} className="p-12 text-center text-slate-400">
-                                            <Users size={32} className="mx-auto mb-2 opacity-30" />
-                                            Hozircha guruhlar mavjud emas. Yuqorida yangi guruh yarating.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                {/* Desktop View */}
+                <div className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table className="w-full text-left">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-black tracking-widest">
+                            <tr>
+                                <th className="p-4">Guruh</th>
+                                {role !== 'admin' && <th className="p-4">Battle</th>}
+                                {role === 'admin' && <th className="p-4">O'qituvchi</th>}
+                                <th className="p-4">Daraja</th>
+                                <th className="p-4">Unit</th>
+                                <th className="p-4 text-right">Amallar</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {groups.map(g => (
+                                <GroupRow
+                                    key={g.id}
+                                    group={g}
+                                    unitQuizzes={unitQuizzes}
+                                    onOpenStudents={handleOpenStudentModal}
+                                    onOpenSchedule={handleOpenSchedule}
+                                    onLaunch={handleLaunchQuiz}
+                                    onEdit={handleEditGroup}
+                                    onDelete={handleDeleteGroup}
+                                    navigate={navigate}
+                                    isAdmin={role === 'admin'}
+                                    battle={battles[g.id] || null}
+                                />
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
 
-                {/* Mobile Card View */}
+                {/* Mobile View */}
                 <div className="md:hidden space-y-4">
-                    {groups.length > 0 ? (
-                        groups.map(group => (
-                            <div key={group.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden active:scale-[0.98] transition-transform">
-                                <div className="flex justify-between items-stretch">
-                                    <div
-                                        className="flex-1 flex items-center gap-3 p-4 hover:bg-slate-50 cursor-pointer transition-colors"
-                                        onClick={() => navigate(role === 'admin' ? `/admin/group/${group.id}` : `/teacher/group/${group.id}`)}
-                                    >
-                                        <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-black text-xl shadow-inner">
-                                            {group.name.charAt(0)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-black text-slate-800 text-lg truncate">{group.name}</h3>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded">Guruh</span>
-                                                {role === 'admin' && (
-                                                    <p className="text-xs text-slate-400 truncate flex items-center gap-1">
-                                                        • {group.teacher_name || 'Noma\'lum'}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="text-slate-300 pr-2">
-                                            <ArrowLeft className="rotate-180" size={20} />
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 pr-4">
-                                        {role === 'admin' && (
-                                            <button
-                                                onClick={() => handleDeleteGroup(group.id)}
-                                                className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:text-red-600 transition-all border border-red-100"
-                                            >
-                                                <Trash2 size={22} />
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => handleOpenStudentModal(group)}
-                                            className="p-3 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 hover:text-indigo-600 transition-all border border-slate-100"
-                                        >
-                                            <Users size={22} />
-                                        </button>
+                    {groups.map(g => (
+                        <div key={g.id} className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3" onClick={() => navigate(role === 'admin' ? `/admin/group/${g.id}` : `/teacher/group/${g.id}`)}>
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-black">{g.name.charAt(0)}</div>
+                                    <div>
+                                        <h3 className="font-black text-slate-800">{g.name}</h3>
+                                        <p className="text-[10px] uppercase font-black text-slate-400">{g.level}</p>
                                     </div>
                                 </div>
-
-                                <div className="px-4 pb-4">
-                                    {/* We reuse a simplified version of the logic here or just render the row logic in a different way. 
-                                    Since GroupRow has state (selectedLevel, etc), we should probably extract that logic or just use the same component but styled differently?
-                                    Actually, GroupRow returns a <tr>. We can't use it here.
-                                    We need a MobileGroupCard component that handles the state.
-                                */}
-                                    <MobileGroupCard
-                                        group={group}
-                                        unitQuizzes={unitQuizzes}
-                                        onLaunch={handleLaunchQuiz}
-                                        onEdit={handleEditGroup}
-                                    />
+                                <div className="flex gap-1">
+                                    <button onClick={() => handleOpenStudentModal(g)} className="p-2 text-slate-400 hover:text-indigo-600"><Users size={20} /></button>
+                                    {role === 'admin' && <button onClick={() => handleDeleteGroup(g.id)} className="p-2 text-rose-400"><Trash2 size={20} /></button>}
                                 </div>
                             </div>
-                        ))
-                    ) : (
-                        <div className="text-center p-8 text-slate-400 bg-white rounded-xl border border-slate-200">
-                            <Users size={32} className="mx-auto mb-2 opacity-30" />
-                            Guruhlar mavjud emas
+                            <MobileGroupCard
+                                group={g}
+                                unitQuizzes={unitQuizzes}
+                                onLaunch={handleLaunchQuiz}
+                                onOpenSchedule={handleOpenSchedule}
+                                onEdit={handleEditGroup}
+                            />
                         </div>
-                    )}
+                    ))}
                 </div>
-
             </div>
 
             {/* Modals */}
-            <StudentModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+            <StudentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} group={selectedGroup} onAddStudent={handleAddStudent} />
+            
+            <ScheduleModal
+                isOpen={isScheduleOpen}
+                onClose={() => setIsScheduleOpen(false)}
                 group={selectedGroup}
-                onAddStudent={handleAddStudent}
+                onForcedBook={handleForcedBook}
+                onDeleteBooking={handleDeleteBooking}
             />
 
-            {/* Edit Group Modal */}
             {isEditModalOpen && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl animate-in fade-in zoom-in duration-200">
+                    <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
                         <div className="flex justify-between items-center mb-8">
-                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Guruhni tahrirlash</h3>
-                            <button onClick={() => setIsEditModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
-                                <X size={24} />
-                            </button>
+                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Tahrirlash</h3>
+                            <button onClick={() => setIsEditModalOpen(false)} className="p-2 text-slate-400"><X size={24} /></button>
                         </div>
 
                         <form onSubmit={handleUpdateGroup} className="space-y-6">
                             <div>
                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Guruh Nomi</label>
-                                <input
-                                    type="text"
-                                    value={editGroupName}
-                                    onChange={(e) => setEditGroupName(e.target.value)}
-                                    placeholder="Guruh nomi"
-                                    className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all"
-                                />
+                                <input type="text" value={editGroupName} onChange={(e) => setEditGroupName(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold" />
                             </div>
 
                             <div>
                                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Daraja</label>
-                                <div className="relative">
-                                    <select
-                                        value={editGroupLevel}
-                                        onChange={(e) => setEditGroupLevel(e.target.value)}
-                                        className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
-                                    >
-                                        {['Beginner', 'Elementary', 'Pre-Intermediate', 'Intermediate', 'Pre-IELTS', 'IELTS'].map(lvl => (
-                                            <option key={lvl} value={lvl}>{lvl}</option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />
-                                </div>
+                                <select value={editGroupLevel} onChange={(e) => setEditGroupLevel(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold appearance-none outline-none">
+                                    {['Beginner', 'Elementary', 'Pre-Intermediate', 'Intermediate', 'Pre-IELTS', 'IELTS'].map(lvl => <option key={lvl} value={lvl}>{lvl}</option>)}
+                                </select>
                             </div>
 
                             {role === 'admin' && (
                                 <div>
                                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">O'qituvchi</label>
-                                    <div className="relative">
-                                        <select
-                                            value={editGroupTeacherId}
-                                            onChange={(e) => setEditGroupTeacherId(e.target.value)}
-                                            className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
-                                        >
-                                            <option value="">O'qituvchini tanlang...</option>
-                                            {allTeachers.map(t => (
-                                                <option key={t.id} value={t.id}>{t.name} ({t.phone})</option>
-                                            ))}
-                                        </select>
-                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />
-                                    </div>
+                                    <select value={editGroupTeacherId} onChange={(e) => setEditGroupTeacherId(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none">
+                                        <option value="">O'qituvchini tanlang...</option>
+                                        {allTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    </select>
                                 </div>
                             )}
 
-                            <div className="pt-4 flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsEditModalOpen(false)}
-                                    className="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-all"
-                                >
-                                    Bekor qilish
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-[2] py-4 rounded-2xl bg-indigo-600 text-white font-black shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition-all"
-                                >
-                                    Saqlash
-                                </button>
+                            <div className="border-t pt-6 space-y-6">
+                                <div>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-3 px-1">Qo'shimcha dars kunlari</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'].map(day => (
+                                            <button
+                                                key={day} type="button"
+                                                onClick={() => editExtraClassDays.includes(day) ? setEditExtraClassDays(editExtraClassDays.filter(d => d !== day)) : setEditExtraClassDays([...editExtraClassDays, day])}
+                                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${editExtraClassDays.includes(day) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-100 text-slate-500'}`}
+                                            >
+                                                {day}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-3 px-1">Vaqt oraliqlari</label>
+                                    <div className="space-y-2">
+                                        {editExtraClassTimes.map((time, idx) => (
+                                            <div key={idx} className="flex gap-2">
+                                                <div className="flex-1 p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm">{time}</div>
+                                                <button type="button" onClick={() => setEditExtraClassTimes(editExtraClassTimes.filter((_, i) => i !== idx))} className="p-3 text-rose-500 bg-rose-50 rounded-xl"><X size={18} /></button>
+                                            </div>
+                                        ))}
+                                        <select
+                                            className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none"
+                                            onChange={(e) => {
+                                                if (e.target.value && !editExtraClassTimes.includes(e.target.value)) {
+                                                    setEditExtraClassTimes([...editExtraClassTimes, e.target.value]);
+                                                }
+                                                e.target.value = "";
+                                            }}
+                                        >
+                                            <option value="">Vaqt qo'shish...</option>
+                                            <option value="13:30-15:30">13:30-15:30</option>
+                                            <option value="15:30-17:30">15:30-17:30</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-4 rounded-2xl bg-slate-100 font-bold">Bekor qilish</button>
+                                <button type="submit" className="flex-[2] py-4 rounded-2xl bg-indigo-600 text-white font-black shadow-lg shadow-indigo-500/30">Saqlash</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+            {isTopicsModalOpen && (
+                <ManageTopicsModal 
+                    isOpen={isTopicsModalOpen} 
+                    onClose={() => setIsTopicsModalOpen(false)} 
+                />
+            )}
+        </div>
+    );
+};
+
+// --- Manage Topics Modal ---
+const ManageTopicsModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+    const [topics, setTopics] = useState<any[]>([]);
+    const [newLevel, setNewLevel] = useState('Beginner');
+    const [newTopicName, setNewTopicName] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) fetchTopics();
+    }, [isOpen]);
+
+    const fetchTopics = async () => {
+        try {
+            const res = await apiFetch('/api/level-topics');
+            if (res.ok) setTopics(await res.json());
+        } catch (e) { }
+    };
+
+    const handleAdd = async () => {
+        if (!newTopicName.trim()) return;
+        setIsLoading(true);
+        try {
+            const res = await apiFetch('/api/level-topics', {
+                method: 'POST',
+                body: JSON.stringify({ level: newLevel, topicName: newTopicName })
+            });
+            if (res.ok) {
+                setNewTopicName('');
+                fetchTopics();
+            }
+        } catch (e) { }
+        setIsLoading(false);
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm("O'chirmoqchimisiz?")) return;
+        try {
+            const res = await apiFetch(`/api/level-topics/${id}`, { method: 'DELETE' });
+            if (res.ok) fetchTopics();
+        } catch (e) { }
+    };
+
+    if (!isOpen) return null;
+
+    const levelsList = ['Beginner', 'Elementary', 'Pre-Intermediate', 'Intermediate', 'IELTS 1', 'IELTS 2'];
+
+    return (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+            <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <div>
+                        <h3 className="text-2xl font-black text-slate-800">Mavzularni boshqarish</h3>
+                        <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Har bir daraja uchun mavzular ro'yxati</p>
+                    </div>
+                    <button onClick={onClose} className="p-3 hover:bg-slate-200 rounded-2xl text-slate-500 transition-colors">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="p-8 space-y-6">
+                    <div className="flex gap-3">
+                        <select 
+                            value={newLevel}
+                            onChange={(e) => setNewLevel(e.target.value)}
+                            className="bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                        >
+                            {levelsList.map(l => <option key={l} value={l}>{l}</option>)}
+                        </select>
+                        <input 
+                            value={newTopicName}
+                            onChange={(e) => setNewTopicName(e.target.value)}
+                            placeholder="Yangi mavzu nomi..."
+                            className="flex-1 bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-3 font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                        />
+                        <button 
+                            onClick={handleAdd}
+                            disabled={isLoading}
+                            className="bg-indigo-600 text-white p-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+                        >
+                            <Plus size={24} />
+                        </button>
+                    </div>
+
+                    <div className="space-y-4 overflow-y-auto pr-2 max-h-[50vh] custom-scrollbar">
+                        {levelsList.map(l => {
+                            const levelTopics = topics.filter(t => t.level === l);
+                            return (
+                                <div key={l} className="space-y-2">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                                        {l}
+                                    </h4>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {levelTopics.length > 0 ? (
+                                            levelTopics.map(t => (
+                                                <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-indigo-200 transition-colors">
+                                                    <span className="text-sm font-bold text-slate-700">{t.topic_name}</span>
+                                                    <button 
+                                                        onClick={() => handleDelete(t.id)}
+                                                        className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-[10px] text-slate-300 italic ml-4">Mavzular yo'q</p>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

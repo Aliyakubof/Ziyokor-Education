@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS groups (
     name TEXT NOT NULL,
     teacher_id UUID REFERENCES teachers(id) ON DELETE SET NULL,
     level TEXT NOT NULL DEFAULT 'Beginner',
-    has_trophy BOOLEAN DEFAULT FALSE
+    has_trophy BOOLEAN DEFAULT FALSE,
+    extra_class_days TEXT[],
+    extra_class_times TEXT[]
 );
 
 -- Students Table
@@ -205,6 +207,25 @@ CREATE TABLE IF NOT EXISTS carousel_slides (
     title TEXT,
     description TEXT,
     order_index INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Extra Class Bookings Table
+CREATE TABLE IF NOT EXISTS extra_class_bookings (
+    id UUID PRIMARY KEY,
+    group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+    student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+    time_slot TEXT NOT NULL,
+    topic TEXT,
+    is_completed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Level Topics Table (Manual entry)
+CREATE TABLE IF NOT EXISTS level_topics (
+    id UUID PRIMARY KEY,
+    level TEXT NOT NULL,
+    topic_name TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
 ` ;
