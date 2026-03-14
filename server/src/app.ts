@@ -1506,7 +1506,10 @@ app.put('/api/groups/:id', async (req, res) => {
         
         const q = `
             UPDATE groups 
-            SET name = $1, level = $2, teacher_id = $3, extra_class_days = $4, extra_class_times = $5 
+            SET name = $1, level = $2, 
+                teacher_id = COALESCE($3, teacher_id), 
+                extra_class_days = $4, 
+                extra_class_times = $5 
             WHERE id = $6
         `;
         const params = [

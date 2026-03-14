@@ -850,7 +850,7 @@ const TeacherDashboard = () => {
             body: JSON.stringify({
                 name: editGroupName,
                 level: editGroupLevel,
-                teacherId: role === 'admin' ? editGroupTeacherId : undefined,
+                teacherId: role === 'admin' ? editGroupTeacherId : selectedGroup.teacher_id,
                 extraClassDays: editExtraClassDays,
                 extraClassTimes: editExtraClassTimes
             })
