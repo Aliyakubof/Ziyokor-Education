@@ -1094,7 +1094,7 @@ async function notifyTeacherOfVocabBattleResult(studentId: string, xp: number, c
 // --- Web Vocab Battle APIs (Level Based) ---
 app.get('/api/student/vocab-battles/levels', async (req, res) => {
     try {
-        const { studentId } = req.query;
+        const studentId = req.query.studentId as string;
         if (!studentId) return res.status(400).json({ error: 'Student ID missing' });
 
         // Check if Vocabulary Battle is globally active
@@ -1141,8 +1141,8 @@ app.get('/api/student/vocab-battles/levels', async (req, res) => {
                 if (Array.isArray(row.player_results)) {
                     const studentResult = row.player_results.find((p: any) => String(p.id) === String(studentId));
                     if (studentResult) score = studentResult.score;
-                } else if (row.player_results && row.player_results[studentId]) {
-                    score = row.player_results[studentId].score;
+                } else if (row.player_results && typeof row.player_results === 'object' && (row.player_results as any)[studentId]) {
+                    score = (row.player_results as any)[studentId].score;
                 }
 
                 const perc = row.total_questions > 0 ? (score / row.total_questions) * 100 : 0;
