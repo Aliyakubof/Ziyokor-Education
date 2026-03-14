@@ -208,16 +208,16 @@ export default function StudentDashboard() {
                         </div>
                     ) : (
                         <>
-                            <div className="flex justify-between items-end mb-2">
-                                <div>
-                                    <span className="text-xs font-bold uppercase tracking-wider opacity-70">Daraja</span>
-                                    <div className="text-3xl font-black flex items-center gap-2">
+                            <div className="flex justify-between items-end mb-2 relative z-10">
+                                <div className="drop-shadow-md">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">Daraja</span>
+                                    <div className="text-4xl font-black flex items-center gap-2 text-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
                                         {level} <span className="text-sm font-bold opacity-80 mt-2">Level</span>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <span className="text-2xl font-bold text-yellow-400">{stats.totalScore.toLocaleString()}</span>
-                                    <span className="text-xs font-bold text-indigo-200 block">Total XP</span>
+                                <div className="text-right filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                                    <span className="text-3xl font-black text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.4)]">{stats.totalScore.toLocaleString()}</span>
+                                    <span className="text-[10px] font-black text-white/90 block uppercase tracking-wider">Total XP</span>
                                 </div>
                             </div>
                             <div className="w-full bg-black/20 rounded-full h-3 overflow-hidden">
@@ -226,7 +226,7 @@ export default function StudentDashboard() {
                                     style={{ width: `${progressPercent}%` }}
                                 ></div>
                             </div>
-                            <div className="flex justify-between text-[10px] font-bold text-indigo-300 mt-1 uppercase">
+                            <div className="flex justify-between text-[10px] font-black text-white/70 mt-1.5 uppercase tracking-widest filter drop-shadow-sm">
                                 <span>{currentLevelProgress} XP</span>
                                 <span>{1000 - currentLevelProgress} XP to Lvl {level + 1}</span>
                             </div>
