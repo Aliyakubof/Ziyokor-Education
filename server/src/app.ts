@@ -1142,11 +1142,19 @@ app.get('/api/student/vocab-battles/levels', async (req, res) => {
                 
                 // Find student's score in player_results (which can be array or object)
                 let score = 0;
-                if (Array.isArray(row.player_results)) {
-                    const studentResult = row.player_results.find((p: any) => String(p.id) === String(studentId));
+                const playerResults = row.player_results;
+                if (Array.isArray(playerResults)) {
+                    const studentResult = playerResults.find((p: any) => String(p.id) === String(studentId));
                     if (studentResult) score = studentResult.score;
-                } else if (row.player_results && typeof row.player_results === 'object' && (row.player_results as any)[studentId]) {
-                    score = (row.player_results as any)[studentId].score;
+                } else if (playerResults && typeof playerResults === 'object') {
+                    // Try to find by direct key or by searching values if keys aren't IDs
+                    if (playerResults[studentId]) {
+                        score = playerResults[studentId].score || 0;
+                    } else {
+                        const vals = Object.values(playerResults);
+                        const studentResult = vals.find((p: any) => String(p.id) === String(studentId)) as any;
+                        if (studentResult) score = studentResult.score || 0;
+                    }
                 }
 
                 const perc = row.total_questions > 0 ? (score / row.total_questions) * 100 : 0;
