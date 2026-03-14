@@ -30,7 +30,9 @@ async function simulate(studentId: string) {
                 (p->>'score')::int as score, 
                 gr.total_questions
             FROM game_results gr
-            CROSS JOIN LATERAL jsonb_array_elements(gr.player_results) AS p
+            CROSS JOIN LATERAL jsonb_array_elements(
+                CASE WHEN jsonb_typeof(gr.player_results) = 'array' THEN gr.player_results ELSE '[]'::jsonb END
+            ) AS p
             WHERE gr.quiz_title LIKE $2 
               AND p->>'id' = $1
         `, [studentId, `Vocab Battle: ${daraja} - Level %`]);
