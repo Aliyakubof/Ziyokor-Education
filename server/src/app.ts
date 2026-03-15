@@ -604,7 +604,7 @@ app.get('/api/manager/groups/:groupId/results', async (req, res) => {
 app.get('/api/manager/groups/:groupId/students', async (req, res) => {
     try {
         const result = await query(
-            'SELECT id, name, phone, parent_name, parent_phone, last_contacted_at, last_contacted_relative, coins FROM students WHERE group_id = $1 ORDER BY name ASC',
+            'SELECT id, name, phone, parent_name, parent_phone, last_contacted_at, last_contacted_relative, coins, avatar_url FROM students WHERE group_id = $1 ORDER BY name ASC',
             [req.params.groupId]
         );
         res.json(result.rows);
@@ -1562,7 +1562,7 @@ app.put('/api/groups/:id', async (req, res) => {
 app.get('/api/groups/:groupId/students', async (req, res) => {
     try {
         const { groupId } = req.params;
-        const result = await query('SELECT id, name FROM students WHERE group_id = $1 ORDER BY name ASC', [groupId]);
+        const result = await query('SELECT id, name, avatar_url FROM students WHERE group_id = $1 ORDER BY name ASC', [groupId]);
         res.json(result.rows);
     } catch (err) {
         console.error('Error fetching group students:', err);
@@ -2142,6 +2142,7 @@ app.get('/api/student/:id/stats', async (req, res) => {
                 s.coins,
                 s.streak_count,
                 s.active_theme_id,
+                s.avatar_url,
                 COALESCE(s.is_hero, false) as is_hero,
                 COALESCE(s.weekly_battle_score, 0) as weekly_battle_score,
                 s.group_id,
