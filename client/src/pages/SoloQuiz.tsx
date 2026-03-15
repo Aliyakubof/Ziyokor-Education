@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
 import { 
@@ -39,6 +40,7 @@ const countCorrectParts = (studentAns: string | number, acceptedAnswers: string[
 
 export default function SoloQuiz() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [quizzes, setQuizzes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
