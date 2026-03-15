@@ -15,6 +15,13 @@ export default function BattleDetails() {
     const [loading, setLoading] = useState(true);
     const [timeLeft, setTimeLeft] = useState('');
     const arenaRef = useRef<HTMLDivElement>(null);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         fetchDetails();
@@ -100,20 +107,23 @@ export default function BattleDetails() {
         <div className="min-h-screen font-sans pb-20 relative overflow-hidden transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
             {/* Animated Background Elements */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 transition-opacity duration-1000">
-                <motion.div
-                    animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
-                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                    className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] opacity-20"
-                    style={{ backgroundColor: 'var(--primary-color)' }}
-                />
-                <motion.div
-                    animate={{ x: [0, -40, 0], y: [0, 60, 0] }}
-                    transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-                    className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] opacity-20"
-                    style={{ backgroundColor: 'var(--secondary-color)' }}
-                />
+                {!isMobile && (
+                    <>
+                        <motion.div
+                            animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
+                            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                            className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] opacity-20"
+                            style={{ backgroundColor: 'var(--primary-color)' }}
+                        />
+                        <motion.div
+                            animate={{ x: [0, -40, 0], y: [0, 60, 0] }}
+                            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+                            className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] opacity-20"
+                            style={{ backgroundColor: 'var(--secondary-color)' }}
+                        />
+                    </>
+                )}
                 <div className="absolute inset-0 opacity-10 md:opacity-20" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/carbon-fibre.png')", mixBlendMode: 'overlay' }}></div>
-                {/* Dynamic overlay for extra intensity themed */}
                 <div className="absolute inset-0 opacity-40 transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}></div>
             </div>
 
@@ -173,9 +183,9 @@ export default function BattleDetails() {
                     {/* Glow behind card */}
                     <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-rose-600 rounded-[2rem] md:rounded-[3rem] blur opacity-10 group-hover:opacity-30 transition duration-1000"></div>
 
-                    <div className="relative backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 border shadow-2xl overflow-hidden transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                    <div className="relative md:backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 border shadow-2xl overflow-hidden transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                         {/* Shimmer Effect */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
+                        {!isMobile && <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />}
 
                         <div className="flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12 relative z-10">
                             {/* Team A */}
@@ -189,7 +199,7 @@ export default function BattleDetails() {
                                         <ShieldAlert className="text-white w-10 md:w-16 lg:w-20" size={40} />
                                     </div>
                                     <motion.div
-                                        animate={{ scale: [1, 1.2, 1] }}
+                                        animate={!isMobile ? { scale: [1, 1.2, 1] } : {}}
                                         transition={{ duration: 2, repeat: Infinity }}
                                         className="absolute -top-3 -left-3 md:-top-4 md:-left-4"
                                     >
@@ -210,13 +220,13 @@ export default function BattleDetails() {
                             {/* VS Divider */}
                             <div className="flex flex-col items-center gap-1 md:gap-2 order-1 md:order-2">
                                 <motion.div
-                                    animate={{ scale: [1, 1.05, 1] }}
+                                    animate={!isMobile ? { scale: [1, 1.05, 1] } : {}}
                                     transition={{ duration: 3, repeat: Infinity }}
                                     className="w-16 h-16 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center border-2 md:border-4 shadow-2xl relative"
                                     style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}
                                 >
                                     <span className="text-2xl md:text-4xl lg:text-5xl font-black italic bg-clip-text text-transparent bg-gradient-to-tr from-rose-500 to-indigo-500">VS</span>
-                                    <div className="absolute inset-0 rounded-full border animate-ping opacity-10" style={{ borderColor: 'var(--primary-color)' }} />
+                                    {!isMobile && <div className="absolute inset-0 rounded-full border animate-ping opacity-10" style={{ borderColor: 'var(--primary-color)' }} />}
                                 </motion.div>
                                 <div className="flex items-center gap-1 text-[8px] md:text-[10px] font-black tracking-widest uppercase opacity-30">
                                     <Sparkles size={10} className="md:w-[12px]" /> LIVE ARENA <Sparkles size={10} className="md:w-[12px]" />
@@ -233,7 +243,7 @@ export default function BattleDetails() {
                                         <Flame className="text-white w-10 md:w-16 lg:w-20" size={40} />
                                     </div>
                                     <motion.div
-                                        animate={{ scale: [1, 1.2, 1] }}
+                                        animate={!isMobile ? { scale: [1, 1.2, 1] } : {}}
                                         transition={{ duration: 2, repeat: Infinity, delay: 1 }}
                                         className="absolute -top-3 -right-3 md:-top-4 md:-right-4"
                                     >
@@ -304,10 +314,10 @@ export default function BattleDetails() {
                                 {battle.membersA.map((m: any, idx: number) => (
                                         <motion.div
                                             key={idx}
-                                            initial={{ x: -20, opacity: 0 }}
-                                            whileInView={{ x: 0, opacity: 1 }}
+                                            initial={!isMobile ? { x: -20, opacity: 0 } : { opacity: 0 }}
+                                            whileInView={!isMobile ? { x: 0, opacity: 1 } : { opacity: 1 }}
                                             viewport={{ once: true }}
-                                            transition={{ delay: 0.05 * idx }}
+                                            transition={!isMobile ? { delay: 0.05 * idx } : { duration: 0.2 }}
                                             className="flex items-center justify-between backdrop-blur-md p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] border hover:bg-indigo-500/5 transition-all shadow-lg"
                                             style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
                                         >
@@ -345,10 +355,10 @@ export default function BattleDetails() {
                                 {battle.membersB.map((m: any, idx: number) => (
                                     <motion.div
                                         key={idx}
-                                        initial={{ x: 20, opacity: 0 }}
-                                        whileInView={{ x: 0, opacity: 1 }}
+                                        initial={!isMobile ? { x: 20, opacity: 0 } : { opacity: 0 }}
+                                        whileInView={!isMobile ? { x: 0, opacity: 1 } : { opacity: 1 }}
                                         viewport={{ once: true }}
-                                        transition={{ delay: 0.05 * idx }}
+                                        transition={!isMobile ? { delay: 0.05 * idx } : { duration: 0.2 }}
                                         className="flex items-center justify-between p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] border hover:bg-rose-500/5 transition-all shadow-lg"
                                         style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}
                                     >

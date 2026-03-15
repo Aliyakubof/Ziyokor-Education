@@ -1532,6 +1532,17 @@ app.put('/api/groups/:id', async (req, res) => {
     }
 });
 
+app.get('/api/groups/:groupId/students', async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        const result = await query('SELECT id, name FROM students WHERE group_id = $1 ORDER BY name ASC', [groupId]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching group students:', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
 // --- Extra Class Bookings ---
 app.get('/api/groups/:groupId/extra-class-bookings', async (req, res) => {
     try {
@@ -1557,8 +1568,8 @@ app.post('/api/students/:studentId/book-extra-class', async (req, res) => {
 
         // 1. Check if student already has a booking
         const existingRes = await query('SELECT 1 FROM extra_class_bookings WHERE student_id = $1', [studentId]);
-        if (existingRes && existingRes.rowCount && existingRes.rowCount > 0 && !isForced) {
-            return res.status(400).json({ error: "Sizda allaqachon bron mavjud!" });
+        if (existingRes && existingRes.rowCount && existingRes.rowCount > 0) {
+            return res.status(400).json({ error: "Ushbu o'quvchida allaqachon bron mavjud!" });
         }
 
         // 2. Check capacity

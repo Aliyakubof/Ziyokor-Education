@@ -2,6 +2,7 @@ import { Telegraf } from 'telegraf';
 import bcrypt from 'bcrypt';
 import { query } from './db';
 import { setupTelegramGame } from './telegram_game';
+import { generateNextDaySchedulePDF } from './pdfGenerator';
 
 const token = process.env.TELEGRAM_BOT_TOKEN || '8564105202:AAFHcou7QISJjWQe0UQqjPLITIbkZq_2-c4';
 export const bot = new Telegraf(token);
@@ -770,6 +771,66 @@ export async function sendWeeklyReports() {
         }
     } catch (err) {
         console.error('[Bot] sendWeeklyReports error:', err);
+    }
+}
+
+/**
+ * Daily Schedule Report: Sends tomorrow's bookings to teachers.
+ */
+export async function sendDailyScheduleToTeachers() {
+    try {
+        console.log('[Bot] Generating daily schedule reports...');
+        
+        // 1. Determine "Tomorrow" and its day name in Uzbek
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dayNames = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+        const tomorrowDayName = dayNames[tomorrow.getDay()];
+        const dateStr = tomorrow.toLocaleDateString('uz-UZ');
+
+        // 2. Fetch all teachers with telegram_chat_id
+        const teachers = await query('SELECT id, name, telegram_chat_id FROM teachers WHERE telegram_chat_id IS NOT NULL');
+
+        for (const teacher of teachers.rows) {
+            try {
+                // 3. Find bookings for this teacher's groups for tomorrow
+                // Note: Our system doesn't store a 'booking_date' column yet, 
+                // but we know which days are extra class days for each group.
+                // The user wants to know who booked for tomorrow.
+                
+                const bookings = await query(`
+                    SELECT ecb.*, g.name as group_name, s.name as student_name
+                    FROM extra_class_bookings ecb
+                    JOIN groups g ON ecb.group_id = g.id
+                    JOIN students s ON ecb.student_id = s.id
+                    WHERE g.teacher_id = $1 
+                      AND g.extra_class_days @> ARRAY[$2]::varchar[]
+                      AND ecb.is_completed = false
+                    ORDER BY ecb.time_slot ASC
+                `, [teacher.id, tomorrowDayName]);
+
+                if (bookings.rowCount && bookings.rowCount > 0) {
+                    const pdfBuffer = await generateNextDaySchedulePDF(
+                        teacher.name,
+                        dateStr,
+                        bookings.rows
+                    );
+
+                    await bot.telegram.sendDocument(teacher.telegram_chat_id, {
+                        source: pdfBuffer,
+                        filename: `jadval-${dateStr}.pdf`
+                    }, {
+                        caption: `📅 <b>Ertangi kun jadvali (${dateStr}):</b>\n\nJami: ${bookings.rowCount} ta dars.`,
+                        parse_mode: 'HTML'
+                    });
+                    console.log(`[Bot] Schedule sent to teacher: ${teacher.name}`);
+                }
+            } catch (e) {
+                console.error(`[Bot] Error sending schedule to teacher ${teacher.id}:`, e);
+            }
+        }
+    } catch (err) {
+        console.error('[Bot] sendDailyScheduleToTeachers error:', err);
     }
 }
 

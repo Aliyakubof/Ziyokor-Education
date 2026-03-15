@@ -98,9 +98,12 @@ export default function StudentDashboard() {
                 apiFetch(`/api/groups/${groupId}/extra-class-bookings`)
             ]);
             
+            let currentLevel = groupSettings?.level || 'Beginner';
+
             if (groupRes.ok) {
                 const groupData = await groupRes.json();
                 setGroupSettings(groupData);
+                currentLevel = groupData.level;
             }
             
             if (bookingsRes.ok) {
@@ -114,8 +117,7 @@ export default function StudentDashboard() {
             const topicsRes = await apiFetch('/api/level-topics');
             if (topicsRes.ok) {
                 const allTopics = await topicsRes.json();
-                const myLevel = groupSettings?.level || 'Beginner';
-                setAvailableTopics(allTopics.filter((t: any) => t.level === myLevel));
+                setAvailableTopics(allTopics.filter((t: any) => t.level === currentLevel));
             }
         } catch (err) {
             console.error('Booking data error:', err);

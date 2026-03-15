@@ -210,13 +210,16 @@ const ScheduleModal = ({
     isOpen: boolean;
     onClose: () => void;
     group: Group | null;
-    onForcedBook: (studentId: string, slot: string) => void;
+    onForcedBook: (studentId: string, slot: string, topic: string) => void;
     onDeleteBooking: (id: string) => void;
 }) => {
     const [bookings, setBookings] = useState<any[]>([]);
     const [students, setStudents] = useState<any[]>([]);
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
     const [isAddingManually, setIsAddingManually] = useState(false);
+    const [availableTopics, setAvailableTopics] = useState<any[]>([]);
+    const [customTopic, setCustomTopic] = useState('');
+    const [selectedTopic, setSelectedTopic] = useState('');
 
     useEffect(() => {
         if (isOpen && group) {
@@ -227,12 +230,17 @@ const ScheduleModal = ({
     const fetchData = async () => {
         if(!group) return;
         try {
-            const [bRes, sRes] = await Promise.all([
+            const [bRes, sRes, tRes] = await Promise.all([
                 apiFetch(`/api/groups/${group.id}/extra-class-bookings`),
-                apiFetch(`/api/groups/${group.id}/students`) 
+                apiFetch(`/api/groups/${group.id}/students`),
+                apiFetch('/api/level-topics')
             ]);
             if (bRes.ok) setBookings(await bRes.json());
             if (sRes.ok) setStudents(await sRes.json());
+            if (tRes.ok) {
+                const allTopics = await tRes.json();
+                setAvailableTopics(allTopics.filter((t: any) => t.level === group.level));
+            }
         } catch (e) { }
     };
 
@@ -356,26 +364,67 @@ const ScheduleModal = ({
             {isAddingManually && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
                     <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl">
-                        <h4 className="text-lg font-black text-slate-800 mb-4">{selectedSlot} ga qo'shish</h4>
-                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                            {students.map(s => (
-                                <button
-                                    key={s.id}
-                                    onClick={() => {
-                                        if (selectedSlot) {
-                                            onForcedBook(s.id, selectedSlot);
-                                            setIsAddingManually(false);
-                                            setTimeout(fetchData, 500);
-                                        }
-                                    }}
-                                    className="w-full text-left p-3 hover:bg-indigo-50 rounded-xl transition-colors font-bold text-sm text-slate-700 flex justify-between items-center group"
-                                >
-                                    {s.name}
-                                    <Plus className="opacity-0 group-hover:opacity-100 text-indigo-400" size={16} />
-                                </button>
-                            ))}
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-lg font-black text-slate-800">{selectedSlot} ga qo'shish</h4>
+                            <button onClick={() => setIsAddingManually(false)} className="p-2 text-slate-400"><X size={20} /></button>
                         </div>
-                        <button onClick={() => setIsAddingManually(false)} className="w-full mt-4 py-3 text-slate-500 font-bold text-sm">Bekor qilish</button>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Mavzu (ixtiyoriy)</label>
+                                <div className="space-y-2">
+                                    <select 
+                                        value={selectedTopic}
+                                        onChange={(e) => setSelectedTopic(e.target.value)}
+                                        className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                                    >
+                                        <option value="">Ro'yxatdan tanlang...</option>
+                                        {availableTopics.map(t => (
+                                            <option key={t.id} value={t.topic_name}>{t.topic_name}</option>
+                                        ))}
+                                        <option value="custom">Boshqa mavzu yozish...</option>
+                                    </select>
+
+                                    {(selectedTopic === 'custom' || availableTopics.length === 0) && (
+                                        <input 
+                                            type="text" 
+                                            placeholder="Mavzuni qo'lda kiriting..." 
+                                            value={customTopic}
+                                            onChange={(e) => setCustomTopic(e.target.value)}
+                                            className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                                        />
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">O'quvchini tanlang</label>
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                    {students.filter(s => !bookings.some(b => b.student_id === s.id)).map(s => (
+                                        <button
+                                            key={s.id}
+                                            onClick={async () => {
+                                                if (selectedSlot) {
+                                                    const finalTopic = selectedTopic === 'custom' ? customTopic : (selectedTopic || customTopic);
+                                                    await onForcedBook(s.id, selectedSlot, finalTopic);
+                                                    setSelectedTopic('');
+                                                    setCustomTopic('');
+                                                    setIsAddingManually(false);
+                                                    setTimeout(fetchData, 500);
+                                                }
+                                            }}
+                                            className="w-full text-left p-3 hover:bg-indigo-50 rounded-xl transition-colors font-bold text-sm text-slate-700 flex justify-between items-center group border border-transparent hover:border-indigo-100"
+                                        >
+                                            {s.name}
+                                            <Plus className="opacity-0 group-hover:opacity-100 text-indigo-400" size={16} />
+                                        </button>
+                                    ))}
+                                    {students.length === 0 && (
+                                        <p className="text-center py-4 text-slate-400 italic text-xs">Guruhda o'quvchilar topilmadi.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -895,12 +944,12 @@ const TeacherDashboard = () => {
         }
     };
 
-    const handleForcedBook = async (studentId: string, slot: string) => {
+    const handleForcedBook = async (studentId: string, slot: string, topic: string = '') => {
         if (!selectedGroup) return;
         try {
             const res = await apiFetch(`/api/students/${studentId}/book-extra-class`, {
                 method: 'POST',
-                body: JSON.stringify({ groupId: selectedGroup.id, timeSlot: slot, isForced: true })
+                body: JSON.stringify({ groupId: selectedGroup.id, timeSlot: slot, isForced: true, topic })
             });
             if (!res.ok) {
                 const data = await res.json();

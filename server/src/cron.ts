@@ -72,5 +72,14 @@ export function startCronJobs() {
         timezone: "Asia/Tashkent"
     });
 
+    // Daily Extra Class Schedule Report: Every day at 20:00
+    cron.schedule('0 20 * * *', async () => {
+        console.log('[Cron] Sending daily extra class schedule reports...');
+        const { sendDailyScheduleToTeachers } = await import('./bot');
+        await sendDailyScheduleToTeachers();
+    }, {
+        timezone: "Asia/Tashkent"
+    });
+
     console.log('[Auto-Cleanup] Cron jobs initialized successfully.');
 }
