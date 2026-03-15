@@ -890,6 +890,33 @@ app.post('/api/student/active-theme', async (req, res) => {
     }
 });
 
+app.post('/api/student/active-avatar', async (req, res) => {
+    try {
+        const { studentId, itemId } = req.body;
+
+        // Fetch item details to get URL
+        const itemRes = await query('SELECT url FROM shop_items WHERE id = $1 AND type = \'avatar\' AND is_active = TRUE', [itemId]);
+        if (itemRes.rowCount === 0) return res.status(404).json({ error: 'Avatar topilmadi' });
+        const avatarUrl = itemRes.rows[0].url;
+
+        // Verify student owns the avatar
+        const purchaseRes = await query(
+            'SELECT 1 FROM student_purchases WHERE student_id = $1 AND item_id = $2 LIMIT 1',
+            [studentId, itemId]
+        );
+
+        if (purchaseRes.rowCount === 0) {
+            return res.status(403).json({ error: 'Siz bu avatarni sotib olmagansiz' });
+        }
+
+        await query('UPDATE students SET avatar_url = $1 WHERE id = $2', [avatarUrl, studentId]);
+        res.json({ success: true, avatarUrl });
+    } catch (err: any) {
+        console.error('Set active avatar error:', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+});
+
 app.get('/api/student/quizzes', async (req, res) => {
     try {
         const { studentId } = req.query;

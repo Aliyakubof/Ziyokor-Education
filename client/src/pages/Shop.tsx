@@ -14,6 +14,7 @@ export default function Shop() {
     const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
     const [purchasedItems, setPurchasedItems] = useState<string[]>([]);
     const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
+    const [activeAvatarUrl, setActiveAvatarUrl] = useState<string | null>(null);
     const [balance, setBalance] = useState(0);
 
     useEffect(() => {
@@ -45,6 +46,7 @@ export default function Shop() {
                 const data = await res.json();
                 setBalance(data.coins);
                 setActiveThemeId(data.active_theme_id);
+                setActiveAvatarUrl(data.avatarUrl);
                 if (data.active_theme_color) {
                     setGlobalThemeId(data.active_theme_color);
                 }
@@ -117,6 +119,31 @@ export default function Shop() {
         }
     };
 
+    const handleApplyAvatar = async (itemId: string) => {
+        setPurchasing(itemId);
+        try {
+            const res = await apiFetch('/api/student/active-avatar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId: user?.id, itemId })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setActiveAvatarUrl(data.avatarUrl);
+                setMessage({ text: "Avatar muvaffaqiyatli o'rnatildi!", type: 'success' });
+            } else {
+                const data = await res.json();
+                setMessage({ text: data.error || "Xatolik yuz berdi", type: 'error' });
+            }
+        } catch (err) {
+            setMessage({ text: "Xatolik yuz berdi", type: 'error' });
+        } finally {
+            setPurchasing(null);
+            setTimeout(() => setMessage(null), 3000);
+        }
+    };
+
     return (
         <div className="min-h-screen font-sans pb-10 transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
             {/* Header */}
@@ -170,7 +197,9 @@ export default function Shop() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {items.map((item) => {
                             const isPurchased = purchasedItems.includes(item.id);
-                            const isActive = activeThemeId === item.id;
+                            const isThemeActive = item.type === 'theme' && activeThemeId === item.id;
+                            const isAvatarActive = item.type === 'avatar' && activeAvatarUrl === item.url;
+                            const isActive = isThemeActive || isAvatarActive;
 
                             return (
                                 <div key={item.id} className="rounded-3xl p-4 flex flex-col items-center text-center group border shadow-sm transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
@@ -197,23 +226,17 @@ export default function Shop() {
                                     <p className="text-[10px] font-bold uppercase mb-4 opacity-50" style={{ color: 'var(--text-color)' }}>{item.type === 'avatar' ? 'Avatar' : item.type === 'theme' ? 'Mavzu' : 'Ruxsat'}</p>
 
                                     {isPurchased && item.is_one_time ? (
-                                        item.type === 'theme' ? (
-                                            <button
-                                                onClick={() => handleApplyTheme(item.id)}
-                                                disabled={isActive || purchasing === item.id}
-                                                className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${isActive
-                                                    ? 'opacity-40 cursor-not-allowed'
-                                                    : 'text-white shadow-lg active:scale-95'
-                                                    }`}
-                                                style={{ backgroundColor: isActive ? 'transparent' : 'var(--primary-color)', color: isActive ? 'var(--text-color)' : 'white' }}
-                                            >
-                                                {isActive ? 'O\'rnatilgan' : 'O\'rnatish'}
-                                            </button>
-                                        ) : (
-                                            <div className="w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 opacity-50" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
-                                                <CheckCircle2 size={16} /> Sotib olingan
-                                            </div>
-                                        )
+                                        <button
+                                            onClick={() => item.type === 'theme' ? handleApplyTheme(item.id) : handleApplyAvatar(item.id)}
+                                            disabled={isActive || purchasing === item.id}
+                                            className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${isActive
+                                                ? 'opacity-40 cursor-not-allowed'
+                                                : 'text-white shadow-lg active:scale-95'
+                                                }`}
+                                            style={{ backgroundColor: isActive ? 'transparent' : 'var(--primary-color)', color: isActive ? 'var(--text-color)' : 'white' }}
+                                        >
+                                            {isActive ? 'O\'rnatilgan' : 'O\'rnatish'}
+                                        </button>
                                     ) : (
                                         <button
                                             onClick={() => handlePurchase(item.id)}

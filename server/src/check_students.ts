@@ -1,17 +1,19 @@
-import { query } from './db';
+import { Client } from 'pg';
 
-async function check() {
+const client = new Client({
+    connectionString: 'postgresql://postgres:postgres@localhost:5432/ziyokor'
+});
+
+async function run() {
     try {
-        const res = await query('SELECT count(*) FROM students');
-        console.log('Student count:', res.rows[0].count);
-        
-        if (Number(res.rows[0].count) > 0) {
-            const sample = await query('SELECT id, name FROM students LIMIT 1');
-            console.log('Sample student:', sample.rows[0]);
-        }
-    } catch (e: any) {
-        console.error('Check failed:', e.message);
+        await client.connect();
+        const res = await client.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'students'");
+        console.log(res.rows.map(r => r.column_name));
+    } catch (err) {
+        console.error(err);
+    } finally {
+        await client.end();
     }
 }
 
-check();
+run();
