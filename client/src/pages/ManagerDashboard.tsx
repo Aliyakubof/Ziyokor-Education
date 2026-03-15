@@ -109,13 +109,13 @@ const ManagerDashboard: React.FC = () => {
 
         return (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-4 border-b border-slate-200 gap-4">
                     <div>
-                        <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
+                        <h2 className="text-xl md:text-2xl font-black text-slate-900 flex items-center gap-3">
                             <Shield className="text-indigo-600" /> Barcha O'qituvchilar
                         </h2>
-                        <p className="text-slate-500 font-medium text-sm mt-1 uppercase tracking-widest">
-                            Natijalarni ko'rish uchun o'qituvchini tanlang
+                        <p className="text-slate-500 font-medium text-[10px] md:text-sm mt-1 uppercase tracking-widest">
+                            Natijalarni ko'rish uchun tanlang
                         </p>
                     </div>
                 </div>
@@ -177,41 +177,41 @@ const ManagerDashboard: React.FC = () => {
     return (
         <div className="min-h-screen bg-transparent p-4 md:p-8 max-w-7xl mx-auto font-sans text-slate-900">
             {/* Header */}
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 lg:mb-12 pb-6 border-b border-indigo-100/50 relative z-10 bg-white/50 backdrop-blur-md rounded-3xl px-6 py-4 shadow-sm border border-white">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 lg:mb-12 pb-6 border-b border-indigo-100/50 relative z-10 bg-white/50 backdrop-blur-md rounded-3xl px-4 md:px-6 py-4 shadow-sm border border-white">
                 <div className="flex items-center gap-4">
                     <img src={logo} alt="Ziyokor Logo" className="h-12 w-auto md:h-16 object-contain rounded-2xl shadow-sm" />
                     <div>
                         <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
                             Menejer Paneli
                         </h1>
-                        <nav className="flex items-center gap-1 mt-2">
+                        <nav className="flex items-center gap-1 mt-2 overflow-x-auto pb-2 -mb-2 scroll-hide">
                             <button
                                 onClick={() => { setActiveTab('teachers'); setSelectedTeacher(null); }}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'teachers' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'teachers' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
                             >
                                 O'qituvchilar
                             </button>
                             <button
                                 onClick={() => { setActiveTab('shop'); setSelectedTeacher(null); }}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'shop' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'shop' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
                             >
                                 Do'kon
                             </button>
                             <button
                                 onClick={() => { setActiveTab('vocabulary'); setSelectedTeacher(null); }}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'vocabulary' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'vocabulary' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
                             >
                                 Lug'atlar
                             </button>
                             <button
                                 onClick={() => { setActiveTab('settings'); setSelectedTeacher(null); }}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'settings' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
                             >
                                 Sozlamalar
                             </button>
                             <button
                                 onClick={() => { setActiveTab('carousel'); setSelectedTeacher(null); }}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'carousel' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'carousel' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
                             >
                                 Karusel
                             </button>

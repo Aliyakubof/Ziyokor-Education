@@ -1643,10 +1643,21 @@ app.patch('/api/extra-class-bookings/:id/complete', async (req, res) => {
     }
 });
 
-app.get('/api/teacher/weekly-report', requireRole('teacher'), async (req, res) => {
+app.get('/api/teacher/weekly-report', requireRole('admin', 'teacher', 'manager'), async (req, res) => {
     try {
-        const teacherId = (req as any).user.id;
-        const teacherName = (req as any).user.name;
+        const { teacherId: queryTeacherId } = req.query;
+        const targetTeacherId = queryTeacherId ? String(queryTeacherId) : (req as any).user.id;
+        const userRole = (req as any).user.role;
+
+        // Managers and admins can view any teacher's report; teachers only their own
+        if (userRole === 'teacher' && targetTeacherId !== (req as any).user.id) {
+            return res.status(403).json({ error: 'Faqat o\'zingizning hisobotingizni ko\'rishingiz mumkin' });
+        }
+
+        // Fetch teacher name
+        const tRes = await query('SELECT name FROM teachers WHERE id = $1', [targetTeacherId]);
+        if (tRes.rowCount === 0) return res.status(404).json({ error: 'O\'qituvchi topilmadi' });
+        const teacherName = tRes.rows[0].name;
 
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 7);
@@ -1662,7 +1673,7 @@ app.get('/api/teacher/weekly-report', requireRole('teacher'), async (req, res) =
               AND ecb.is_completed = true
               AND ecb.created_at >= NOW() - INTERVAL '7 days'
             ORDER BY ecb.created_at DESC
-        `, [teacherId]);
+        `, [targetTeacherId]);
 
         const pdfBuffer = await generateWeeklyTeacherReportPDF(
             teacherName,
@@ -1672,7 +1683,7 @@ app.get('/api/teacher/weekly-report', requireRole('teacher'), async (req, res) =
         );
 
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=weekly-report-${teacherName}.pdf`);
+        res.setHeader('Content-Disposition', `attachment; filename=weekly-report-${encodeURIComponent(teacherName)}.pdf`);
         res.send(pdfBuffer);
     } catch (err: any) {
         console.error('Error generating weekly report:', err);

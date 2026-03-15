@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../api';
-import { Users, Phone, Shield, History } from 'lucide-react';
+import { Users, Phone, Shield, History, FileDown } from 'lucide-react';
 
 interface Group {
     id: string;
@@ -21,6 +21,8 @@ const ManagerTeacherGroups: React.FC<ManagerTeacherGroupsProps> = ({ teacherId, 
     const [groups, setGroups] = useState<Group[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [downloading, setDownloading] = useState(false);
+
     useEffect(() => {
         const fetchGroups = async () => {
             try {
@@ -37,6 +39,29 @@ const ManagerTeacherGroups: React.FC<ManagerTeacherGroupsProps> = ({ teacherId, 
         fetchGroups();
     }, [teacherId]);
 
+    const handleDownloadWeeklyReport = async () => {
+        setDownloading(true);
+        try {
+            const res = await apiFetch(`/api/teacher/weekly-report?teacherId=${teacherId}`);
+            if (!res.ok) throw new Error('Yuklashda xatolik');
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `haftalik-hisobot-${teacherName}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err) {
+            console.error(err);
+            alert('Hisobotni yuklashda xatolik yuz berdi');
+        } finally {
+            setDownloading(false);
+        }
+    };
+
     return (
         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
@@ -48,8 +73,18 @@ const ManagerTeacherGroups: React.FC<ManagerTeacherGroupsProps> = ({ teacherId, 
                         <Shield className="text-indigo-600" /> {teacherName} - Guruhlari
                     </h2>
                 </div>
-                <div className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl font-bold border border-indigo-100 shadow-sm">
-                    {groups.length} ta Guruh
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={handleDownloadWeeklyReport}
+                        disabled={downloading}
+                        className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {downloading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <FileDown size={18} />}
+                        Haftalik Hisobot (PDF)
+                    </button>
+                    <div className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl font-bold border border-indigo-100 shadow-sm">
+                        {groups.length} ta Guruh
+                    </div>
                 </div>
             </div>
 

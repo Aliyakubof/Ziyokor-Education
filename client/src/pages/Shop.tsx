@@ -177,7 +177,7 @@ export default function Shop() {
                                     <div className="w-24 h-24 rounded-2xl mb-4 flex items-center justify-center overflow-hidden border group-hover:scale-105 transition-all duration-300" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}>
                                         {item.type === 'avatar' ? (
                                             <img
-                                                src={item.url?.startsWith('/') ? `${(window as any).VITE_BACKEND_URL || ''}${item.url}` : item.url}
+                                                src={item.url?.startsWith('/') ? `${import.meta.env.VITE_BACKEND_URL || ''}${item.url}` : item.url}
                                                 alt={item.name}
                                                 className="w-20 h-20 object-contain"
                                             />

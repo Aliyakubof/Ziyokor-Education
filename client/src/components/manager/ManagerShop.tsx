@@ -173,7 +173,7 @@ export default function ManagerShop() {
                             </div>
                             {editingItem.url && (
                                 <div className="w-20 h-20 bg-white rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden p-2">
-                                    <img src={editingItem.url.startsWith('/') ? `${(window as any).VITE_BACKEND_URL || ''}${editingItem.url}` : editingItem.url} alt="Preview" className="w-full h-full object-contain" />
+                                    <img src={editingItem.url.startsWith('/') ? `${import.meta.env.VITE_BACKEND_URL || ''}${editingItem.url}` : editingItem.url} alt="Preview" className="w-full h-full object-contain" />
                                 </div>
                             )}
                         </div>
@@ -248,7 +248,7 @@ export default function ManagerShop() {
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-100">
                                                 {item.type === 'avatar' && item.url ? (
-                                                    <img src={item.url.startsWith('/') ? `${(window as any).VITE_BACKEND_URL || ''}${item.url}` : item.url} className="w-8 h-8 object-contain" />
+                                                    <img src={item.url.startsWith('/') ? `${import.meta.env.VITE_BACKEND_URL || ''}${item.url}` : item.url} className="w-8 h-8 object-contain" />
                                                 ) : item.type === 'theme' ? (
                                                     <div className="w-6 h-6 rounded-md shadow-inner" style={{ backgroundColor: item.color?.startsWith('#') ? item.color : 'white' }}></div>
                                                 ) : (
