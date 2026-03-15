@@ -280,13 +280,21 @@ const ScheduleModal = ({
                     {slots.length > 0 ? (
                         slots.map(slot => {
                             const slotBookings = bookings.filter(b => b.time_slot === slot);
+                            const forcedCount = slotBookings.filter(b => b.is_forced).length;
+                            const studentCount = slotBookings.filter(b => !b.is_forced).length;
+                            
                             return (
                                 <div key={slot} className="p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 space-y-3">
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex justify-between items-start">
                                         <span className="text-lg font-black text-indigo-600">{slot}</span>
-                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${slotBookings.length >= 5 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                            {slotBookings.length}/5 band
-                                        </span>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${forcedCount >= 5 ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}>
+                                                Teacher: {forcedCount}/5
+                                            </span>
+                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${studentCount >= 4 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                                Student: {studentCount}/4
+                                            </span>
+                                        </div>
                                     </div>
                                     <div className="flex flex-wrap gap-3">
                                         {slotBookings.map(b => (
@@ -963,43 +971,41 @@ const TeacherDashboard = () => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col-reverse md:flex-row items-center gap-4 w-full md:w-auto">
-                        <StudentSearchInput navigate={navigate} />
-                        
-                        <form onSubmit={handleCreateGroup} className="flex gap-2 w-full md:w-auto">
-                            <input
-                                type="text"
-                                value={newGroupName}
-                                onChange={(e) => setNewGroupName(e.target.value)}
-                                placeholder="Guruh nomi..."
-                                className="bg-white border border-slate-300 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-40"
-                            />
-                            <button type="submit" className="bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
-                                <Plus size={20} />
-                            </button>
-                        </form>
+                    <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+                        <div className="w-full md:w-auto flex flex-col md:flex-row gap-4">
+                            <StudentSearchInput navigate={navigate} />
+                            
+                            <form onSubmit={handleCreateGroup} className="flex gap-2 w-full md:w-auto">
+                                <input
+                                    type="text"
+                                    value={newGroupName}
+                                    onChange={(e) => setNewGroupName(e.target.value)}
+                                    placeholder="Guruh nomi..."
+                                    className="bg-white border border-slate-300 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-40"
+                                />
+                                <button type="submit" className="bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                                    <Plus size={20} />
+                                </button>
+                            </form>
+                        </div>
 
-                        <div className="flex items-center gap-3">
-                            <div className="text-right">
-                                <p className="text-sm font-bold">{user?.name}</p>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{role}</p>
-                            </div>
+                        <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
                             <button 
                                 onClick={() => setIsTopicsModalOpen(true)}
-                                className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors text-sm font-bold flex items-center gap-2"
+                                className="flex-1 md:flex-none px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors text-xs md:text-sm font-bold flex items-center justify-center gap-2"
                                 title="Mavzularni boshqarish"
                             >
-                                <BookOpen size={16} /> Mavzular
+                                <BookOpen size={16} /> <span className="md:inline">Mavzular</span>
                             </button>
                             <button 
                                 onClick={handleDownloadWeeklyReport}
-                                className="px-3 py-2 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors text-sm font-bold flex items-center gap-2"
+                                className="flex-1 md:flex-none px-3 py-2 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors text-xs md:text-sm font-bold flex items-center justify-center gap-2"
                                 title="Haftalik hisobotni PDF yuklab olish"
                             >
-                                <FileText size={16} /> PDF Hisobot
+                                <FileText size={16} /> <span className="md:inline">PDF Hisobot</span>
                             </button>
-                            <button onClick={() => { logout(); navigate('/login'); }} className="px-3 py-2 bg-white text-red-600 rounded-lg border border-red-100 hover:bg-red-50 transition-colors text-sm font-bold flex items-center gap-2">
-                                <LogOut size={16} /> Chiqish
+                            <button onClick={() => { logout(); navigate('/login'); }} className="flex-1 md:flex-none px-3 py-2 bg-white text-red-600 rounded-lg border border-red-100 hover:bg-red-50 transition-colors text-xs md:text-sm font-bold flex items-center justify-center gap-2">
+                                <LogOut size={16} /> <span className="md:inline">Chiqish</span>
                             </button>
                         </div>
                     </div>

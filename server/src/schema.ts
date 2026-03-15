@@ -217,6 +217,7 @@ CREATE TABLE IF NOT EXISTS extra_class_bookings (
     student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
     time_slot TEXT NOT NULL,
     topic TEXT,
+    is_forced BOOLEAN DEFAULT FALSE,
     is_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW()
 );

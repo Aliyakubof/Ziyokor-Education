@@ -142,7 +142,8 @@ export default function StudentDashboard() {
             
             if (checkDayName && groupSettings.extra_class_days.includes(checkDayName)) {
                 const diffHours = (checkDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-                if (diffHours >= 48) {
+                // Allow booking if the class is at least 24 hours away
+                if (diffHours >= 24) {
                     found = true;
                     break;
                 }
@@ -150,7 +151,7 @@ export default function StudentDashboard() {
         }
 
         if (!found) {
-            alert("Yaqin 2 kun ichida bo'sh dars kunlari yo'q. Keyinroq urinib ko'ring.");
+            alert("Yaqin 24 soat ichida bo'sh dars kunlari yo'q. Keyinroq urinib ko'ring.");
             return;
         }
 

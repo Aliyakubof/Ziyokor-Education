@@ -199,6 +199,9 @@ async function initDb() {
             );
         `);
 
+        // Extra Class Booking migration
+        await query('ALTER TABLE extra_class_bookings ADD COLUMN IF NOT EXISTS is_forced BOOLEAN DEFAULT FALSE;');
+
 
         // Gamification columns migration (coins, streaks)
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS coins INT DEFAULT 0;');
@@ -1558,9 +1561,17 @@ app.post('/api/students/:studentId/book-extra-class', async (req, res) => {
             return res.status(400).json({ error: "Sizda allaqachon bron mavjud!" });
         }
 
-        // 2. Check capacity (unless forced by teacher)
-        if (!isForced) {
-            const countRes = await query('SELECT COUNT(*) FROM extra_class_bookings WHERE group_id = $1 AND time_slot = $2', [groupId, timeSlot]);
+        // 2. Check capacity
+        if (isForced) {
+            // Teacher pool: max 5
+            const countRes = await query('SELECT COUNT(*) FROM extra_class_bookings WHERE group_id = $1 AND time_slot = $2 AND is_forced = true', [groupId, timeSlot]);
+            const count = parseInt(countRes.rows[0].count);
+            if (count >= 5) {
+                return res.status(400).json({ error: "O'qituvchi uchun ajratilgan joy qolmagan (MAX 5)!" });
+            }
+        } else {
+            // Student pool: max 4
+            const countRes = await query('SELECT COUNT(*) FROM extra_class_bookings WHERE group_id = $1 AND time_slot = $2 AND is_forced = false', [groupId, timeSlot]);
             const count = parseInt(countRes.rows[0].count);
             if (count >= 4) {
                 return res.status(400).json({ error: "Bu vaqtda joy qolmagan (MAX 4)!" });
@@ -1570,8 +1581,8 @@ app.post('/api/students/:studentId/book-extra-class', async (req, res) => {
         const id = uuidv4();
         const { topic } = req.body;
         await query(
-            'INSERT INTO extra_class_bookings (id, student_id, group_id, time_slot, topic) VALUES ($1, $2, $3, $4, $5)',
-            [id, studentId, groupId, timeSlot, topic]
+            'INSERT INTO extra_class_bookings (id, student_id, group_id, time_slot, topic, is_forced) VALUES ($1, $2, $3, $4, $5, $6)',
+            [id, studentId, groupId, timeSlot, topic, !!isForced]
         );
         res.json({ success: true, id });
     } catch (err) {
