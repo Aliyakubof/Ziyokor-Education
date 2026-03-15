@@ -36,11 +36,11 @@ const UnitJoin = () => {
         });
 
         socket.on('game-started', () => {
-            navigate('/play');
+            navigate('/play', { replace: true });
         });
 
         socket.on('unit-game-started', () => {
-            navigate('/play');
+            navigate('/play', { replace: true });
         });
 
         socket.on('error', (msg) => {

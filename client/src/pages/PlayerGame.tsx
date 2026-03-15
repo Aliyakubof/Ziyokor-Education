@@ -286,7 +286,7 @@ export default function PlayerGame() {
                         <Info className="mx-auto mb-4" size={24} style={{ color: 'var(--primary-color)' }} />
                         <p className="font-bold" style={{ color: 'var(--text-color)' }}>Natijalar o'qituvchingizga yuborildi.</p>
                     </div>
-                    <button onClick={() => window.location.href = '/'} className="w-full text-white font-black py-4 rounded-2xl shadow-lg transition-transform active:scale-95" style={{ backgroundColor: 'var(--primary-color)' }}>ASOSIY MENYUGA QAYTISH</button>
+                    <button onClick={() => navigate('/student/dashboard', { replace: true })} className="w-full text-white font-black py-4 rounded-2xl shadow-lg transition-transform active:scale-95" style={{ backgroundColor: 'var(--primary-color)' }}>ASOSIY MENYUGA QAYTISH</button>
                 </div>
             </div>
         );
@@ -302,7 +302,7 @@ export default function PlayerGame() {
                     <h2 className="text-3xl font-black mb-2" style={{ color: 'var(--text-color)' }}>Xatolik</h2>
                     <p className="font-medium mb-10 opacity-60" style={{ color: 'var(--text-color)' }}>{error}</p>
                     <button onClick={() => window.location.reload()} className="w-full text-white font-black py-4 rounded-2xl mb-4 shadow-lg" style={{ backgroundColor: 'var(--primary-color)' }}>QAYTADAN URINISH</button>
-                    <button onClick={() => navigate('/student/dashboard')} className="w-full font-bold text-xs uppercase tracking-widest opacity-40" style={{ color: 'var(--text-color)' }}>DASHBOARDGA QAYTISH</button>
+                    <button onClick={() => navigate('/student/dashboard', { replace: true })} className="w-full font-bold text-xs uppercase tracking-widest opacity-40" style={{ color: 'var(--text-color)' }}>DASHBOARDGA QAYTISH</button>
                 </div>
             </div>
         );

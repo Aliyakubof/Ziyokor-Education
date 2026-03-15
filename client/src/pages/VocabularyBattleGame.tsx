@@ -75,7 +75,7 @@ export default function VocabularyBattleGame() {
                 setQuestions(processedQs);
             } else {
                 alert("Topilmadi!");
-                navigate('/student/vocab-battles');
+                navigate('/student/vocab-battles', { replace: true });
             }
         } catch (error) {
             console.error(error);
@@ -229,7 +229,7 @@ export default function VocabularyBattleGame() {
         return <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center space-y-4 transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
             <ShieldAlert size={64} className="text-rose-400" />
             <h2 className="text-2xl font-black" style={{ color: 'var(--text-color)' }}>Ushbu bosqichda savollar yo'q</h2>
-            <button onClick={() => navigate(-1)} className="px-6 py-3 text-white font-bold rounded-2xl shadow-xl hover:-translate-y-1 transition-all" style={{ backgroundColor: 'var(--primary-color)' }}>Orqaga</button>
+            <button onClick={() => navigate('/student/vocab-battles', { replace: true })} className="px-6 py-3 text-white font-bold rounded-2xl shadow-xl hover:-translate-y-1 transition-all" style={{ backgroundColor: 'var(--primary-color)' }}>Orqaga</button>
         </div>;
     }
 
@@ -321,7 +321,7 @@ export default function VocabularyBattleGame() {
                 <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent z-50">
                     <div className="max-w-2xl mx-auto">
                         <button
-                            onClick={() => navigate('/student/vocab-battles')}
+                            onClick={() => navigate('/student/vocab-battles', { replace: true })}
                             className="w-full py-5 text-white font-black rounded-[2rem] text-xl shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95"
                             style={{ backgroundColor: 'var(--primary-color)' }}
                         >

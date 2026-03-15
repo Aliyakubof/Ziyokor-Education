@@ -268,12 +268,20 @@ export default function SoloQuiz() {
                             </div>
                         </div>
 
-                        <button
-                            onClick={() => { setView('LIST'); setSelectedQuiz(null); setResults(null); }}
-                            className="w-full bg-indigo-600 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all"
-                        >
-                            YANA URINISH
-                        </button>
+                        <div className="flex flex-col gap-3 w-full">
+                            <button
+                                onClick={() => { setView('LIST'); setSelectedQuiz(null); setResults(null); }}
+                                className="w-full bg-indigo-600 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all"
+                            >
+                                YANA URINISH
+                            </button>
+                            <button
+                                onClick={() => navigate('/student/dashboard', { replace: true })}
+                                className="w-full bg-slate-100 text-slate-600 font-black py-4 rounded-[1.5rem] hover:bg-slate-200 transition-all text-sm uppercase tracking-widest"
+                            >
+                                BOSH SAHIFA
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
