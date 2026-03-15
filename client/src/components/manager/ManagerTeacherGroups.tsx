@@ -64,25 +64,25 @@ const ManagerTeacherGroups: React.FC<ManagerTeacherGroupsProps> = ({ teacherId, 
 
     return (
         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-            <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-4 border-b border-slate-200 gap-4">
                 <div>
-                    <button onClick={onBack} className="text-slate-500 hover:text-indigo-600 font-medium text-sm flex items-center gap-2 mb-2 transition-colors">
+                    <button onClick={onBack} className="text-slate-500 hover:text-indigo-600 font-medium text-xs md:text-sm flex items-center gap-2 mb-2 transition-colors">
                         ← Orqaga
                     </button>
-                    <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
+                    <h2 className="text-xl md:text-2xl font-black text-slate-900 flex items-center gap-3">
                         <Shield className="text-indigo-600" /> {teacherName} - Guruhlari
                     </h2>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3">
                     <button
                         onClick={handleDownloadWeeklyReport}
                         disabled={downloading}
-                        className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-xs md:text-sm shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {downloading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <FileDown size={18} />}
                         Haftalik Hisobot (PDF)
                     </button>
-                    <div className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl font-bold border border-indigo-100 shadow-sm">
+                    <div className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl font-bold border border-indigo-100 shadow-sm text-xs md:text-sm">
                         {groups.length} ta Guruh
                     </div>
                 </div>

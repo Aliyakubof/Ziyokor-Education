@@ -178,10 +178,10 @@ const ManagerDashboard: React.FC = () => {
         <div className="min-h-screen bg-transparent p-4 md:p-8 max-w-7xl mx-auto font-sans text-slate-900">
             {/* Header */}
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 lg:mb-12 pb-6 border-b border-indigo-100/50 relative z-10 bg-white/50 backdrop-blur-md rounded-3xl px-4 md:px-6 py-4 shadow-sm border border-white">
-                <div className="flex items-center gap-4">
-                    <img src={logo} alt="Ziyokor Logo" className="h-12 w-auto md:h-16 object-contain rounded-2xl shadow-sm" />
+                <div className="flex items-center gap-3 md:gap-4">
+                    <img src={logo} alt="Ziyokor Logo" className="h-10 w-auto md:h-16 object-contain rounded-xl md:rounded-2xl shadow-sm" />
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                        <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">
                             Menejer Paneli
                         </h1>
                         <nav className="flex items-center gap-1 mt-2 overflow-x-auto pb-2 -mb-2 scroll-hide">
@@ -219,37 +219,37 @@ const ManagerDashboard: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 justify-end">
-                    <div className="text-right hidden md:block">
+                <div className="flex flex-wrap items-center gap-3 justify-end">
+                    <div className="text-right hidden lg:block">
                         <p className="text-sm font-black text-slate-800 leading-tight">{user?.name || 'Menejer'}</p>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Administrator</p>
                     </div>
-                    <div className="h-10 w-px bg-slate-200 hidden md:block mx-2"></div>
-
+                    <div className="h-10 w-px bg-slate-200 hidden lg:block mx-1"></div>
+ 
                     <a
                         href="https://t.me/Z_education_bot?start=manager"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-[#0088cc] text-white hover:bg-[#0077b5] rounded-xl transition-all font-bold text-xs shadow-sm"
+                        className="flex items-center gap-2 px-3 md:px-4 py-2 bg-[#0088cc] text-white hover:bg-[#0077b5] rounded-xl transition-all font-bold text-[10px] md:text-xs shadow-sm"
                     >
-                        <Shield size={16} /> <span className="hidden sm:inline">BOTGA ULANISH</span>
+                        <Shield size={14} /> <span className="hidden xs:inline">BOTGA ULANISH</span>
                     </a>
-
+ 
                     <button
                         onClick={handleBack}
-                        className="p-3 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-all font-medium"
+                        className="p-2.5 md:p-3 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-all font-medium"
                         title="Orqaga / Bosh sahifaga"
                     >
-                        <ArrowLeft size={20} />
+                        <ArrowLeft size={18} />
                     </button>
                     <button
                         onClick={() => {
                             logout();
                             navigate('/login');
                         }}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-xl transition-colors border border-red-200 font-bold text-sm shadow-sm"
+                        className="flex items-center gap-2 px-3 md:px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-xl transition-colors border border-red-200 font-bold text-[10px] md:text-sm shadow-sm"
                     >
-                        <LogOut size={18} /> <span className="hidden sm:inline uppercase tracking-widest text-[10px]">Chiqish</span>
+                        <LogOut size={16} /> <span className="hidden xs:inline uppercase tracking-widest">Chiqish</span>
                     </button>
                 </div>
             </header>
