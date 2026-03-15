@@ -15,7 +15,7 @@ const Login = () => {
     // Auto-redirect if already logged in
     useEffect(() => {
         if (isAuthenticated && role) {
-            navigate('/');
+            navigate('/', { replace: true });
         }
     }, [isAuthenticated, role, navigate]);
 
@@ -66,11 +66,11 @@ const Login = () => {
             login(data.user, userRole);
 
             if (userRole === 'student') {
-                navigate('/student/dashboard');
+                navigate('/student/dashboard', { replace: true });
             } else if (userRole === 'manager') {
-                navigate('/manager');
+                navigate('/manager', { replace: true });
             } else {
-                navigate('/teacher');
+                navigate('/teacher', { replace: true });
             }
 
         } catch (err: any) {

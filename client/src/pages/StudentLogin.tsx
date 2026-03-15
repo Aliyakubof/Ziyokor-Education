@@ -63,7 +63,7 @@ export default function StudentLogin() {
             if (res.ok) {
                 const data = await res.json();
                 login(data.user, 'student');
-                navigate('/student/dashboard');
+                navigate('/student/dashboard', { replace: true });
             } else {
                 const error = await res.json();
                 alert(error.error || "Kirishda xatolik");
