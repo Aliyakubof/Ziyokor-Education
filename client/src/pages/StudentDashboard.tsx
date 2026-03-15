@@ -349,7 +349,11 @@ export default function StudentDashboard() {
                     <div className="flex items-center gap-3">
                         <div className="w-14 h-14 rounded-2xl flex items-center justify-center border-2 shadow-lg overflow-hidden relative" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--primary-color)' }}>
                             {stats.avatarUrl ? (
-                                <img src={stats.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                <img 
+                                    src={stats.avatarUrl.startsWith('/uploads') ? `${import.meta.env.VITE_BACKEND_URL}${stats.avatarUrl}` : stats.avatarUrl} 
+                                    alt="Avatar" 
+                                    className="w-full h-full object-cover" 
+                                />
                             ) : (
                                 <span className="text-2xl font-black">
                                     {user?.name?.charAt(0).toUpperCase()}
@@ -745,7 +749,11 @@ export default function StudentDashboard() {
                         <div className="relative w-28 h-28 mx-auto mb-4 group inline-block">
                             <div className="w-28 h-28 rounded-[2.5rem] flex items-center justify-center text-4xl font-black text-white shadow-xl overflow-hidden relative border-4 transition-all" style={{ background: `linear-gradient(to tr, var(--primary-color), var(--secondary-color))`, borderColor: 'var(--card-bg)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)' }}>
                                 {stats.avatarUrl ? (
-                                    <img src={stats.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                    <img 
+                                        src={stats.avatarUrl.startsWith('/uploads') ? `${import.meta.env.VITE_BACKEND_URL}${stats.avatarUrl}` : stats.avatarUrl} 
+                                        alt="Avatar" 
+                                        className="w-full h-full object-cover" 
+                                    />
                                 ) : (
                                     <span>{user?.name?.charAt(0).toUpperCase()}</span>
                                 )}

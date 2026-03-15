@@ -58,6 +58,7 @@ export default function PlayerGame() {
     const [unitAIFeedback, setUnitAIFeedback] = useState<Record<number, string>>({});
     const [quizTitle, setQuizTitle] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [playerAvatar, setPlayerAvatar] = useState<string | null>(null);
 
     const pinFromStore = localStorage.getItem('kahoot-pin');
     const idFromStore = localStorage.getItem('student-id');
@@ -79,6 +80,22 @@ export default function PlayerGame() {
             }
         }
     }, [pinFromStore]);
+    
+    useEffect(() => {
+        if (idFromStore) {
+            const cached = localStorage.getItem(`stats_${idFromStore}`);
+            if (cached) {
+                try {
+                    const data = JSON.parse(cached);
+                    if (data.avatarUrl) {
+                        setPlayerAvatar(data.avatarUrl.startsWith('/uploads') ? `${import.meta.env.VITE_BACKEND_URL}${data.avatarUrl}` : data.avatarUrl);
+                    }
+                } catch (e) {
+                    console.error('Error parsing cached stats:', e);
+                }
+            }
+        }
+    }, [idFromStore]);
 
     useEffect(() => {
         const onConnect = () => {
@@ -325,7 +342,13 @@ export default function PlayerGame() {
                     <div className="relative">
                         <div className="w-32 h-32 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin"></div>
                         <div className="absolute inset-0 flex items-center justify-center">
-                            {view === 'WAITING' ? <Clock className="text-blue-500 animate-pulse" size={40} /> : <CheckCircle2 className="text-emerald-500 animate-bounce" size={40} />}
+                            {playerAvatar ? (
+                                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-xl">
+                                    <img src={playerAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                                </div>
+                            ) : (
+                                view === 'WAITING' ? <Clock className="text-blue-500 animate-pulse" size={40} /> : <CheckCircle2 className="text-emerald-500 animate-bounce" size={40} />
+                            )}
                         </div>
                     </div>
                     <div className="text-center">

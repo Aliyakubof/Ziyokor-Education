@@ -36,7 +36,11 @@ const MemoizedPlayerCard = memo(({ player, totalQuestionsCount }: { player: any;
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-xl shadow-lg overflow-hidden
                         ${isFinished ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-indigo-500 shadow-indigo-500/20'}`}>
                         {player.avatar_url ? (
-                            <img src={player.avatar_url} alt={player.name} className="w-full h-full object-cover" />
+                            <img 
+                                src={player.avatar_url.startsWith('/uploads') ? `${import.meta.env.VITE_BACKEND_URL}${player.avatar_url}` : player.avatar_url} 
+                                alt={player.name} 
+                                className="w-full h-full object-cover" 
+                            />
                         ) : (
                             player.name?.[0]?.toUpperCase() || 'O'
                         )}
