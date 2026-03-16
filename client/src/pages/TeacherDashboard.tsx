@@ -1181,7 +1181,7 @@ const TeacherDashboard = () => {
                                 <div>
                                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-3 px-1">Qo'shimcha dars kunlari</label>
                                     <div className="flex flex-wrap gap-2">
-                                        {['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'].map(day => (
+                                        {['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'].map(day => (
                                             <button
                                                 key={day} type="button"
                                                 onClick={() => editExtraClassDays.includes(day) ? setEditExtraClassDays(editExtraClassDays.filter(d => d !== day)) : setEditExtraClassDays([...editExtraClassDays, day])}

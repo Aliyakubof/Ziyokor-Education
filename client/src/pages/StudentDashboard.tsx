@@ -131,7 +131,7 @@ export default function StudentDashboard() {
         }
 
         const daysMap: Record<string, number> = {
-            'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3, 'Payshanba': 4, 'Juma': 5, 'Shanba': 6
+            'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3, 'Payshanba': 4, 'Juma': 5, 'Shanba': 6, 'Yakshanba': 0
         };
         
         const now = new Date();
@@ -186,7 +186,7 @@ export default function StudentDashboard() {
         if (!myBooking) return;
 
         const daysMap: Record<string, number> = {
-            'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3, 'Payshanba': 4, 'Juma': 5, 'Shanba': 6
+            'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3, 'Payshanba': 4, 'Juma': 5, 'Shanba': 6, 'Yakshanba': 0
         };
 
         const now = new Date();
@@ -240,8 +240,8 @@ export default function StudentDashboard() {
         groupSettings.extra_class_times.forEach((range: string) => {
             const parts = range.split('-');
             if (parts.length < 2) return;
-            const start = parts[0];
-            const end = parts[1];
+            const start = parts[0].trim();
+            const end = parts[1].trim();
             let current = new Date(`2000-01-01T${start}:00`);
             const endLimit = new Date(`2000-01-01T${end}:00`);
             
@@ -878,7 +878,7 @@ export default function StudentDashboard() {
                                             {groupSettings.extra_class_days.join(', ')} kunlari uchun
                                         </p>
                                         <p className="text-[10px] font-medium text-amber-600 mt-1 italic">
-                                            * Bron qilish darsdan 48 soat oldin to'xtatiladi. Bekor qilish kamida 24 soat oldin.
+                                            * Bron qilish darsdan 24 soat oldin to'xtatiladi. Bekor qilish kamida 24 soat oldin.
                                         </p>
                                     </div>
 
