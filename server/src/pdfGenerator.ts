@@ -52,6 +52,25 @@ export const generateQuizResultPDF = (
         doc.text(`Sana: ${new Date().toLocaleString()}`, { align: 'left' });
         doc.moveDown();
 
+        // Robust parsing for questions
+        let questions: any[] = [];
+        try {
+            if (Array.isArray(quiz.questions)) {
+                questions = quiz.questions;
+            } else if (typeof quiz.questions === 'string') {
+                questions = JSON.parse(quiz.questions);
+            }
+        } catch (e) {
+            console.error('[generateQuizResultPDF] Error parsing quiz.questions:', e);
+            questions = [];
+        }
+
+        if (!players || players.length === 0) {
+            doc.text("Bu testda ishtirokchilar mavjud emas.", { align: 'center' });
+            doc.end();
+            return;
+        }
+
         // Table Header
         const tableTop = doc.y;
         const col1 = 50;
@@ -69,7 +88,7 @@ export const generateQuizResultPDF = (
         // Table Body
         let y = tableTop + 25;
         let total = 0;
-        quiz.questions.forEach(q => {
+        questions.forEach(q => {
             if (q.type === 'info-slide') return;
             if (q.type === 'matching' || q.type === 'word-box') {
                 total += q.acceptedAnswers?.length || 0;
@@ -87,7 +106,7 @@ export const generateQuizResultPDF = (
 
             // Calculate correct count accurately (excluding info-slides)
             let correctCount = 0;
-            quiz.questions.forEach((q, qIdx) => {
+            questions.forEach((q, qIdx) => {
                 if (q.type === 'info-slide') return;
 
                 if (player.partialScoreMap && player.partialScoreMap[qIdx] !== undefined) {
@@ -131,7 +150,7 @@ export const generateQuizResultPDF = (
             doc.moveDown();
 
             let actualQIdx = 1;
-            quiz.questions.forEach((q, qIdx) => {
+            questions.forEach((q, qIdx) => {
                 if (q.type === 'info-slide') return;
 
                 const answer = player.answers[qIdx];

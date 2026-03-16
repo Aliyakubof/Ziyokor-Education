@@ -3749,7 +3749,20 @@ async function finishGame(pin: string) {
     if (game.isUnitQuiz && game.groupId) {
         try {
             const resultId = uuidv4();
-            const questions = game.quiz.questions || [];
+            
+            // Robust parsing for questions
+            let questions: any[] = [];
+            try {
+                if (Array.isArray(game.quiz.questions)) {
+                    questions = game.quiz.questions;
+                } else if (typeof game.quiz.questions === 'string') {
+                    questions = JSON.parse(game.quiz.questions);
+                }
+            } catch (e) {
+                console.error('[finishGame] Error parsing quiz.questions:', e);
+                questions = [];
+            }
+
             let totalPossibleScore = 0;
             questions.forEach((q: any) => {
                 if (q.type === 'info-slide') return;
@@ -3759,6 +3772,9 @@ async function finishGame(pin: string) {
                     totalPossibleScore += 1;
                 }
             });
+            
+            console.log(`[finishGame] Saving results for ${game.players.length} players. Total questions: ${questions.length}`);
+            
             await query(
                 'INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results) VALUES ($1, $2, $3, $4, $5)',
                 [resultId, game.groupId, game.quiz.title, totalPossibleScore, JSON.stringify(game.players)]
