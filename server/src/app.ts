@@ -814,6 +814,69 @@ app.delete('/api/telegram-questions/:id', requireRole('admin', 'teacher'), async
     }
 });
 
+// Admin: Available Booking Slots
+app.get('/api/available-slots', async (req, res) => {
+    try {
+        const result = await query('SELECT * FROM available_slots ORDER BY created_at ASC');
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error fetching slots:', err);
+        res.status(500).json({ error: 'Error fetching slots', details: err.message });
+    }
+});
+
+app.post('/api/admin/available-slots', requireRole('admin'), async (req, res) => {
+    try {
+        const { time_text, day_of_week } = req.body;
+        const id = uuidv4();
+        await query(
+            'INSERT INTO available_slots (id, time_text, day_of_week) VALUES ($1, $2, $3)',
+            [id, time_text, day_of_week]
+        );
+        res.json({ id, time_text, day_of_week });
+    } catch (err: any) {
+        console.error('Error creating slot:', err);
+        res.status(500).json({ error: 'Error creating slot', details: err.message });
+    }
+});
+
+app.put('/api/admin/available-slots/:id', requireRole('admin'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { time_text, day_of_week } = req.body;
+        await query(
+            'UPDATE available_slots SET time_text = $1, day_of_week = $2 WHERE id = $3',
+            [time_text, day_of_week, id]
+        );
+        res.json({ id, time_text, day_of_week });
+    } catch (err: any) {
+        console.error('Error updating slot:', err);
+        res.status(500).json({ error: 'Error updating slot', details: err.message });
+    }
+});
+
+app.delete('/api/admin/available-slots/:id', requireRole('admin'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM available_slots WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err: any) {
+        console.error('Error deleting slot:', err);
+        res.status(500).json({ error: 'Error deleting slot', details: err.message });
+    }
+});
+
+app.delete('/api/telegram-questions/:id', requireRole('admin', 'teacher'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM telegram_questions WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err: any) {
+        console.error('Error deleting telegram question:', err);
+        res.status(500).json({ error: 'Error deleting telegram question', details: err.message });
+    }
+});
+
 // Manager: Shop Items Management
 app.post('/api/manager/shop/items', requireRole('admin', 'manager'), async (req, res) => {
     try {

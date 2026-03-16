@@ -229,4 +229,12 @@ CREATE TABLE IF NOT EXISTS level_topics (
     topic_name TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Available Slots Table (Global slots managed by Admin)
+CREATE TABLE IF NOT EXISTS available_slots (
+    id UUID PRIMARY KEY,
+    time_text TEXT NOT NULL, -- e.g., '14:00 - 15:30'
+    day_of_week TEXT, -- Optional: 'Dushanba', etc.
+    created_at TIMESTAMP DEFAULT NOW()
+);
 ` ;

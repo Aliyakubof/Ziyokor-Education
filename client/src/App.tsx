@@ -13,6 +13,7 @@ import AdminVocabBattles from './pages/AdminVocabBattles';
 import CreateVocabBattle from './pages/CreateVocabBattle';
 import ManageTelegramQuestions from './pages/ManageTelegramQuestions';
 import ManageDuels from './pages/ManageDuels';
+import AdminSlots from './pages/AdminSlots';
 
 import StudentDashboard from './pages/StudentDashboard';
 import Leaderboard from './pages/Leaderboard';
@@ -196,6 +197,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminPanel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/slots"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminSlots />
                 </ProtectedRoute>
               }
             />

@@ -252,8 +252,8 @@ const ScheduleModal = ({
         group.extra_class_times.forEach((range: string) => {
             const parts = range.split('-');
             if (parts.length < 2) return;
-            const start = parts[0];
-            const end = parts[1];
+            const start = parts[0].trim();
+            const end = parts[1].trim();
             let current = new Date(`2000-01-01T${start}:00`);
             const endLimit = new Date(`2000-01-01T${end}:00`);
             while (current < endLimit) {
@@ -817,6 +817,7 @@ const TeacherDashboard = () => {
     const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const [isTopicsModalOpen, setIsTopicsModalOpen] = useState(false);
     const [allTeachers, setAllTeachers] = useState<any[]>([]);
+    const [availableSlots, setAvailableSlots] = useState<any[]>([]);
 
     useEffect(() => {
         if (role === 'admin') {
@@ -826,6 +827,7 @@ const TeacherDashboard = () => {
             fetchGroups();
         }
         fetchUnitQuizzes();
+        fetchAvailableSlots();
     }, [user, role]);
 
     const fetchAllTeachers = async () => {
@@ -872,6 +874,14 @@ const TeacherDashboard = () => {
             const res = await apiFetch('/api/unit-quizzes');
             const data = await res.json();
             setUnitQuizzes(Array.isArray(data) ? data : []);
+        } catch (err) {}
+    };
+
+    const fetchAvailableSlots = async () => {
+        try {
+            const res = await apiFetch('/api/available-slots');
+            const data = await res.json();
+            setAvailableSlots(Array.isArray(data) ? data : []);
         } catch (err) {}
     };
 
@@ -1202,8 +1212,11 @@ const TeacherDashboard = () => {
                                             }}
                                         >
                                             <option value="">Vaqt qo'shish...</option>
-                                            <option value="13:30-15:30">13:30-15:30</option>
-                                            <option value="15:30-17:30">15:30-17:30</option>
+                                            {availableSlots.map(slot => (
+                                                <option key={slot.id} value={slot.time_text}>
+                                                    {slot.time_text} {slot.day_of_week ? `(${slot.day_of_week})` : ''}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft, LogOut, Users, Search, Key, X } from 'lucide-react';
+import { UserPlus, BookOpen, Plus, Trash2, ArrowLeft, LogOut, Users, Search, Key, X, Clock } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
 import logo from '../assets/logo.jpeg';
@@ -340,6 +340,34 @@ const AdminPanel = () => {
                                 </div>
                             </button>
 
+                        </section>
+
+                        {/* Slots Management Card */}
+                        <section>
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="bg-indigo-100 p-2 rounded-lg">
+                                    <Clock className="text-indigo-600 w-6 h-6" />
+                                </div>
+                                <h2 className="text-xl font-bold text-slate-900">Vaqtlar Boshqaruvi</h2>
+                            </div>
+
+                            <button
+                                onClick={() => navigate('/admin/slots')}
+                                className="w-full bg-white border-2 border-slate-100 hover:border-indigo-200 p-6 rounded-2xl flex items-center justify-between group transition-all shadow-sm"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
+                                        <Clock size={24} />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-lg font-black text-slate-800">Bron qilish vaqtlari</p>
+                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Global sozlamalar</p>
+                                    </div>
+                                </div>
+                                <div className="text-indigo-300 group-hover:text-indigo-500 transition-colors bg-indigo-50 p-2 rounded-lg">
+                                    <Plus size={20} />
+                                </div>
+                            </button>
                         </section>
 
                         {/* Unit Quiz List */}
