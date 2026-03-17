@@ -54,6 +54,10 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// Apply global response payload compression (GZip) - Reduces JSON payload sizes down ~70%
+// Moved up to ensure static files and early responses are also compressed
+app.use(compression());
+
 // Serve static files from uploads directory
 app.use('/uploads', express.static(UPLOADS_DIR));
 
@@ -86,8 +90,7 @@ app.use(cors({
 // Apply basic security headers
 app.use(helmet());
 
-// Apply global response payload compression (GZip) - Reduces JSON payload sizes down ~70%
-app.use(compression());
+
 
 // Limit payload size to 50mb (increased to allow saving large quizzes)
 app.use(express.json({ limit: '50mb' }));
@@ -666,17 +669,30 @@ app.get('/api/groups/:groupId/contact-info-pdf', async (req, res) => {
     }
 });
 
-// Admin: Students
+// Admin: Students (with Pagination)
 app.get('/api/admin/students', async (req, res) => {
     try {
+        const limit = parseInt(req.query.limit as string) || 50;
+        const offset = parseInt(req.query.offset as string) || 0;
+
+        const countResult = await query('SELECT COUNT(*) FROM students');
+        const total = parseInt(countResult.rows[0].count);
+
         const result = await query(`
             SELECT s.*, g.name as group_name, t.name as teacher_name
             FROM students s
             LEFT JOIN groups g ON s.group_id = g.id
             LEFT JOIN teachers t ON g.teacher_id = t.id
             ORDER BY s.name ASC
-            `);
-        res.json(result.rows.map(row => ({ ...row, password: row.plain_password || row.password })));
+            LIMIT $1 OFFSET $2
+            `, [limit, offset]);
+
+        res.json({
+            students: result.rows.map(row => ({ ...row, password: row.plain_password || row.password })),
+            total,
+            limit,
+            offset
+        });
     } catch (err: any) {
         console.error('Error fetching admin students:', err);
         res.status(500).json({ error: 'Error fetching students', details: err.message });

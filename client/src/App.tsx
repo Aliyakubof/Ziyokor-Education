@@ -1,41 +1,41 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Home from './pages/Home';
-import CreateQuiz from './pages/CreateQuiz';
-import HostLobby from './pages/HostLobby';
-import PlayerJoin from './pages/PlayerJoin';
-import PlayerGame from './pages/PlayerGame';
-import HostGame from './pages/HostGame';
-import AdminPanel from './pages/AdminPanel';
-import TeacherDashboard from './pages/TeacherDashboard';
-import ManagerDashboard from './pages/ManagerDashboard';
-import StudentLogin from './pages/StudentLogin';
-import AdminVocabBattles from './pages/AdminVocabBattles';
-import CreateVocabBattle from './pages/CreateVocabBattle';
-import ManageTelegramQuestions from './pages/ManageTelegramQuestions';
-import ManageDuels from './pages/ManageDuels';
-import AdminSlots from './pages/AdminSlots';
-
-import StudentDashboard from './pages/StudentDashboard';
-import Leaderboard from './pages/Leaderboard';
-import Shop from './pages/Shop';
-import SoloQuiz from './pages/SoloQuiz';
-import DuelLobby from './pages/DuelLobby';
-import UnitLobby from './pages/UnitLobby';
-import UnitJoin from './pages/UnitJoin';
-import Login from './pages/Login';
-import GroupDetails from './pages/GroupDetails';
-import BattleDetails from './pages/BattleDetails';
-import VocabularyBattleLevels from './pages/VocabularyBattleLevels';
-import VocabularyBattleGame from './pages/VocabularyBattleGame';
+import React, { lazy, Suspense, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthContext';
 import AppMonitor from './AppMonitor';
-import { useEffect } from 'react';
+import { ThemeEngine } from './components/ThemeEngine';
 import { App as CapacitorApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
-import { useLocation } from 'react-router-dom';
-import { ThemeEngine } from './components/ThemeEngine';
 
+// Lazy load pages
+const Home = lazy(() => import('./pages/Home'));
+const CreateQuiz = lazy(() => import('./pages/CreateQuiz'));
+const HostLobby = lazy(() => import('./pages/HostLobby'));
+const PlayerJoin = lazy(() => import('./pages/PlayerJoin'));
+const PlayerGame = lazy(() => import('./pages/PlayerGame'));
+const HostGame = lazy(() => import('./pages/HostGame'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard'));
+const ManagerDashboard = lazy(() => import('./pages/ManagerDashboard'));
+const StudentLogin = lazy(() => import('./pages/StudentLogin'));
+const AdminVocabBattles = lazy(() => import('./pages/AdminVocabBattles'));
+const CreateVocabBattle = lazy(() => import('./pages/CreateVocabBattle'));
+const ManageTelegramQuestions = lazy(() => import('./pages/ManageTelegramQuestions'));
+const ManageDuels = lazy(() => import('./pages/ManageDuels'));
+const AdminSlots = lazy(() => import('./pages/AdminSlots'));
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Shop = lazy(() => import('./pages/Shop'));
+const SoloQuiz = lazy(() => import('./pages/SoloQuiz'));
+const DuelLobby = lazy(() => import('./pages/DuelLobby'));
+const UnitLobby = lazy(() => import('./pages/UnitLobby'));
+const UnitJoin = lazy(() => import('./pages/UnitJoin'));
+const Login = lazy(() => import('./pages/Login'));
+const GroupDetails = lazy(() => import('./pages/GroupDetails'));
+const BattleDetails = lazy(() => import('./pages/BattleDetails'));
+const VocabularyBattleLevels = lazy(() => import('./pages/VocabularyBattleLevels'));
+const VocabularyBattleGame = lazy(() => import('./pages/VocabularyBattleGame'));
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'teacher' | 'student' | 'manager' | ('admin' | 'teacher' | 'student' | 'manager')[] }) => {
   const { isAuthenticated, role } = useAuth();
 
@@ -100,7 +100,12 @@ function App() {
             paddingLeft: 'env(safe-area-inset-left)',
             paddingRight: 'env(safe-area-inset-right)'
           }}>
-          <Routes>
+          <Suspense fallback={
+            <div className="flex-1 flex items-center justify-center bg-white dark:bg-[#0a0a0a]">
+              <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          }>
+            <Routes>
             <Route path="/" element={<RootRoute />} />
             <Route path="/login" element={<Login />} />
             <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
@@ -298,6 +303,7 @@ function App() {
             />
             <Route path="/unit-join/:pin" element={<UnitJoin />} />
           </Routes>
+          </Suspense>
         </div>
       </AppMonitor>
       </ThemeEngine>
