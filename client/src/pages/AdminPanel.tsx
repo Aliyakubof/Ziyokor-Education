@@ -341,7 +341,7 @@ const AdminPanel = () => {
                                     </div>
                                     <div className="text-left">
                                         <p className="text-lg font-black text-slate-800">Barcha o'quvchilar</p>
-                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">{students.length} kishi</p>
+                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">{totalStudents} kishi</p>
                                     </div>
                                 </div>
                                 <div className="text-orange-300 group-hover:text-orange-500 transition-colors bg-orange-50 p-2 rounded-lg">
