@@ -79,7 +79,7 @@ export function setupTelegramGame(bot: Telegraf) {
             };
 
             // Fetch random custom questions
-            const quizRes = await query('SELECT * FROM telegram_questions ORDER BY RANDOM() LIMIT 5');
+            const quizRes = await query('SELECT * FROM telegram_questions ORDER BY RANDOM() LIMIT 20');
             if (quizRes && quizRes.rowCount && quizRes.rowCount > 0) {
                 state.quizTitle = "Maxsus Duel ✨";
                 state.questions = quizRes.rows.map(r => ({
@@ -334,7 +334,7 @@ export function setupTelegramGame(bot: Telegraf) {
 
         state.gameMode = mode;
         state.status = 'JOINING';
-        state.joinSecondsLeft = 30;
+        state.joinSecondsLeft = 60;
 
         const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
         const renderJoinMsg = (seconds: number) => {
@@ -350,11 +350,12 @@ export function setupTelegramGame(bot: Telegraf) {
                 `Qatnashuvchilar (${state.players.length}):\n${playerNames || '<i>Hali hech kim yo\'q</i>'}`;
         };
 
-        const msg = await ctx.editMessageText(renderJoinMsg(30), {
+        const msg = await ctx.editMessageText(renderJoinMsg(60), {
             parse_mode: 'HTML',
             reply_markup: {
                 inline_keyboard: [
                     [{ text: "✋ Qatnashish", callback_data: "tg_join" }],
+                    [{ text: "▶️ O'yinni boshlash", callback_data: "tg_force_start" }],
                     [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
                 ]
             }
@@ -368,6 +369,24 @@ export function setupTelegramGame(bot: Telegraf) {
         state.joinTimerInterval = setInterval(async () => {
             if (state.joinSecondsLeft && state.joinSecondsLeft > 0) {
                 state.joinSecondsLeft -= 1;
+
+                if (state.joinSecondsLeft === 30) {
+                    bot.telegram.sendMessage(chatId, "⏱ O'yin boshlanishiga 30 soniya qoldi! Hali ulgurmaganlar tezroq qo'shilinglar!");
+                }
+
+                if (state.joinSecondsLeft % 5 === 0 || state.joinSecondsLeft <= 5) {
+                    const text = renderJoinMsg(state.joinSecondsLeft);
+                    await limiter.schedule(() => bot.telegram.editMessageText(chatId, state.mainMessageId, undefined, text, {
+                        parse_mode: 'HTML',
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: "✋ Qatnashish", callback_data: "tg_join" }],
+                                [{ text: "▶️ O'yinni boshlash", callback_data: "tg_force_start" }],
+                                [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
+                            ]
+                        }
+                    })).catch(() => { });
+                }
 
                 if (state.joinSecondsLeft <= 0) {
                     clearInterval(state.joinTimerInterval);
@@ -475,12 +494,14 @@ export function setupTelegramGame(bot: Telegraf) {
             `⏳ Qatnashish vaqti ketyapti...\n` +
             (await SettingsService.get('tg_game_all_can_join', false) ? '' : `💰 Kirish to'lovi: ${entryFee} coin\n`) +
             `⚠️ <b>Kamida 4 kishi kerak!</b>\n\n` +
+            (state.joinSecondsLeft && state.joinSecondsLeft <= 30 ? `⚠️ <b>${state.joinSecondsLeft} soniya qoldi!</b>\n\n` : '') + // 30-second warning
             `Qatnashuvchilar (${state.players.length}):\n${playerNames}`,
             {
                 parse_mode: 'HTML',
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: "✋ Qo'shilish", callback_data: "tg_join" }],
+                        [{ text: "▶️ O'yinni boshlash", callback_data: "tg_force_start" }],
                         [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
                     ]
                 }
@@ -520,6 +541,10 @@ export function setupTelegramGame(bot: Telegraf) {
             if (state.joinSecondsLeft && state.joinSecondsLeft > 0) {
                 state.joinSecondsLeft -= 1;
 
+                if (state.joinSecondsLeft === 30) {
+                    bot.telegram.sendMessage(chatId, "⏱ O'yin boshlanishiga 30 soniya qoldi! Hali ulgurmaganlar tezroq qo'shilinglar!");
+                }
+
                 if (state.joinSecondsLeft % 5 === 0 || state.joinSecondsLeft <= 5) {
                     const text = await renderJoinMsg(state.joinSecondsLeft);
                     await limiter.schedule(() => bot.telegram.editMessageText(chatId, state.mainMessageId, undefined, text, {
@@ -527,6 +552,7 @@ export function setupTelegramGame(bot: Telegraf) {
                         reply_markup: {
                             inline_keyboard: [
                                 [{ text: "✋ Qo'shilish", callback_data: "tg_join" }],
+                                [{ text: "▶️ O'yinni boshlash", callback_data: "tg_force_start" }],
                                 [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
                             ]
                         }
@@ -567,6 +593,22 @@ export function setupTelegramGame(bot: Telegraf) {
 
         await gameSessions.delete(chatId);
         ctx.answerCbQuery("O'yin bekor qilindi.");
+    });
+
+    bot.action('tg_force_start', async (ctx) => {
+        const chatId = ctx.chat?.id.toString();
+        if (!chatId || !(await gameSessions.has(chatId))) return ctx.answerCbQuery("O'yin topilmadi", { show_alert: true });
+
+        const state = (await gameSessions.get(chatId))!;
+        if (state.status !== 'JOINING') return ctx.answerCbQuery("O'yin allaqachon boshlangan.");
+
+        if (state.players.length < 4) {
+            return ctx.answerCbQuery("⚠️ O'yinni boshlash uchun kamida 4 kishi kerak!", { show_alert: true });
+        }
+
+        if (state.joinTimerInterval) clearInterval(state.joinTimerInterval);
+        ctx.answerCbQuery("O'yin boshlanmoqda...");
+        startGamePlay(bot, chatId);
     });
 
     bot.action(/^tg_ans_(\d+)$/, async (ctx) => {
