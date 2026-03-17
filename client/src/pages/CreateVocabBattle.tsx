@@ -184,11 +184,10 @@ export default function CreateVocabBattle() {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Level (1-30)</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Level (Raqam)</label>
                                         <input
                                             type="number"
                                             min="1"
-                                            max="30"
                                             value={level}
                                             onChange={(e) => setLevel(e.target.value)}
                                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-bold outline-none"

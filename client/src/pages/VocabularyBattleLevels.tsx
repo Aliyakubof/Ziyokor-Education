@@ -61,14 +61,12 @@ export default function VocabularyBattleLevels() {
         }
     };
 
-    const mapNodes = Array.from({ length: 30 }, (_, i) => {
-        const levelNum = i + 1;
-        const battle = levels.find(l => Number(l.level) === levelNum);
+    const mapNodes = levels.map((battle) => {
         return {
-            levelNumber: levelNum,
+            levelNumber: battle.level,
             battle,
-            isLocked: !battle || battle.isLocked,
-            stars: battle?.stars || 0
+            isLocked: battle.isLocked,
+            stars: battle.stars || 0
         };
     });
 

@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS solo_quizzes (
 CREATE TABLE IF NOT EXISTS vocabulary_battles (
     id UUID PRIMARY KEY,
     daraja TEXT NOT NULL, -- e.g., 'Beginner', 'Elementary'
-    level INT NOT NULL, -- 1 to 30
+    level INT NOT NULL, -- Dynamic level number
     title TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     questions JSONB NOT NULL
