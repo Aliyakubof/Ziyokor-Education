@@ -37,6 +37,9 @@ const AdminPanel = () => {
     const [students, setStudents] = useState<Student[]>([]);
     const [view, setView] = useState<'DASHBOARD' | 'STUDENTS'>('DASHBOARD');
     const [searchQuery, setSearchQuery] = useState('');
+    const [totalStudents, setTotalStudents] = useState(0);
+    const [offset, setOffset] = useState(0);
+    const LIMIT = 50;
 
     // Teacher Form
     const [teacherName, setTeacherName] = useState('');
@@ -52,7 +55,7 @@ const AdminPanel = () => {
     useEffect(() => {
         fetchTeachers();
         fetchUnitQuizzes();
-        fetchStudents();
+        fetchStudents(0);
     }, []);
 
     const fetchTeachers = async () => {
@@ -78,11 +81,17 @@ const AdminPanel = () => {
     };
 
 
-    const fetchStudents = async () => {
+    const fetchStudents = async (newOffset: number) => {
         try {
-            const res = await apiFetch('/api/admin/students');
+            const res = await apiFetch(`/api/admin/students?limit=${LIMIT}&offset=${newOffset}`);
             const data = await res.json();
-            setStudents(Array.isArray(data) ? data : []);
+            if (data && data.students) {
+                setStudents(data.students);
+                setTotalStudents(data.total);
+                setOffset(newOffset);
+            } else {
+                setStudents([]);
+            }
         } catch (err) {
             console.error('Error fetching students:', err);
             setStudents([]);
@@ -163,7 +172,7 @@ const AdminPanel = () => {
                 body: JSON.stringify({ password: newPassword })
             });
             if (res.ok) {
-                fetchStudents();
+                fetchStudents(offset);
                 alert("O'quvchi paroli yangilandi!");
             }
         } catch (err) {
@@ -444,7 +453,7 @@ const AdminPanel = () => {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black text-slate-900">O'quvchilar Ro'yxati</h2>
-                                <p className="text-slate-500 text-sm font-medium">{students.length} ta o'quvchi bazada mavjud</p>
+                                <p className="text-slate-500 text-sm font-medium">{totalStudents} ta o'quvchi bazada mavjud</p>
                             </div>
                         </div>
 
@@ -532,6 +541,29 @@ const AdminPanel = () => {
                                         ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    <div className="flex items-center justify-between mt-6 px-4">
+                        <div className="text-sm text-slate-500 font-medium">
+                            Ko'rsatilyapti {offset + 1}-{Math.min(offset + LIMIT, totalStudents)} (jami {totalStudents})
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => fetchStudents(Math.max(0, offset - LIMIT))}
+                                disabled={offset === 0}
+                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition-colors"
+                            >
+                                Oldingi
+                            </button>
+                            <button
+                                onClick={() => fetchStudents(offset + LIMIT)}
+                                disabled={offset + LIMIT >= totalStudents}
+                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition-colors"
+                            >
+                                Keyingi
+                            </button>
                         </div>
                     </div>
                 </section>
