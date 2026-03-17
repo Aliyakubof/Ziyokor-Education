@@ -7,6 +7,7 @@ interface PlayerEntry {
     telegramUserId: string;
     hasAnswered: boolean;
     streak: number;
+    isUnregistered?: boolean;
     team?: 'Red' | 'Blue';
 }
 
@@ -27,6 +28,7 @@ interface GameState {
     joinSecondsLeft?: number;
     questionStartTime?: number;
     totalCoinPool?: number;
+    inactivityTimer?: NodeJS.Timeout;
 }
 
 /**
@@ -52,6 +54,9 @@ class GameSessionManager {
         }
         if (state && state.joinTimerInterval) {
             clearInterval(state.joinTimerInterval);
+        }
+        if (state && state.inactivityTimer) {
+            clearTimeout(state.inactivityTimer);
         }
         this.sessions.delete(chatId);
     }

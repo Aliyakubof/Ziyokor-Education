@@ -52,11 +52,48 @@ const AdminPanel = () => {
     const [editPhone, setEditPhone] = useState('');
     const [editPassword, setEditPassword] = useState('');
 
+    const [tgPublicMode, setTgPublicMode] = useState(false);
+    const [loadingSettings, setLoadingSettings] = useState(false);
+
     useEffect(() => {
         fetchTeachers();
         fetchUnitQuizzes();
         fetchStudents(0);
+        fetchBotSettings();
     }, []);
+
+    const fetchBotSettings = async () => {
+        try {
+            const res = await apiFetch('/api/admin/settings/tg_game_all_can_join');
+            if (res.ok) {
+                const data = await res.json();
+                setTgPublicMode(data.value === true || data.value === 'true');
+            }
+        } catch (err) {
+            console.error('Error fetching bot settings:', err);
+        }
+    };
+
+    const handleToggleTgPublicMode = async () => {
+        setLoadingSettings(true);
+        try {
+            const newValue = !tgPublicMode;
+            const res = await apiFetch('/api/admin/settings', {
+                method: 'PUT',
+                body: JSON.stringify({ key: 'tg_game_all_can_join', value: newValue })
+            });
+
+            if (res.ok) {
+                setTgPublicMode(newValue);
+            } else {
+                alert("Sozlamani yangilashda xatolik!");
+            }
+        } catch (err) {
+            console.error('Error updating bot setting:', err);
+        } finally {
+            setLoadingSettings(false);
+        }
+    };
 
     const fetchTeachers = async () => {
         try {
@@ -377,6 +414,49 @@ const AdminPanel = () => {
                                     <Plus size={20} />
                                 </div>
                             </button>
+                        </section>
+
+                        {/* Bot Settings Card */}
+                        <section>
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="bg-purple-100 p-2 rounded-lg">
+                                    <Key className="text-purple-600 w-6 h-6" />
+                                </div>
+                                <h2 className="text-xl font-bold text-slate-900">Bot Sozlamalari</h2>
+                            </div>
+
+                            <div className="bg-white border-2 border-slate-100 p-6 rounded-2xl shadow-sm mb-8">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500">
+                                            <Users size={24} />
+                                        </div>
+                                        <div>
+                                            <p className="text-lg font-black text-slate-800">Ochiq rejim</p>
+                                            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">
+                                                Registratsiyasiz o'ynash
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    <button
+                                        onClick={handleToggleTgPublicMode}
+                                        disabled={loadingSettings}
+                                        className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                                            tgPublicMode ? 'bg-purple-600' : 'bg-slate-200'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`${
+                                                tgPublicMode ? 'translate-x-7' : 'translate-x-1'
+                                            } inline-block h-6 w-6 transform rounded-full bg-white transition-transform`}
+                                        />
+                                    </button>
+                                </div>
+                                <p className="mt-4 text-sm text-slate-500 font-medium">
+                                    Yoqilganda, botdan ro'yxatdan o'tmagan foydalanuvchilar ham guruh o'yinlariga qo'shila oladi.
+                                </p>
+                            </div>
                         </section>
 
                         {/* Unit Quiz List */}

@@ -173,12 +173,20 @@ export function setupTelegramGame(bot: Telegraf) {
         const q = state.questions[state.currentQIndex];
         const isCorrect = answerIndex === q.correctIndex;
 
+        let totalPoints = 0;
         if (isCorrect) {
-            player.score += 1;
+            totalPoints = 1;
+            // Speed Bonus for Duels
+            const now = Date.now();
+            const timeTaken = now - (state.questionStartTime || now);
+            if (timeTaken <= 3000) {
+                totalPoints += 1;
+            }
+            player.score += totalPoints;
         }
 
         await gameSessions.set(inlineMsgId, state);
-        ctx.answerCbQuery(isCorrect ? "✅ To'g'ri!" : "❌ Xato!");
+        ctx.answerCbQuery(isCorrect ? (totalPoints > 1 ? "⚡ Tezkor va To'g'ri! +2 ball" : "✅ To'g'ri!") : "❌ Xato!");
 
         if (state.players.every(p => p.hasAnswered)) {
             if (state.timer) clearTimeout(state.timer);
@@ -368,85 +376,99 @@ export function setupTelegramGame(bot: Telegraf) {
         }
 
         try {
+            const publicMode = await SettingsService.get('tg_game_all_can_join', false);
+            const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
+
             // Find student linked to this telegram User ID
             const subRes = await query(`
-                SELECT s.id, s.name 
+                SELECT s.id, s.name, s.coins 
                 FROM student_telegram_subscriptions sub
                 JOIN students s ON sub.student_id = s.id
                 WHERE sub.telegram_chat_id = $1
             `, [userId]);
 
+            let playerEntry: PlayerEntry;
+
             if (subRes.rowCount === 0) {
-                return ctx.answerCbQuery("Siz botga o'quvchi sifatida ulanmagansiz! Botga kirib 7-xonali kodingizni kiriting.", { show_alert: true });
+                if (!publicMode) {
+                    return ctx.answerCbQuery("Siz botga o'quvchi sifatida ulanmagansiz! Botga kirib 7-xonali kodingizni kiriting.", { show_alert: true });
+                }
+                playerEntry = {
+                    id: `unreg_${userId}`,
+                    name: ctx.from.first_name || 'Ishtirokchi',
+                    score: 0,
+                    telegramUserId: userId,
+                    hasAnswered: false,
+                    streak: 0,
+                    isUnregistered: true
+                };
+            } else {
+                const student = subRes.rows[0];
+                if (student.coins < entryFee) {
+                    return ctx.answerCbQuery(`❌ O'yinga kirish uchun kamida ${entryFee} coin kerak. Sizda: ${student.coins}`, { show_alert: true });
+                }
+
+                // Deduct coins
+                await query('UPDATE students SET coins = coins - $1 WHERE id = $2', [entryFee, student.id]);
+                state.totalCoinPool = (state.totalCoinPool || 0) + entryFee;
+
+                playerEntry = {
+                    id: student.id,
+                    name: student.name,
+                    score: 0,
+                    telegramUserId: userId,
+                    hasAnswered: false,
+                    streak: 0
+                };
             }
-
-            // Assume first student if multiple connected (simplification for game)
-            const student = subRes.rows[0];
-
-            // --- Coin Integration ---
-            const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
-            const coinRes = await query('SELECT coins FROM students WHERE id = $1', [student.id]);
-            const currentCoins = coinRes.rows[0]?.coins || 0;
-
-            if (currentCoins < entryFee) {
-                return ctx.answerCbQuery(`❌ O'yinga kirish uchun kamida ${entryFee} coin kerak. Sizda: ${currentCoins}`, { show_alert: true });
-            }
-
-            // Deduct coins
-            await query('UPDATE students SET coins = coins - $1 WHERE id = $2', [entryFee, student.id]);
-
-            // Track total pool
-            state.totalCoinPool = (state.totalCoinPool || 0) + entryFee;
-            // ------------------------
 
             // Assign team if in team mode (alternate)
-            let team: 'Red' | 'Blue' | undefined;
             if (state.gameMode === 'TEAM') {
-                const redCount = state.players.filter((p: PlayerEntry) => p.team === 'Red').length;
-                const blueCount = state.players.filter((p: PlayerEntry) => p.team === 'Blue').length;
-                team = redCount <= blueCount ? 'Red' : 'Blue';
+                const redCount = state.players.filter(p => p.team === 'Red').length;
+                const blueCount = state.players.filter(p => p.team === 'Blue').length;
+                playerEntry.team = redCount <= blueCount ? 'Red' : 'Blue';
             }
 
-            state.players.push({
-                id: student.id,
-                name: student.name,
-                score: 0,
-                telegramUserId: userId,
-                hasAnswered: false,
-                streak: 0,
-                team
-            });
-
+            state.players.push(playerEntry);
             await gameSessions.set(chatId, state);
 
-            const playerNames = state.players.map((p: PlayerEntry) => {
-                const teamIcon = p.team === 'Red' ? '🔴 ' : p.team === 'Blue' ? '🔵 ' : '• ';
-                return `${teamIcon}${p.name}`;
-            }).join('\n');
-
-            await ctx.editMessageText(
-                `🎉 <b>${state.quizTitle}</b> o'yini ochilyapti!\n` +
-                `Format: ${state.gameMode === 'SOLO' ? '👤 Solo' : '👥 Team Battle'}\n\n` +
-                `⏳ Qatnashish vaqti ketyapti...\n` +
-                `💰 Kirish to'lovi: ${entryFee} coin\n\n` +
-                `Qatnashuvchilar (${state.players.length}):\n${playerNames}`,
-                {
-                    parse_mode: 'HTML',
-                    reply_markup: {
-                        inline_keyboard: [
-                            [{ text: "✋ Qo'shilish", callback_data: "tg_join" }],
-                            [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
-                        ]
-                    }
-                }
-            );
-            ctx.answerCbQuery(`Muvaffaqiyatli qo'shildingiz! ${team ? (team === 'Red' ? '🔴 Jamoasiga' : '🔵 Jamoasiga') : ''} -${entryFee} coin`);
+            await updateJoinMessage(ctx, state, entryFee);
+            ctx.answerCbQuery(`Muvaffaqiyatli qo'shildingiz! ${playerEntry.team ? (playerEntry.team === 'Red' ? '🔴 Jamoasiga' : '🔵 Jamoasiga') : ''} ${playerEntry.isUnregistered ? '(Mehmon)' : `-${entryFee} coin`}`);
 
         } catch (err) {
             console.error('[tg_game] join error:', err);
             ctx.answerCbQuery("Xatolik yuz berdi");
         }
     });
+
+    /**
+     * Helper to update the join message with current player list
+     */
+    async function updateJoinMessage(ctx: any, state: GameState, entryFee: number) {
+        const playerNames = state.players.map((p: PlayerEntry) => {
+            const teamIcon = p.team === 'Red' ? '🔴 ' : p.team === 'Blue' ? '🔵 ' : '• ';
+            const guestSuffix = p.isUnregistered ? ' 👤' : '';
+            return `${teamIcon}${p.name}${guestSuffix}`;
+        }).join('\n');
+
+        return ctx.editMessageText(
+            `🎉 <b>${state.quizTitle}</b> o'yini ochilyapti!\n` +
+            `Format: ${state.gameMode === 'SOLO' ? '👤 Solo' : '👥 Team Battle'}\n\n` +
+            `⏳ Qatnashish vaqti ketyapti...\n` +
+            `💰 Kirish to'lovi: ${entryFee} coin\n` +
+            `⚠️ <b>Kamida 4 kishi kerak!</b>\n\n` +
+            `Qatnashuvchilar (${state.players.length}):\n${playerNames}`,
+            {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "✋ Qo'shilish", callback_data: "tg_join" }],
+                        [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
+                    ]
+                }
+            }
+        ).catch(() => { });
+    }
 
     bot.action('tg_add_time', async (ctx) => {
         const chatId = ctx.chat?.id.toString();
@@ -471,7 +493,8 @@ export function setupTelegramGame(bot: Telegraf) {
                 `Format: ${state.gameMode === 'SOLO' ? '👤 Solo' : '👥 Team Battle'}\n\n` +
                 `⏳ Qatnashish vaqti uzaytirildi (+30s)...\n` +
                 `⏰ Qolgan vaqt: <b>${seconds}</b> soniya\n` +
-                `💰 Kirish to'lovi: ${entryFee} coin\n\n` +
+                `💰 Kirish to'lovi: ${entryFee} coin\n` +
+                `⚠️ <b>Kamida 4 kishi kerak!</b>\n\n` +
                 `Qatnashuvchilar (${state.players.length}):\n${playerNames || '<i>Hali hech kim yo\'q</i>'}`;
         };
 
@@ -539,7 +562,17 @@ export function setupTelegramGame(bot: Telegraf) {
 
         let totalPoints = 0;
         if (isCorrect) {
-            totalPoints = 1; // 1 XP per correct question
+            totalPoints = 1; // Base 1 XP
+            
+            // Speed Bonus: Correct answer within 3 seconds
+            const now = Date.now();
+            const timeTaken = now - (state.questionStartTime || now);
+            let speedBonus = false;
+            if (timeTaken <= 3000) {
+                totalPoints += 1; // +1 Speed Bonus
+                speedBonus = true;
+            }
+
             player.score += totalPoints;
             player.streak++;
 
@@ -547,8 +580,12 @@ export function setupTelegramGame(bot: Telegraf) {
                 state.teamScores[player.team] += totalPoints;
             }
 
+            if (speedBonus) {
+                limiter.schedule(() => bot.telegram.sendMessage(chatId, `⚡ <b>${player.name}</b> juda tez (Speed Bonus +1 ball)!`, { parse_mode: 'HTML' })).catch(() => { });
+            }
+
             if (player.streak >= 3) {
-                limiter.schedule(() => bot.telegram.sendMessage(chatId, `🔥 <b>${player.name}</b> ketma-ket ${player.streak} ta to'g'ri javob topdi!`, { parse_mode: 'HTML' })).catch(() => { });
+                // Streak message removed as per user request
             }
         } else {
             player.streak = 0;
@@ -561,8 +598,12 @@ export function setupTelegramGame(bot: Telegraf) {
 
         // Check if all players have answered
         if (state.players.every(p => p.hasAnswered)) {
-            // Clear the 30s timer and advance immediately
+            // Clear all timers and advance immediately
             if (state.timer) clearTimeout(state.timer);
+            if (state.inactivityTimer) {
+                clearTimeout(state.inactivityTimer);
+                state.inactivityTimer = undefined;
+            }
             await moveNext(bot, chatId);
         }
     });
@@ -697,12 +738,18 @@ async function startGamePlay(bot: Telegraf, chatId: string) {
     const state = await gameSessions.get(chatId);
     if (!state) return;
 
-    if (state.players.length === 0) {
+    if (state.players.length < 4) {
         state.status = 'FINISHED';
-        await gameSessions.delete(chatId);
         try {
-            await limiter.schedule(() => bot.telegram.sendMessage(chatId, "❌ Hech kim qo'shilmadi. O'yin bekor qilindi."));
+            const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
+            for (const p of state.players) {
+                if (!p.isUnregistered) {
+                    await query('UPDATE students SET coins = coins + $1 WHERE id = $2', [entryFee, p.id]).catch(console.error);
+                }
+            }
+            await limiter.schedule(() => bot.telegram.sendMessage(chatId, "❌ O'yin boshlanishi uchun kamida 4 kishi kerak edi. O'yin bekor qilindi va to'lovlar qaytarildi."));
         } catch (e) { }
+        await gameSessions.delete(chatId);
         return;
     }
 
@@ -767,6 +814,19 @@ async function sendCurrentQuestion(bot: Telegraf, chatId: string) {
         state.timer = setTimeout(() => {
             moveNext(bot, chatId);
         }, 30000);
+
+        // Start 25 second inactivity timer
+        state.inactivityTimer = setTimeout(async () => {
+            const currentState = await gameSessions.get(chatId);
+            if (!currentState || currentState.status !== 'PLAYING' || currentState.currentQIndex !== state.currentQIndex) return;
+
+            const sleepingPlayers = currentState.players.filter(p => !p.hasAnswered);
+            for (const p of sleepingPlayers) {
+                limiter.schedule(() => bot.telegram.sendMessage(chatId, `😴 <b>${p.name}</b> uxlab qoldi!`, { parse_mode: 'HTML' })).catch(() => { });
+            }
+        }, 25000);
+
+        await gameSessions.set(chatId, state);
     } catch (e) {
         gameLogger.error("Error sending question:", e);
     }
@@ -865,7 +925,7 @@ async function finishGame(bot: Telegraf, chatId: string, isDuel = false) {
             for (const p of winningPlayers) {
                 const pReward = Math.floor((p.score / totalWinningScore) * totalPool);
                 try {
-                    if (pReward > 0) {
+                    if (pReward > 0 && !p.isUnregistered) {
                         await query('UPDATE students SET coins = coins + $1 WHERE id = $2', [pReward, p.id]);
                     }
                 } catch (e) {
@@ -885,7 +945,8 @@ async function finishGame(bot: Telegraf, chatId: string, isDuel = false) {
         state.players.filter(p => p.score > 0).forEach((p, i) => {
             const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🎖";
             const rewardText = (p as any).rewardEarned > 0 ? ` (+${(p as any).rewardEarned} 🪙)` : '';
-            board += `${medal} <b>${p.name}</b> — ${p.score} XP${rewardText}\n`;
+            const unregText = p.isUnregistered ? ' (Mehmon)' : '';
+            board += `${medal} <b>${p.name}</b> — ${p.score} ball${rewardText}${unregText}\n`;
         });
         board += `\n`;
     }

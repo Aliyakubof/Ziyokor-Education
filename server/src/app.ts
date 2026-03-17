@@ -320,7 +320,9 @@ async function initDb() {
         // Initialize System Settings
         await query(`
             INSERT INTO system_settings (key, value, description)
-            VALUES ('vocab_battle_active', 'false', 'Vocabulary Battle feature availability for students')
+            VALUES 
+                ('vocab_battle_active', 'false', 'Vocabulary Battle feature availability for students'),
+                ('tg_game_all_can_join', 'false', 'Allow unregistered users to join Telegram bot games')
             ON CONFLICT (key) DO NOTHING;
         `);
 
@@ -786,6 +788,35 @@ app.get('/api/telegram-questions', requireRole('admin', 'teacher', 'manager'), a
     } catch (err: any) {
         console.error('Error fetching telegram questions:', err);
         res.status(500).json({ error: 'Error fetching telegram questions', details: err.message });
+    }
+});
+
+// Admin: System Settings
+app.get('/api/admin/settings/:key', requireRole('admin'), async (req, res) => {
+    try {
+        const { key } = req.params;
+        const result = await query('SELECT value FROM system_settings WHERE key = $1', [key]);
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Setting not found' });
+        res.json({ value: result.rows[0].value });
+    } catch (err) {
+        res.status(500).json({ error: 'Error fetching setting' });
+    }
+});
+
+app.put('/api/admin/settings', requireRole('admin'), async (req, res) => {
+    try {
+        const { key, value } = req.body;
+        await query(
+            'INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()',
+            [key, JSON.stringify(value)]
+        );
+        // Also refresh SettingsService cache
+        const { SettingsService } = require('./services/settings');
+        await SettingsService.refreshCache();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error updating setting:', err);
+        res.status(500).json({ error: 'Error updating setting' });
     }
 });
 
