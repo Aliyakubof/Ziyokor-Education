@@ -111,29 +111,43 @@ export function setupTelegramGame(bot: Telegraf) {
                 WHERE sub.telegram_chat_id = $1 LIMIT 1
             `, [userId]);
 
-            if (subRes.rowCount === 0) return ctx.answerCbQuery("Botdan ro'yxatdan o'tmagansiz!", { show_alert: true });
-            const student = subRes.rows[0];
+            let student = (subRes && subRes.rowCount && subRes.rowCount > 0) ? subRes.rows[0] : null;
+            const isPublicMode = await SettingsService.get('tg_game_all_can_join', false);
+
+            if (!student && !isPublicMode) {
+                return ctx.answerCbQuery("Botdan ro'yxatdan o'tmagansiz!", { show_alert: true });
+            }
 
             const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
-            if (student.coins < entryFee) return ctx.answerCbQuery(`Sizda yetarli coin yo'q! (Kerak: ${entryFee})`, { show_alert: true });
+            const isGuest = !student;
 
-            // Deduct
-            await query('UPDATE students SET coins = coins - $1 WHERE id = $2', [entryFee, student.id]);
-            state.totalCoinPool = (state.totalCoinPool || 0) + entryFee;
+            if (student && student.coins < entryFee && !isPublicMode) {
+                return ctx.answerCbQuery(`Sizda yetarli coin yo'q! (Kerak: ${entryFee})`, { show_alert: true });
+            }
+
+            if (student && !isGuest) {
+                // Deduct only if registered and not effectively in public mode (actually we deduct if registered, and skip if guest)
+                await query('UPDATE students SET coins = coins - $1 WHERE id = $2', [entryFee, student.id]);
+                state.totalCoinPool = (state.totalCoinPool || 0) + entryFee;
+            }
 
             state.players.push({
-                id: student.id,
-                name: student.name,
+                id: student ? student.id : `guest_${userId}`,
+                name: student ? student.name : ctx.from.first_name,
                 score: 0,
                 telegramUserId: userId,
                 hasAnswered: false,
-                streak: 0
+                streak: 0,
+                isUnregistered: isGuest
             });
 
             await gameSessions.set(inlineMsgId, state);
 
             let txt = `⚔️ <b>${state.quizTitle}</b> bo'yicha DUEL!\n\n`;
-            state.players.forEach(p => txt += `🥊 ${p.name} (-${entryFee} 🪙)\n`);
+            state.players.forEach(p => {
+                const feeText = p.isUnregistered ? '' : ` (-${entryFee} 🪙)`;
+                txt += `🥊 ${p.name}${feeText}\n`;
+            });
 
             if (state.players.length === 2) {
                 txt += `\n🚀 Barcha tayyor! O'yin boshlanmoqda...`;
@@ -190,6 +204,10 @@ export function setupTelegramGame(bot: Telegraf) {
 
         if (state.players.every(p => p.hasAnswered)) {
             if (state.timer) clearTimeout(state.timer);
+            if (state.inactivityTimer) {
+                clearTimeout(state.inactivityTimer);
+                state.inactivityTimer = undefined;
+            }
             await moveNextDuel(bot, inlineMsgId);
         } else {
             // Update inline message to show who answered
@@ -455,7 +473,7 @@ export function setupTelegramGame(bot: Telegraf) {
             `🎉 <b>${state.quizTitle}</b> o'yini ochilyapti!\n` +
             `Format: ${state.gameMode === 'SOLO' ? '👤 Solo' : '👥 Team Battle'}\n\n` +
             `⏳ Qatnashish vaqti ketyapti...\n` +
-            `💰 Kirish to'lovi: ${entryFee} coin\n` +
+            (await SettingsService.get('tg_game_all_can_join', false) ? '' : `💰 Kirish to'lovi: ${entryFee} coin\n`) +
             `⚠️ <b>Kamida 4 kishi kerak!</b>\n\n` +
             `Qatnashuvchilar (${state.players.length}):\n${playerNames}`,
             {
@@ -483,7 +501,7 @@ export function setupTelegramGame(bot: Telegraf) {
         state.joinSecondsLeft = 30;
         const entryFee = await SettingsService.get('tg_game_entry_fee', 10);
 
-        const renderJoinMsg = (seconds: number) => {
+        const renderJoinMsg = async (seconds: number) => {
             const playerNames = state.players.map((p: PlayerEntry) => {
                 const teamIcon = p.team === 'Red' ? '🔴 ' : p.team === 'Blue' ? '🔵 ' : '• ';
                 return `${teamIcon}${p.name}`;
@@ -493,7 +511,7 @@ export function setupTelegramGame(bot: Telegraf) {
                 `Format: ${state.gameMode === 'SOLO' ? '👤 Solo' : '👥 Team Battle'}\n\n` +
                 `⏳ Qatnashish vaqti uzaytirildi (+30s)...\n` +
                 `⏰ Qolgan vaqt: <b>${seconds}</b> soniya\n` +
-                `💰 Kirish to'lovi: ${entryFee} coin\n` +
+                (await SettingsService.get('tg_game_all_can_join', false) ? '' : `💰 Kirish to'lovi: ${entryFee} coin\n`) +
                 `⚠️ <b>Kamida 4 kishi kerak!</b>\n\n` +
                 `Qatnashuvchilar (${state.players.length}):\n${playerNames || '<i>Hali hech kim yo\'q</i>'}`;
         };
@@ -501,6 +519,19 @@ export function setupTelegramGame(bot: Telegraf) {
         state.joinTimerInterval = setInterval(async () => {
             if (state.joinSecondsLeft && state.joinSecondsLeft > 0) {
                 state.joinSecondsLeft -= 1;
+
+                if (state.joinSecondsLeft % 5 === 0 || state.joinSecondsLeft <= 5) {
+                    const text = await renderJoinMsg(state.joinSecondsLeft);
+                    await limiter.schedule(() => bot.telegram.editMessageText(chatId, state.mainMessageId, undefined, text, {
+                        parse_mode: 'HTML',
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: "✋ Qo'shilish", callback_data: "tg_join" }],
+                                [{ text: "⏳ +30 soniya", callback_data: "tg_add_time" }, { text: "❌ Bekor qilish", callback_data: "tg_cancel_game" }]
+                            ]
+                        }
+                    })).catch(() => { });
+                }
 
                 if (state.joinSecondsLeft <= 0) {
                     clearInterval(state.joinTimerInterval);
@@ -701,6 +732,29 @@ async function sendDuelQuestion(bot: Telegraf, inlineMsgId: string) {
         state.timer = setTimeout(() => {
             moveNextDuel(bot, inlineMsgId);
         }, 30000);
+
+        // Start 25 second inactivity timer for Duel
+        state.inactivityTimer = setTimeout(async () => {
+            const currentState = await gameSessions.get(inlineMsgId);
+            if (!currentState || currentState.status !== 'PLAYING' || currentState.currentQIndex !== state.currentQIndex) return;
+
+            const sleepingPlayers = currentState.players.filter(p => !p.hasAnswered);
+            if (sleepingPlayers.length > 0) {
+                let updatedTxt = `<b>Savol ${currentState.currentQIndex + 1} / ${currentState.questions.length}</b>\n\n${q.text}\n\n`;
+                currentState.players.forEach(p => {
+                    const status = p.hasAnswered ? '✅' : '😴';
+                    const suffix = !p.hasAnswered ? ' uxlab qoldi!' : '';
+                    updatedTxt += `${status} ${p.name}${suffix}\n`;
+                });
+
+                const updatedButtons = buildDuelKeyboard(q);
+                await limiter.schedule(() => bot.telegram.editMessageText(undefined, undefined, inlineMsgId, updatedTxt, {
+                    parse_mode: 'HTML',
+                    reply_markup: { inline_keyboard: updatedButtons }
+                })).catch(() => { });
+            }
+        }, 25000);
+
         await gameSessions.set(inlineMsgId, state);
     } catch (e) {
         gameLogger.error("Error sending duel question:", e);
