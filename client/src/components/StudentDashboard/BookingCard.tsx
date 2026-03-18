@@ -1,0 +1,66 @@
+import React from 'react';
+import { Calendar, X } from 'lucide-react';
+
+interface BookingCardProps {
+    myBooking: any;
+    groupSettings: any;
+    onCancel: () => void;
+    onOpenModal: () => void;
+}
+
+const BookingCard: React.FC<BookingCardProps> = ({ myBooking, groupSettings, onCancel, onOpenModal }) => {
+    return (
+        <div className="rounded-3xl p-6 shadow-xl border relative overflow-hidden transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+            <div className="flex justify-between items-start mb-4">
+                <div>
+                    <h2 className="text-lg font-black flex items-center gap-2" style={{ color: 'var(--text-color)' }}>
+                        <Calendar size={20} className="text-indigo-500" />
+                        Qo'shimcha dars
+                    </h2>
+                    <p className="text-xs font-bold mt-1 opacity-50" style={{ color: 'var(--text-color)' }}>
+                        Haftalik 30-daqiqalik darsni bron qiling
+                    </p>
+                </div>
+                {myBooking && (
+                    <div className="bg-emerald-500/10 text-emerald-500 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-500/20">
+                        Band qilingan
+                    </div>
+                )}
+            </div>
+
+            {myBooking ? (
+                <div className="flex items-center justify-between p-4 bg-indigo-50 border-2 border-indigo-100 rounded-2xl">
+                    <div>
+                        <div className="text-xs font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Tanlangan vaqt</div>
+                        <div className="text-2xl font-black text-indigo-700">{myBooking.time_slot}</div>
+                        {myBooking.topic && (
+                            <div className="text-[10px] font-bold text-indigo-500 mt-1 bg-white inline-block px-2 py-0.5 rounded-lg border border-indigo-100">
+                                Mavzu: {myBooking.topic}
+                            </div>
+                        )}
+                        <div className="text-[10px] font-bold text-indigo-600 mt-1">
+                            {groupSettings?.extra_class_days?.join(', ')} kunlari
+                        </div>
+                    </div>
+                    <button 
+                        onClick={onCancel}
+                        className="p-3 bg-white text-rose-500 rounded-xl hover:bg-rose-50 transition-colors shadow-sm"
+                        title="Bekor qilish"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+            ) : (
+                <button 
+                    onClick={onOpenModal}
+                    className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
+                >
+                    <Calendar size={20} />
+                    Vaqtni tanlash
+                </button>
+            )}
+        </div>
+    );
+};
+
+export default React.memo(BookingCard);

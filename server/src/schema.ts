@@ -199,6 +199,13 @@ CREATE INDEX IF NOT EXISTS idx_game_results_group ON game_results(group_id);
 CREATE INDEX IF NOT EXISTS idx_game_results_created ON game_results(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_students_last_activity ON students(last_activity_at DESC);
 CREATE INDEX IF NOT EXISTS idx_game_results_player_gin ON game_results USING GIN (player_results);
+CREATE INDEX IF NOT EXISTS idx_extra_class_bookings_student ON extra_class_bookings(student_id);
+CREATE INDEX IF NOT EXISTS idx_extra_class_bookings_group ON extra_class_bookings(group_id);
+CREATE INDEX IF NOT EXISTS idx_student_purchases_student ON student_purchases(student_id);
+CREATE INDEX IF NOT EXISTS idx_duels_players ON duels(player1_id, player2_id);
+CREATE INDEX IF NOT EXISTS idx_duels_status ON duels(status);
+CREATE INDEX IF NOT EXISTS idx_groups_teacher ON groups(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_student_telegram_subscriptions_chat ON student_telegram_subscriptions(telegram_chat_id);
 
 -- Carousel Slides Table
 CREATE TABLE IF NOT EXISTS carousel_slides (
