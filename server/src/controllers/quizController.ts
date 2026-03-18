@@ -375,30 +375,6 @@ export const deleteDuelQuiz = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Error deleting duel quiz' });
     }
 };
-
-// Group Battles
-export const getBattleDetails = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const battleRes = await query(`
-            SELECT b.*, g1.name as group_a_name, g2.name as group_b_name, t1.name as teacher_a_name, t2.name as teacher_b_name
-            FROM group_battles b
-            JOIN groups g1 ON b.group_a_id = g1.id
-            JOIN groups g2 ON b.group_b_id = g2.id
-            LEFT JOIN teachers t1 ON g1.teacher_id = t1.id
-            LEFT JOIN teachers t2 ON g2.teacher_id = t2.id
-            WHERE b.id = $1
-        `, [id]);
-        if (battleRes.rowCount === 0) return res.status(404).json({ error: 'Battle not found' });
-        const battle = battleRes.rows[0];
-        const membersA = await query('SELECT name, weekly_battle_score, avatar_url, coins FROM students WHERE group_id = $1 ORDER BY weekly_battle_score DESC', [battle.group_a_id]);
-        const membersB = await query('SELECT name, weekly_battle_score, avatar_url, coins FROM students WHERE group_id = $1 ORDER BY weekly_battle_score DESC', [battle.group_b_id]);
-        res.json({ ...battle, membersA: membersA.rows, membersB: membersB.rows });
-    } catch (err) {
-        res.status(500).json({ error: 'Error fetching battle details' });
-    }
-};
-
 export const getCurrentBattleByGroup = async (req: Request, res: Response) => {
     try {
         const result = await query('SELECT * FROM group_battles WHERE (group_a_id = $1 OR group_b_id = $1) AND status = \'active\' ORDER BY created_at DESC LIMIT 1', [req.params.groupId]);
@@ -408,17 +384,3 @@ export const getCurrentBattleByGroup = async (req: Request, res: Response) => {
     }
 };
 
-export const getBattleLeaderboard = async (req: Request, res: Response) => {
-    try {
-        const result = await query(`
-            SELECT b.id, b.score_a, b.score_b, b.status, b.week_start, g1.name as group_a_name, g1.level, g2.name as group_b_name
-            FROM group_battles b
-            JOIN groups g1 ON b.group_a_id = g1.id
-            JOIN groups g2 ON b.group_b_id = g2.id
-            WHERE b.status = 'active' ORDER BY (b.score_a + b.score_b) DESC LIMIT 20
-        `);
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: 'Error fetching battle leaderboard' });
-    }
-};

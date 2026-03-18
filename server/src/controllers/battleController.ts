@@ -77,3 +77,19 @@ export const getBattleById = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Error fetching battle' });
     }
 };
+
+export const getBattleLeaderboard = async (req: Request, res: Response) => {
+    try {
+        const result = await query(`
+            SELECT b.id, b.score_a, b.score_b, b.status, b.week_start, g1.name as group_a_name, g1.level, g2.name as group_b_name
+            FROM group_battles b
+            JOIN groups g1 ON b.group_a_id = g1.id
+            JOIN groups g2 ON b.group_b_id = g2.id
+            WHERE b.status = 'active' ORDER BY (b.score_a + b.score_b) DESC LIMIT 20
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching battle leaderboard:', err);
+        res.status(500).json({ error: 'Error fetching battle leaderboard' });
+    }
+};

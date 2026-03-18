@@ -31,9 +31,5 @@ router.delete('/duel-quizzes/:id', quizController.deleteDuelQuiz);
 router.post('/student/quiz/submit', quizController.submitStudentQuiz);
 router.post('/student/vocab-battles/submit', quizController.submitVocabBattle);
 
-// Group Battles
-router.get('/battles/leaderboard', quizController.getBattleLeaderboard);
-router.get('/battles/current/:groupId', quizController.getCurrentBattleByGroup);
-router.get('/battles/:id/details', quizController.getBattleDetails);
 
 export default router;
