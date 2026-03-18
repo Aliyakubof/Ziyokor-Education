@@ -9,6 +9,7 @@ import settingsRoutes from './settingsRoutes';
 import battleRoutes from './battleRoutes';
 import * as adminController from '../controllers/adminController';
 import * as authController from '../controllers/authController';
+import * as studentController from '../controllers/studentController';
 
 const router = Router();
 
@@ -47,6 +48,7 @@ router.get('/slots', requireRole('admin', 'manager', 'teacher'), adminController
 import * as shopController from '../controllers/shopController';
 router.get('/teachers', requireRole('admin', 'manager'), adminController.getTeachersList);
 router.get('/students', requireRole('admin'), adminController.getStudentsWithPagination);
+router.get('/leaderboard', requireRole('admin', 'teacher', 'manager', 'student'), studentController.getLeaderboard);
 router.get('/shop-items', requireRole('admin', 'teacher', 'student', 'manager'), shopController.getItems);
 
 // Critical legacy redirects
