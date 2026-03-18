@@ -6,5 +6,6 @@ const router = Router();
 
 router.get('/current/:groupId', requireRole('student', 'teacher', 'admin', 'manager'), battleController.getCurrentBattle);
 router.get('/:id', requireRole('student', 'teacher', 'admin', 'manager'), battleController.getBattleById);
+router.get('/:id/details', requireRole('student', 'teacher', 'admin', 'manager'), battleController.getBattleById);
 
 export default router;

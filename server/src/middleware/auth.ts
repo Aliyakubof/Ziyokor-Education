@@ -41,6 +41,7 @@ export function requireRole(...roles: string[]) {
             req.user = decoded;
 
             if (roles.length > 0 && !roles.includes(decoded.role)) {
+                console.warn(`[Auth] 403 Forbidden: User role '${decoded.role}' not in allowed roles [${roles.join(', ')}] for path ${req.path}`);
                 return res.status(403).json({ error: 'Ruxsat yo\'q (Forbidden)' });
             }
 
