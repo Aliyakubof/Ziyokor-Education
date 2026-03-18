@@ -15,7 +15,9 @@ const router = Router();
 router.use('/auth', authRoutes);
 router.use('/student', studentRoutes);
 router.use('/teacher', teacherRoutes);
+router.use('/manager', teacherRoutes); // Mount teacherRoutes under /manager
 router.use('/admin', adminRoutes);
+router.use('/manager', adminRoutes); // Mount adminRoutes under /manager
 router.use('/shop', shopRoutes);
 router.use('/quizzes', quizRoutes);
 router.use('/settings', settingsRoutes);
@@ -46,5 +48,9 @@ router.post('/login', authController.login);
 router.get('/groups/:groupId', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupById);
 router.get('/groups/:groupId/extra-class-bookings', requireRole('admin', 'teacher', 'manager'), teacherController.getExtraClassBookings);
 router.get('/student/:id/purchases', requireRole('student', 'teacher', 'admin', 'manager'), shopController.getPurchases);
+
+// Extra aliasing for Manager specifically if they use flat /manager paths
+router.get('/manager/groups', requireRole('admin', 'manager', 'teacher'), teacherController.getGroups);
+router.get('/manager/weekly-report', requireRole('admin', 'manager', 'teacher'), teacherController.getWeeklyReport);
 
 export default router;
