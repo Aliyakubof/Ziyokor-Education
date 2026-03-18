@@ -48,8 +48,32 @@ export const getBattleById = async (req: Request, res: Response) => {
         `, [id]);
 
         if (result.rowCount === 0) return res.status(404).json({ error: 'Battle not found' });
-        res.json(result.rows[0]);
+        
+        const battle = result.rows[0];
+
+        // Fetch members for Group A
+        const membersARes = await query(`
+            SELECT id, name, weekly_battle_score, coins, avatar_url 
+            FROM students 
+            WHERE group_id = $1 
+            ORDER BY weekly_battle_score DESC
+        `, [battle.group_a_id]);
+
+        // Fetch members for Group B
+        const membersBRes = await query(`
+            SELECT id, name, weekly_battle_score, coins, avatar_url 
+            FROM students 
+            WHERE group_id = $1 
+            ORDER BY weekly_battle_score DESC
+        `, [battle.group_b_id]);
+
+        res.json({
+            ...battle,
+            membersA: membersARes.rows,
+            membersB: membersBRes.rows
+        });
     } catch (err) {
+        console.error('Error fetching battle details:', err);
         res.status(500).json({ error: 'Error fetching battle' });
     }
 };
