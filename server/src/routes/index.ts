@@ -8,6 +8,7 @@ import quizRoutes from './quizRoutes';
 import settingsRoutes from './settingsRoutes';
 import battleRoutes from './battleRoutes';
 import * as adminController from '../controllers/adminController';
+import * as authController from '../controllers/authController';
 
 const router = Router();
 
@@ -39,5 +40,11 @@ import * as shopController from '../controllers/shopController';
 router.get('/teachers', requireRole('admin', 'manager'), adminController.getTeachersList);
 router.get('/students', requireRole('admin'), adminController.getStudentsWithPagination);
 router.get('/shop-items', requireRole('admin', 'teacher', 'student', 'manager'), shopController.getItems);
+
+// Critical legacy redirects
+router.post('/login', authController.login);
+router.get('/groups/:groupId', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupById);
+router.get('/groups/:groupId/extra-class-bookings', requireRole('admin', 'teacher', 'manager'), teacherController.getExtraClassBookings);
+router.get('/student/:id/purchases', requireRole('student', 'teacher', 'admin', 'manager'), shopController.getPurchases);
 
 export default router;
