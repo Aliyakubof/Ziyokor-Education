@@ -21,6 +21,7 @@ router.use('/manager', adminRoutes); // Mount adminRoutes under /manager
 router.use('/shop', shopRoutes);
 router.use('/quizzes', quizRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/manager/settings', settingsRoutes);
 router.use('/battles', battleRoutes);
 
 // Publicly accessible but logic in adminController
