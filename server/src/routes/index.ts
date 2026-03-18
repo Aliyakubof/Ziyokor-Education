@@ -45,8 +45,8 @@ router.get('/shop-items', requireRole('admin', 'teacher', 'student', 'manager'),
 
 // Critical legacy redirects
 router.post('/login', authController.login);
-router.get('/groups/:groupId', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupById);
-router.get('/groups/:groupId/extra-class-bookings', requireRole('admin', 'teacher', 'manager'), teacherController.getExtraClassBookings);
+router.get('/groups/:groupId', requireRole('admin', 'teacher', 'manager', 'student'), teacherController.getGroupById);
+router.get('/groups/:groupId/extra-class-bookings', requireRole('admin', 'teacher', 'manager', 'student'), teacherController.getExtraClassBookings);
 router.get('/student/:id/purchases', requireRole('student', 'teacher', 'admin', 'manager'), shopController.getPurchases);
 
 // Extra aliasing for Manager specifically if they use flat /manager paths
