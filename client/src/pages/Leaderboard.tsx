@@ -148,7 +148,7 @@ export default function Leaderboard() {
                                     return (
                                         <div
                                             key={battle.id}
-                                            onClick={() => navigate(`/battle/${battle.id}`)}
+                                            onClick={() => navigate(`/student/battle/${battle.id}`)}
                                             className="p-4 hover:opacity-80 cursor-pointer transition-colors border-b"
                                             style={{ borderColor: 'var(--border-color)' }}
                                         >
