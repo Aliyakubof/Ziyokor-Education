@@ -23,4 +23,21 @@ router.use('/battles', battleRoutes);
 // Publicly accessible but logic in adminController
 router.get('/level-topics', adminController.getLevelTopics);
 
+// --- Compatibility Aliases for Frontend (Flat Paths) ---
+import * as teacherController from '../controllers/teacherController';
+import * as quizController from '../controllers/quizController';
+import { requireRole } from '../middleware/auth';
+
+router.get('/groups', requireRole('admin', 'teacher', 'manager'), teacherController.getGroups);
+router.get('/admin/groups', requireRole('admin', 'teacher', 'manager'), teacherController.getGroups);
+router.get('/unit-quizzes', requireRole('admin', 'teacher', 'manager'), quizController.getUnitQuizzes);
+router.get('/available-slots', requireRole('admin', 'manager', 'teacher'), adminController.getAvailableSlots);
+router.get('/slots', requireRole('admin', 'manager', 'teacher'), adminController.getAvailableSlots);
+
+// Additional common flat routes
+import * as shopController from '../controllers/shopController';
+router.get('/teachers', requireRole('admin', 'manager'), adminController.getTeachersList);
+router.get('/students', requireRole('admin'), adminController.getStudentsWithPagination);
+router.get('/shop-items', requireRole('admin', 'teacher', 'student', 'manager'), shopController.getItems);
+
 export default router;
