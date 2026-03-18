@@ -3,11 +3,15 @@ export interface Player {
     name: string;
     score: number;
     answers: Record<string, string | number>; // questionIndex -> answerIndex or raw text
-    status?: 'Online' | 'Offline' | 'Cheating';
+    status?: 'Online' | 'Offline' | 'Cheating' | 'joined';
     isCheater?: boolean;
     partialScoreMap?: Record<number, number>; // questionIndex -> score (0 or 1, or fractional)
     aiFeedbackMap?: Record<number, string>; // questionIndex -> AI feedback
     avatar_url?: string;
+    socketId?: string;
+    hp?: number;
+    combo?: number;
+    lastAnswerTime?: number;
 }
 
 export interface Teacher {

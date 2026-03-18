@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
 import { Clock, CheckCircle2, XCircle, Info } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sword, Zap, Trophy, Crown } from 'lucide-react';
 
 interface QuestionData {
     info?: string;
@@ -59,6 +60,9 @@ export default function PlayerGame() {
     const [quizTitle, setQuizTitle] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [playerAvatar, setPlayerAvatar] = useState<string | null>(null);
+    const [isDuel, setIsDuel] = useState(false);
+    const [duelSync, setDuelSync] = useState<any[]>([]);
+    const [battleEffects, setBattleEffects] = useState<any[]>([]);
 
     const pinFromStore = localStorage.getItem('kahoot-pin');
     const idFromStore = localStorage.getItem('student-id');
@@ -161,6 +165,37 @@ export default function PlayerGame() {
             setCurrentUnitIndex(nextIdx);
             setQuestion(data.questions[nextIdx]);
             setView('PLAYING');
+            if (data.isDuel) setIsDuel(true);
+        });
+
+        socket.on('duel-started', (data: { pin: string, duelId: string }) => {
+            setIsDuel(true);
+            setIsUnitMode(true);
+        });
+
+        socket.on('duel-status-sync', (players: any[]) => {
+            setDuelSync(players);
+        });
+
+        socket.on('duel-damage', (data: { targetId: string, damage: number, attackerId: string, combo: number }) => {
+            const id = Math.random().toString(36).substring(7);
+            setBattleEffects(prev => [...prev.slice(-5), { id, ...data, type: 'DAMAGE' }]);
+            setTimeout(() => {
+                setBattleEffects(prev => prev.filter(e => e.id !== id));
+            }, 2000);
+        });
+
+        socket.on('duel-effect', (data: { type: string, playerId: string }) => {
+            const id = Math.random().toString(36).substring(7);
+            setBattleEffects(prev => [...prev.slice(-5), { id, ...data, type: 'SPECIAL' }]);
+            setTimeout(() => {
+                setBattleEffects(prev => prev.filter(e => e.id !== id));
+            }, 2000);
+        });
+
+        socket.on('duel-ko', (data: { winnerId: string, loserId: string }) => {
+            const id = 'ko-' + Math.random().toString(36).substring(7);
+            setBattleEffects(prev => [...prev, { id, ...data, type: 'KO' }]);
         });
 
         socket.on('question-start', (q) => {
@@ -224,6 +259,10 @@ export default function PlayerGame() {
             socket.off('question-start');
             socket.off('unit-finished');
             socket.off('game-over');
+            socket.off('duel-status-sync');
+            socket.off('duel-damage');
+            socket.off('duel-effect');
+            socket.off('duel-ko');
             socket.off('error');
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
@@ -793,6 +832,133 @@ export default function PlayerGame() {
         );
     };
 
+    const ArenaUI = () => {
+        if (!isDuel || !duelSync.length) return null;
+
+        const myId = localStorage.getItem('student-id') || socket.id;
+        const me = duelSync.find(p => p.id === myId) || { hp: 100, combo: 0, score: 0 };
+        const opponent = duelSync.find(p => p.id !== myId) || { hp: 100, combo: 0, score: 0 };
+
+        return (
+            <div className="w-full max-w-4xl mx-auto mb-8 relative">
+                {/* Battle Effects Layer */}
+                <div className="absolute inset-0 pointer-events-none z-50">
+                    <AnimatePresence>
+                        {battleEffects.map(effect => (
+                            <motion.div
+                                key={effect.id}
+                                initial={{ opacity: 0, y: 0, scale: 0.5 }}
+                                animate={{ opacity: 1, y: -100, scale: 1.5 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                            >
+                                {effect.type === 'DAMAGE' && (
+                                    <span className={`text-5xl font-black italic drop-shadow-2xl ${effect.targetId === myId ? 'text-red-500' : 'text-yellow-400'}`}>
+                                        -{effect.damage}
+                                    </span>
+                                )}
+                                {effect.type === 'SPECIAL' && (
+                                    <div className="flex flex-col items-center">
+                                        <Zap className="text-blue-400 fill-blue-400" size={64} />
+                                        <span className="text-3xl font-black text-blue-400 uppercase tracking-tighter">{effect.type}</span>
+                                    </div>
+                                )}
+                                {effect.type === 'KO' && (
+                                    <motion.div 
+                                        initial={{ scale: 0, rotate: -20 }}
+                                        animate={{ scale: 1.2, rotate: 0 }}
+                                        className="bg-black/80 backdrop-blur-md p-10 rounded-[3rem] border-4 border-yellow-400 shadow-[0_0_50px_rgba(234,179,8,0.5)]"
+                                    >
+                                        <Trophy className="text-yellow-400 mx-auto mb-4" size={80} />
+                                        <h2 className="text-6xl font-black text-white italic">K.O.</h2>
+                                    </motion.div>
+                                )}
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </div>
+
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-black/10 p-6 rounded-[2.5rem] backdrop-blur-sm border border-white/5 shadow-2xl">
+                    {/* Me */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between px-2">
+                            <span className="font-black text-white/50 text-xs uppercase tracking-widest">Siz</span>
+                            <div className="flex items-center gap-1">
+                                <Sword size={12} className="text-primary-color" />
+                                <span className="font-bold text-white text-sm">{me.score}</span>
+                            </div>
+                        </div>
+                        <div className="h-4 bg-black/40 rounded-full overflow-hidden border border-white/10 relative shadow-inner">
+                            <motion.div 
+                                initial={{ width: '100%' }}
+                                animate={{ width: `${me.hp}%` }}
+                                className={`h-full bg-gradient-to-r ${me.hp < 30 ? 'from-red-600 to-red-400 shadow-[0_0_15px_rgba(220,38,38,0.5)]' : 'from-emerald-600 to-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]'}`}
+                            />
+                            {me.hp < 100 && (
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/80">{me.hp}%</span>
+                            )}
+                        </div>
+                        <AnimatePresence>
+                            {me.combo > 1 && (
+                                <motion.div 
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                    className="flex items-center gap-2"
+                                >
+                                    <div className="px-2 py-0.5 bg-yellow-400 text-black rounded-lg text-[10px] font-black shadow-lg">COMBO X{me.combo}</div>
+                                    <Zap size={14} className="text-yellow-400 fill-yellow-400 animate-pulse" />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* VS */}
+                    <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 shadow-lg mb-1">
+                            <span className="font-black text-white/20 italic italic text-xl">VS</span>
+                        </div>
+                        <div className="w-1 h-8 bg-gradient-to-b from-white/10 to-transparent rounded-full" />
+                    </div>
+
+                    {/* Opponent */}
+                    <div className="space-y-3 text-right">
+                        <div className="flex items-center justify-between px-2 flex-row-reverse">
+                            <span className="font-black text-white/50 text-xs uppercase tracking-widest">Raqib</span>
+                            <div className="flex items-center gap-1">
+                                <span className="font-bold text-white text-sm">{opponent.score}</span>
+                                <Crown size={12} className="text-yellow-500" />
+                            </div>
+                        </div>
+                        <div className="h-4 bg-black/40 rounded-full overflow-hidden border border-white/10 relative shadow-inner">
+                            <motion.div 
+                                initial={{ width: '100%' }}
+                                animate={{ width: `${opponent.hp}%` }}
+                                className={`h-full bg-gradient-to-l ${opponent.hp < 30 ? 'from-red-600 to-red-400 shadow-[0_0_15px_rgba(220,38,38,0.5)]' : 'from-indigo-600 to-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)]'}`}
+                            />
+                            {opponent.hp < 100 && (
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/80">{opponent.hp}%</span>
+                            )}
+                        </div>
+                        <AnimatePresence>
+                            {opponent.combo > 1 && (
+                                <motion.div 
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    className="flex items-center gap-2 justify-end"
+                                >
+                                    <Zap size={14} className="text-indigo-400 fill-indigo-400 animate-pulse" />
+                                    <div className="px-2 py-0.5 bg-indigo-500 text-white rounded-lg text-[10px] font-black shadow-lg">COMBO X{opponent.combo}</div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="flex flex-col h-[100dvh] transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
             <header className="backdrop-blur-md p-4 flex justify-between items-center border-b shrink-0 transition-colors" style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--border-color)' }}>
@@ -816,6 +982,7 @@ export default function PlayerGame() {
             </header>
 
             <main className="flex-1 p-4 md:p-6 overflow-y-auto w-full max-w-5xl mx-auto flex flex-col">
+                <ArenaUI />
                 <div className="flex-1 relative">{renderQuestionContent()}</div>
             </main>
 

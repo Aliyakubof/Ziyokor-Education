@@ -153,6 +153,10 @@ export const store = {
         } catch (e) { }
     },
 
+    async addPlayer(pin: string, player: Player): Promise<void> {
+        await this.setPlayer(pin, player);
+    },
+
     async getGameMetadata(pin: string): Promise<Partial<GameSession> | null> {
         if (!useRedis) {
             const session = await this.getGame(pin);
