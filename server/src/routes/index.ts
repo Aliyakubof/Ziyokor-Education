@@ -35,6 +35,11 @@ import { requireRole } from '../middleware/auth';
 router.get('/groups', requireRole('admin', 'teacher', 'manager'), teacherController.getGroups);
 router.get('/admin/groups', requireRole('admin', 'teacher', 'manager'), teacherController.getGroups);
 router.get('/unit-quizzes', requireRole('admin', 'teacher', 'manager'), quizController.getUnitQuizzes);
+router.get('/solo-quizzes', requireRole('admin', 'teacher', 'manager'), quizController.getSoloQuizzes);
+router.get('/duel-quizzes', requireRole('admin', 'teacher', 'manager'), quizController.getDuelQuizzes);
+router.post('/duel-quizzes', requireRole('admin', 'teacher'), quizController.createDuelQuiz);
+router.put('/duel-quizzes/:id', requireRole('admin', 'teacher'), quizController.updateDuelQuiz);
+router.delete('/duel-quizzes/:id', requireRole('admin', 'teacher'), quizController.deleteDuelQuiz);
 router.get('/available-slots', requireRole('admin', 'manager', 'teacher'), adminController.getAvailableSlots);
 router.get('/slots', requireRole('admin', 'manager', 'teacher'), adminController.getAvailableSlots);
 
