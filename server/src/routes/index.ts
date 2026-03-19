@@ -61,4 +61,10 @@ router.get('/student/:id/purchases', requireRole('student', 'teacher', 'admin', 
 router.get('/manager/groups', requireRole('admin', 'manager', 'teacher'), teacherController.getGroups);
 router.get('/manager/weekly-report', requireRole('admin', 'manager', 'teacher'), teacherController.getWeeklyReport);
 
+// GroupDetails compatibility (Round 2 Fixes)
+router.get('/groups/:groupId/results', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupResults);
+router.get('/groups/:groupId/contact-logs', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupContactLogs);
+router.get('/groups/:groupId/contact-info-pdf', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupContactInfoPDF);
+router.get('/students/:groupId', requireRole('admin', 'teacher', 'manager'), teacherController.getStudentsByGroup);
+
 export default router;

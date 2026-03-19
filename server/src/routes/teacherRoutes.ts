@@ -21,6 +21,7 @@ router.get('/groups/:groupId/students-short', requireRole('admin', 'teacher', 'm
 
 // Extra Class Bookings (Teacher View)
 router.get('/groups/:groupId/extra-class-bookings', requireRole('admin', 'teacher', 'manager'), teacherController.getExtraClassBookings);
+router.get('/groups/:groupId/contact-info-pdf', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupContactInfoPDF);
 router.patch('/extra-class-bookings/:id/complete', requireRole('teacher'), teacherController.completeBooking);
 
 // Reports

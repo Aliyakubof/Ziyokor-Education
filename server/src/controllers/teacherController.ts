@@ -5,7 +5,7 @@ import { query } from '../db';
 import { ADMIN_ID } from '../constants';
 import { notifyTeacher } from '../bot';
 import { generateStudentId, generateParentId } from '../store';
-import { generateWeeklyTeacherReportPDF } from '../pdfGenerator';
+import { generateWeeklyTeacherReportPDF, generateGroupContactPDF } from '../pdfGenerator';
 
 export const getTeacherStats = async (req: Request, res: Response) => {
     try {
@@ -341,6 +341,24 @@ export const getWeeklyReport = async (req: Request, res: Response) => {
         res.send(pdfBuffer);
     } catch (err: any) {
         console.error('Error generating weekly report:', err);
+        res.status(500).json({ error: 'Xatolik', details: err.message });
+    }
+};
+export const getGroupContactInfoPDF = async (req: Request, res: Response) => {
+    try {
+        const { groupId } = req.params;
+        const gRes = await query('SELECT name FROM groups WHERE id = $1', [groupId]);
+        if (gRes.rowCount === 0) return res.status(404).json({ error: 'Guruh topilmadi' });
+        const groupName = gRes.rows[0].name;
+
+        const sRes = await query('SELECT name, phone, parent_name, parent_phone FROM students WHERE group_id = $1 ORDER BY name ASC', [groupId]);
+        
+        const pdfBuffer = await generateGroupContactPDF(groupName, sRes.rows);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=Group_Contacts_${encodeURIComponent(groupName)}.pdf`);
+        res.send(pdfBuffer);
+    } catch (err: any) {
+        console.error('Error generating group contact PDF:', err);
         res.status(500).json({ error: 'Xatolik', details: err.message });
     }
 };
