@@ -400,7 +400,7 @@ export const getAvailableDuelQuizzes = async (req: Request, res: Response) => {
     try {
         const studentRes = await query('SELECT g.level FROM students s JOIN groups g ON s.group_id = g.id WHERE s.id = $1', [req.params.studentId]);
         const level = studentRes.rows[0]?.level || 'Beginner';
-        const result = await query('SELECT id, title, daraja FROM duel_quizzes WHERE daraja = $1 AND is_active = TRUE ORDER BY created_at DESC', [level]);
+        const result = await query('SELECT id, title, daraja FROM duel_quizzes WHERE LOWER(TRIM(daraja)) = LOWER(TRIM($1)) AND (is_active = TRUE OR is_active IS NULL) ORDER BY created_at DESC', [level]);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch available duel quizzes' });
