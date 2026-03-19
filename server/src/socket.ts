@@ -558,9 +558,9 @@ export function initSocket(io: Server) {
                 const totalTime = metadata.timePerQuestion || question.timeLimit || 20;
 
                 let damage = 0;
-                let isCorrect = currentScore > 0;
+                let improved = currentScore > prevPartialScore;
 
-                if (isCorrect) {
+                if (improved) {
                     // Damage calculation
                     const baseDamage = 10;
                     const speedBonus = Math.max(0, Math.floor(((totalTime - timeTaken) / totalTime) * 10)); // Up to 10 bonus
@@ -574,41 +574,37 @@ export function initSocket(io: Server) {
                         damage = Math.floor(damage * 1.5);
                         io.to(pin).emit('duel-effect', { type: 'CRITICAL', playerId: player.id });
                     }
-                } else {
+                } else if (currentScore < prevPartialScore) {
+                    // Player made a mistake or changed a correct answer
                     player.combo = 0;
-                    // Optional: Self damage on wrong answer
-                    damage = -5; // Self damage (negative for logic below)
+                    // Optional: no self-damage here to keep it fair during typing
                 }
 
                 player.lastAnswerTime = now;
                 await store.setPlayer(pin, player);
 
-                // Apply damage to opponent or self
-                const game = await store.getGame(pin);
-                if (game) {
-                    const opponent = game.players.find(p => p.id !== player.id);
-                    if (opponent && isCorrect) {
-                        opponent.hp = Math.max(0, (opponent.hp || 100) - damage);
-                        await store.setPlayer(pin, opponent);
-                        io.to(pin).emit('duel-damage', { targetId: opponent.id, damage, attackerId: player.id, combo: player.combo });
-                    } else if (!isCorrect) {
-                        player.hp = Math.max(0, (player.hp || 100) + damage); // damage is -5
-                        await store.setPlayer(pin, player);
-                        io.to(pin).emit('duel-damage', { targetId: player.id, damage: 5, attackerId: 'system', combo: 0 });
-                    }
+                // Apply damage to opponent only on IMPROVED score
+                if (improved) {
+                    const game = await store.getGame(pin);
+                    if (game) {
+                        const opponent = game.players.find(p => p.id !== player.id);
+                        if (opponent) {
+                            opponent.hp = Math.max(0, (opponent.hp || 100) - damage);
+                            await store.setPlayer(pin, opponent);
+                            io.to(pin).emit('duel-damage', { targetId: opponent.id, damage, attackerId: player.id, combo: player.combo });
 
-                    // Check for KO
-                    if (opponent && (opponent.hp || 0) <= 0) {
-                        io.to(pin).emit('duel-ko', { winnerId: player.id, loserId: opponent.id });
-                        setTimeout(() => finishGame(io, pin), 2000);
-                    } else if ((player.hp || 0) <= 0 && opponent) {
-                        io.to(pin).emit('duel-ko', { winnerId: opponent.id, loserId: player.id });
-                        setTimeout(() => finishGame(io, pin), 2000);
+                            // Check for KO
+                            if ((opponent.hp || 0) <= 0) {
+                                io.to(pin).emit('duel-ko', { winnerId: player.id, loserId: opponent.id });
+                                setTimeout(() => finishGame(io, pin), 2000);
+                            }
+                        }
                     }
                 }
 
                 // Sync HP/Combo to both players
-                const playersSync = game?.players.map(p => ({
+                const gameAfter = await store.getGame(pin);
+                const playersSync = gameAfter?.players.map(p => ({
                     id: p.id,
                     hp: p.hp,
                     combo: p.combo,
