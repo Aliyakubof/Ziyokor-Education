@@ -426,7 +426,16 @@ export function initSocket(io: Server) {
                 socket.join(pin);
                 socket.emit('joined', { name: existingPlayer.name, playerId });
                 if (game.status === 'ACTIVE') {
-                    socket.emit(game.isUnitQuiz ? 'unit-game-started' : 'game-started');
+                    if (game.isUnitQuiz) {
+                        socket.emit('unit-game-started', {
+                            questions: game.quiz.questions,
+                            title: game.quiz.title,
+                            isDuel: (game as any).isDuel,
+                            createdAt: (game as any).createdAt
+                        });
+                    } else {
+                        socket.emit('game-started', { title: game.quiz.title });
+                    }
                 }
                 await broadcastPlayerUpdate(io, pin, playerId);
                 return;
@@ -454,7 +463,16 @@ export function initSocket(io: Server) {
             socket.join(pin);
             socket.emit('joined', { name, playerId });
             if (game.status === 'ACTIVE') {
-                socket.emit(game.isUnitQuiz ? 'unit-game-started' : 'game-started');
+                if (game.isUnitQuiz) {
+                    socket.emit('unit-game-started', {
+                        questions: game.quiz.questions,
+                        title: game.quiz.title,
+                        isDuel: (game as any).isDuel,
+                        createdAt: (game as any).createdAt
+                    });
+                } else {
+                    socket.emit('game-started', { title: game.quiz.title });
+                }
             }
             await broadcastPlayerUpdate(io, pin, playerId);
         });
