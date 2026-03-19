@@ -674,6 +674,7 @@ export function initSocket(io: Server) {
                 io.to(socket.id).emit('duel-started', { pin, duelId });
                 io.to(fromSocketId).emit('duel-started', { pin, duelId });
             } catch (err) {
+                console.error('[Duel-Accept] Error starting duel:', err);
                 socket.emit('error', 'Duelni boshlashda xatolik');
             }
         });

@@ -199,6 +199,8 @@ async function initDb() {
                 END IF;
             END $$;
         `);
+        console.log('Checked and cleared duels table constraints');
+        console.log('Successfully checked and cleared duels table constraints if they existed.');
 
         console.log('Database initialized successfully');
         await ensureAdminExists();
