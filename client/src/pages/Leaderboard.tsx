@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
-import { Trophy, Medal, ChevronLeft, Users, Globe, Flame, Coins, Swords, ShieldAlert } from 'lucide-react';
+import { Trophy, Medal, ChevronLeft, Users, Globe, Flame, Coins, Swords, ShieldAlert, Zap } from 'lucide-react';
+import { socket } from '../socket';
 
 export default function Leaderboard() {
     const { user } = useAuth();
@@ -12,6 +13,13 @@ export default function Leaderboard() {
     const [data, setData] = useState<any[]>([]);
     const [battleData, setBattleData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [challengingId, setChallengingId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (user?.role === 'student' && !socket.connected) {
+            socket.connect();
+        }
+    }, [user]);
 
     useEffect(() => {
         if (view === 'battles') {
@@ -54,6 +62,19 @@ export default function Leaderboard() {
         if (rank === 1) return <Medal className="text-slate-300" size={24} />;
         if (rank === 2) return <Medal className="text-amber-600" size={24} />;
         return <span className="text-slate-400 font-bold">{rank + 1}</span>;
+    };
+
+    const handleChallenge = (targetId: string, targetName: string) => {
+        if (!user?.id) return;
+        setChallengingId(targetId);
+        
+        socket.emit('duel-invite', {
+            targetStudentId: targetId,
+            studentName: user.name
+        });
+
+        // Temporary success state
+        setTimeout(() => setChallengingId(null), 3000);
     };
 
     return (
@@ -220,6 +241,25 @@ export default function Leaderboard() {
                                         </h3>
                                         <p className="text-[10px] font-semibold uppercase opacity-50" style={{ color: 'var(--text-color)' }}>{player.group_name}</p>
                                     </div>
+                                    
+                                    {/* Challenge Button */}
+                                    {user?.role === 'student' && player.id !== user?.id && view !== 'battles' && (
+                                        <button
+                                            onClick={() => handleChallenge(player.id, player.name)}
+                                            disabled={challengingId === player.id}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all active:scale-95 ${challengingId === player.id ? 'bg-emerald-500 text-white' : 'bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white'}`}
+                                        >
+                                            {challengingId === player.id ? (
+                                                <>Taklif etildi</>
+                                            ) : (
+                                                <>
+                                                    <Swords size={12} />
+                                                    Duel
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+
                                     <div className="text-right">
                                         {type === 'coins' ? (
                                             <div className="flex items-center gap-1 font-black" style={{ color: 'var(--text-color)' }}>
