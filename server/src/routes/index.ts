@@ -78,6 +78,7 @@ router.post('/groups', requireRole('admin', 'teacher'), teacherController.create
 router.put('/groups/:id', requireRole('admin', 'teacher'), teacherController.updateGroup);
 router.delete('/groups/:id', requireRole('admin'), teacherController.deleteGroup);
 router.post('/students', requireRole('admin', 'teacher'), teacherController.createStudent);
+router.post('/student/purchase', requireRole('student'), shopController.purchaseItem);
 router.post('/students/:studentId/book-extra-class', requireRole('student', 'admin', 'teacher'), studentController.bookExtraClass);
 router.delete('/extra-class-bookings/:id', requireRole('admin', 'teacher', 'manager', 'student'), teacherController.deleteBooking);
 
