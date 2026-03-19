@@ -245,7 +245,7 @@ export const getAdminSetting = async (req: Request, res: Response) => {
     try {
         const { key } = req.params;
         const result = await query('SELECT value FROM system_settings WHERE key = $1', [key]);
-        if (result.rowCount === 0) return res.status(404).json({ error: 'Setting not found' });
+        if (result.rowCount === 0) return res.json({ value: null });
         res.json({ value: result.rows[0].value });
     } catch (err) {
         res.status(500).json({ error: 'Error fetching setting' });

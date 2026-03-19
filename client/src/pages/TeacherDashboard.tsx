@@ -848,15 +848,18 @@ const TeacherDashboard = () => {
     };
 
     const fetchBattles = async (groupIds: string[]) => {
-        const battleMap: Record<string, Battle> = {};
-        for (const id of groupIds) {
-            try {
-                const res = await apiFetch(`/api/battles/current/${id}`);
+        try {
+            const res = await apiFetch('/api/battles/batch/current', {
+                method: 'POST',
+                body: JSON.stringify({ groupIds })
+            });
+            if (res.ok) {
                 const data = await res.json();
-                if (data) battleMap[id] = data;
-            } catch (e) { }
+                setBattles(data || {});
+            }
+        } catch (e) {
+            console.error('Error fetching batch battles:', e);
         }
-        setBattles(battleMap);
     };
 
     const fetchGroups = async () => {

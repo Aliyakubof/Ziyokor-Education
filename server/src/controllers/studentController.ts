@@ -126,7 +126,7 @@ export const getStats = async (req: Request, res: Response) => {
             WHERE s.id = $1
         `, [id]);
         
-        if (studentRes.rowCount === 0) return res.status(404).json({ error: 'Student not found' });
+        if (studentRes.rowCount === 0) return res.json(null);
         const student = studentRes.rows[0];
 
         const gamesRes = await query(`
@@ -287,7 +287,7 @@ export const getVocabBattleLevels = async (req: Request, res: Response) => {
         if (!vocabBattleActive) return res.json({ isActive: false });
 
         const studentRes = await query('SELECT g.level as daraja FROM students s JOIN groups g ON s.group_id = g.id WHERE s.id = $1', [studentId]);
-        if (studentRes.rowCount === 0) return res.status(404).json({ error: 'Student or group not found' });
+        if (studentRes.rowCount === 0) return res.json({ isActive: false, levels: [] });
         const daraja = studentRes.rows[0].daraja;
 
         const result = await query('SELECT * FROM vocabulary_battles WHERE daraja = $1 ORDER BY level', [daraja]);
@@ -338,7 +338,7 @@ export const getVocabBattleById = async (req: Request, res: Response) => {
         const vocabBattleActive = (settingsRes.rowCount ?? 0) > 0 ? (settingsRes.rows[0].value === true || settingsRes.rows[0].value === 'true') : false;
         if (!vocabBattleActive) return res.status(403).json({ error: 'Vocabulary Battle hozircha yopiq' });
         const result = await query('SELECT * FROM vocabulary_battles WHERE id = $1', [req.params.id]);
-        if (result.rowCount === 0) return res.status(404).json({ error: 'Topilmadi' });
+        if (result.rowCount === 0) return res.json(null);
         res.json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch battle' });
