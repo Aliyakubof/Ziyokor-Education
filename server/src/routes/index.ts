@@ -60,6 +60,8 @@ router.get('/student/:id/purchases', requireRole('student', 'teacher', 'admin', 
 // Extra aliasing for Manager specifically if they use flat /manager paths
 router.get('/manager/groups', requireRole('admin', 'manager', 'teacher'), teacherController.getGroups);
 router.get('/manager/weekly-report', requireRole('admin', 'manager', 'teacher'), teacherController.getWeeklyReport);
+router.get('/manager/groups/:groupId/results', requireRole('admin', 'manager', 'teacher'), teacherController.getGroupResults);
+router.get('/manager/groups/:groupId/students', requireRole('admin', 'manager', 'teacher'), teacherController.getStudentsByGroup);
 router.get('/manager/shop/items', requireRole('admin', 'manager'), shopController.getManagerShopItems);
 router.post('/manager/shop/items', requireRole('admin', 'manager'), shopController.createShopItem);
 router.put('/manager/shop/items/:id', requireRole('admin', 'manager'), shopController.updateShopItem);
@@ -79,6 +81,8 @@ router.put('/groups/:id', requireRole('admin', 'teacher'), teacherController.upd
 router.delete('/groups/:id', requireRole('admin'), teacherController.deleteGroup);
 router.post('/students', requireRole('admin', 'teacher'), teacherController.createStudent);
 router.post('/student/purchase', requireRole('student'), shopController.purchaseItem);
+router.post('/student/vocab-battles/submit', requireRole('student'), quizController.submitVocabBattle);
+router.get('/student/quizzes', requireRole('student'), quizController.getSoloQuizzes);
 router.post('/students/:studentId/book-extra-class', requireRole('student', 'admin', 'teacher'), studentController.bookExtraClass);
 router.delete('/extra-class-bookings/:id', requireRole('admin', 'teacher', 'manager', 'student'), teacherController.deleteBooking);
 
