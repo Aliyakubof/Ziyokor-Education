@@ -74,6 +74,33 @@ router.post('/groups', requireRole('admin', 'teacher'), teacherController.create
 router.put('/groups/:id', requireRole('admin', 'teacher'), teacherController.updateGroup);
 router.delete('/groups/:id', requireRole('admin'), teacherController.deleteGroup);
 router.post('/students', requireRole('admin', 'teacher'), teacherController.createStudent);
-router.delete('/extra-class-bookings/:id', requireRole('admin', 'teacher', 'manager'), teacherController.deleteBooking);
+router.post('/students/:studentId/book-extra-class', requireRole('student', 'admin', 'teacher'), studentController.bookExtraClass);
+router.delete('/extra-class-bookings/:id', requireRole('admin', 'teacher', 'manager', 'student'), teacherController.deleteBooking);
+
+// Unit Quizzes (Plural Management)
+router.post('/unit-quizzes', requireRole('admin', 'teacher'), quizController.createUnitQuiz);
+router.put('/unit-quizzes/:id', requireRole('admin', 'teacher'), quizController.updateUnitQuiz);
+router.delete('/unit-quizzes/:id', requireRole('admin', 'teacher'), quizController.deleteUnitQuiz);
+
+// Solo Quizzes (Plural Management)
+router.post('/solo-quizzes', requireRole('admin', 'teacher'), quizController.createSoloQuiz);
+router.put('/solo-quizzes/:id', requireRole('admin', 'teacher'), quizController.updateSoloQuiz);
+router.delete('/solo-quizzes/:id', requireRole('admin', 'teacher'), quizController.deleteSoloQuiz);
+router.post('/solo-quizzes/submit', requireRole('admin', 'teacher', 'student'), quizController.submitSoloQuizPDFReport);
+
+// Telegram Questions (Plural Management)
+router.get('/telegram-questions', requireRole('admin', 'teacher', 'manager'), adminController.getTelegramQuestions);
+router.post('/telegram-questions', requireRole('admin', 'teacher'), adminController.createTelegramQuestion);
+router.put('/telegram-questions/:id', requireRole('admin', 'teacher'), adminController.updateTelegramQuestion);
+router.delete('/telegram-questions/:id', requireRole('admin', 'teacher'), adminController.deleteTelegramQuestion);
+
+// Booking Slots (Plural Management)
+router.post('/available-slots', requireRole('admin'), adminController.createAvailableSlot);
+router.put('/available-slots/:id', requireRole('admin'), adminController.updateAvailableSlot);
+router.delete('/available-slots/:id', requireRole('admin'), adminController.deleteAvailableSlot);
+
+// Level Topics (Plural Management)
+router.post('/level-topics', requireRole('admin', 'teacher'), adminController.createLevelTopic);
+router.delete('/level-topics/:id', requireRole('admin', 'teacher'), adminController.deleteLevelTopic);
 
 export default router;
