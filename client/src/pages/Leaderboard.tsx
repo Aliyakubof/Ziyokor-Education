@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
-import { Trophy, Medal, ChevronLeft, Users, Globe, Flame, Coins, Swords, ShieldAlert, Zap } from 'lucide-react';
+import { Trophy, Medal, ChevronLeft, Users, Globe, Flame, Coins, Swords, ShieldAlert } from 'lucide-react';
 import { socket } from '../socket';
 
 export default function Leaderboard() {
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const navigate = useNavigate();
     const [view, setView] = useState<'global' | 'group' | 'battles'>('global');
     const [type, setType] = useState<'coins' | 'streaks'>('coins');
@@ -16,10 +16,10 @@ export default function Leaderboard() {
     const [challengingId, setChallengingId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (user?.role === 'student' && !socket.connected) {
+        if (role === 'student' && !socket.connected) {
             socket.connect();
         }
-    }, [user]);
+    }, [role]);
 
     useEffect(() => {
         if (view === 'battles') {
@@ -64,7 +64,7 @@ export default function Leaderboard() {
         return <span className="text-slate-400 font-bold">{rank + 1}</span>;
     };
 
-    const handleChallenge = (targetId: string, targetName: string) => {
+    const handleChallenge = (targetId: string) => {
         if (!user?.id) return;
         setChallengingId(targetId);
         
@@ -243,9 +243,9 @@ export default function Leaderboard() {
                                     </div>
                                     
                                     {/* Challenge Button */}
-                                    {user?.role === 'student' && player.id !== user?.id && view !== 'battles' && (
+                                    {role === 'student' && player.id !== user?.id && (
                                         <button
-                                            onClick={() => handleChallenge(player.id, player.name)}
+                                            onClick={() => handleChallenge(player.id)}
                                             disabled={challengingId === player.id}
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all active:scale-95 ${challengingId === player.id ? 'bg-emerald-500 text-white' : 'bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white'}`}
                                         >
