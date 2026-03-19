@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { socket } from '../socket';
-import { Swords, ChevronLeft, X, Check, Loader2, AlertCircle } from 'lucide-react';
+import { Swords, ChevronLeft, X, Check, Loader2, AlertCircle, Search, UserMinus } from 'lucide-react';
+import { apiFetch } from '../api';
 
 export default function DuelLobby() {
     const { user } = useAuth();
@@ -11,6 +12,10 @@ export default function DuelLobby() {
     const [socketConnected, setSocketConnected] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
     const [hasActiveQuizzes, setHasActiveQuizzes] = useState<boolean | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [challengingId, setChallengingId] = useState<string | null>(null);
 
     useEffect(() => {
         // Connect socket if not connected
@@ -86,6 +91,30 @@ export default function DuelLobby() {
         setInvitations(prev => prev.filter(i => i.fromId !== fromId));
     };
 
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (searchTerm.length < 3) return;
+        setIsSearching(true);
+        try {
+            const res = await apiFetch(`/api/students/search?q=${encodeURIComponent(searchTerm)}`);
+            if (res.ok) setSearchResults(await res.json());
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const handleChallenge = (targetId: string) => {
+        if (!user?.id) return;
+        setChallengingId(targetId);
+        socket.emit('duel-invite', {
+            targetStudentId: targetId,
+            studentName: user.name
+        });
+        setTimeout(() => setChallengingId(null), 3000);
+    };
+
     return (
         <div className="min-h-screen font-sans pb-10 transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
             {/* Header */}
@@ -157,32 +186,67 @@ export default function DuelLobby() {
                     </div>
                 )}
 
-                {/* Search Player Card / Soon Message */}
-                {hasActiveQuizzes === false ? (
-                    <div className="glass-premium rounded-3xl p-6 flex flex-col items-center justify-center py-12 border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
-                        <Loader2 className="animate-spin mb-4" size={48} style={{ color: 'var(--primary-color)' }} />
-                        <h2 className="text-xl font-black mb-2 uppercase tracking-tight" style={{ color: 'var(--text-color)' }}>
-                            TEZ ORADA...
-                        </h2>
-                        <p className="text-sm font-bold text-center max-w-sm opacity-50" style={{ color: 'var(--text-color)' }}>
-                            Hozirda duellar vaqtinchalik o'chirilgan. Savollar bazasi yangilanmoqda.
-                        </p>
+                {/* Duel Card / Search Section */}
+                <div className="glass-premium rounded-3xl p-6 border transition-colors space-y-4" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500">
+                            <Swords size={20} />
+                        </div>
+                        <h2 className="text-lg font-black" style={{ color: 'var(--text-color)' }}>Raqib qidirish</h2>
                     </div>
-                ) : hasActiveQuizzes === true ? (
-                    <div className="glass-premium rounded-3xl p-6 flex flex-col items-center justify-center py-12 border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
-                        <Swords className="mb-4 animate-bounce" size={48} style={{ color: 'var(--primary-color)' }} />
-                        <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text-color)' }}>
-                            Duelga tayyormisiz?
-                        </h2>
-                        <p className="text-sm font-bold text-center max-w-sm opacity-50" style={{ color: 'var(--text-color)' }}>
-                            Boshqa o'quvchilar sizni taklif qilishini kuting yoki taklifnomalarni tekshiring.
-                        </p>
-                    </div>
-                ) : (
-                    <div className="flex justify-center py-12">
-                        <Loader2 className="animate-spin text-rose-400" size={32} />
-                    </div>
-                )}
+
+                    <form onSubmit={handleSearch} className="relative">
+                        <input
+                            type="text"
+                            placeholder="Ism yoki ID orqali qidirish..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-11 pr-4 py-3 rounded-2xl border-2 focus:outline-none focus:border-rose-500 transition-colors bg-transparent"
+                            style={{ color: 'var(--text-color)', borderColor: 'var(--border-color)' }}
+                        />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" size={18} style={{ color: 'var(--text-color)' }} />
+                        <button 
+                            type="submit" 
+                            disabled={isSearching || searchTerm.length < 3}
+                            className="absolute right-2 top-1.5 bottom-1.5 px-4 bg-rose-500 text-white rounded-xl text-xs font-bold disabled:opacity-50"
+                        >
+                            {isSearching ? <Loader2 className="animate-spin" size={16} /> : 'Qidirish'}
+                        </button>
+                    </form>
+
+                    {/* Search Results */}
+                    {searchResults.length > 0 ? (
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                            {searchResults.map((student) => (
+                                <div key={student.id} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-dashed" style={{ borderColor: 'var(--border-color)' }}>
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-sm truncate" style={{ color: 'var(--text-color)' }}>{student.name}</p>
+                                        <p className="text-[10px] opacity-50 font-medium" style={{ color: 'var(--text-color)' }}>ID: {student.id} | {student.group_name}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleChallenge(student.id)}
+                                        disabled={challengingId === student.id || student.id === user?.id}
+                                        className={`px-4 py-1.5 rounded-xl text-[10px] font-black transition-all active:scale-95 ${challengingId === student.id ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white hover:bg-rose-600 disabled:opacity-30'}`}
+                                    >
+                                        {challengingId === student.id ? 'Taklif yuborildi' : 'Challenge'}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : searchTerm.length >= 3 && !isSearching && (
+                        <div className="py-8 text-center opacity-40">
+                            <UserMinus className="mx-auto mb-2" size={32} />
+                            <p className="text-xs font-bold">Hech kim topilmadi</p>
+                        </div>
+                    )}
+
+                    {hasActiveQuizzes === false && (
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-2">
+                            <AlertCircle size={16} className="text-amber-500" />
+                            <p className="text-[10px] font-bold text-amber-600">Eslatma: Hozirda savollar bazasi yangilanmoqda, duel taklifi qabul qilinmasligi mumkin.</p>
+                        </div>
+                    )}
+                </div>
 
                 {/* Info Card */}
                 <div className="p-6 rounded-3xl border transition-colors" style={{ backgroundColor: 'color-mix(in srgb, var(--primary-color), transparent 90%)', borderColor: 'var(--border-color)' }}>

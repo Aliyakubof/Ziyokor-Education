@@ -19,7 +19,17 @@ export default function Leaderboard() {
         if (role === 'student' && !socket.connected) {
             socket.connect();
         }
-    }, [role]);
+
+        const onDuelStarted = ({ pin }: { pin: string }) => {
+            navigate(`/unit-join/${pin}`);
+        };
+
+        socket.on('duel-started', onDuelStarted);
+
+        return () => {
+            socket.off('duel-started', onDuelStarted);
+        };
+    }, [role, navigate]);
 
     useEffect(() => {
         if (view === 'battles') {

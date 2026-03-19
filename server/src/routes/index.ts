@@ -52,6 +52,7 @@ router.get('/slots', requireRole('admin', 'manager', 'teacher'), adminController
 import * as shopController from '../controllers/shopController';
 router.get('/teachers', requireRole('admin', 'manager'), adminController.getTeachersList);
 router.get('/students', requireRole('admin'), adminController.getStudentsWithPagination);
+router.get('/students/search', requireRole('admin', 'teacher', 'student', 'manager'), teacherController.searchStudents);
 router.put('/students/:id', requireRole('admin', 'teacher'), teacherController.updateStudent);
 router.delete('/students/:id', requireRole('admin'), teacherController.deleteStudent);
 router.put('/students/:id/move', requireRole('admin'), teacherController.moveStudent);
