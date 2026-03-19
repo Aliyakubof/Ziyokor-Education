@@ -312,6 +312,17 @@ export const completeBooking = async (req: Request, res: Response) => {
     }
 };
 
+export const deleteBooking = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        await query('DELETE FROM extra_class_bookings WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error deleting booking:', err);
+        res.status(500).json({ error: 'Xatolik' });
+    }
+};
+
 // Reports
 export const getWeeklyReport = async (req: Request, res: Response) => {
     try {

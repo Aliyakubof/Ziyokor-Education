@@ -23,6 +23,7 @@ router.get('/groups/:groupId/students-short', requireRole('admin', 'teacher', 'm
 router.get('/groups/:groupId/extra-class-bookings', requireRole('admin', 'teacher', 'manager'), teacherController.getExtraClassBookings);
 router.get('/groups/:groupId/contact-info-pdf', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupContactInfoPDF);
 router.patch('/extra-class-bookings/:id/complete', requireRole('teacher'), teacherController.completeBooking);
+router.delete('/extra-class-bookings/:id', requireRole('admin', 'teacher', 'manager'), teacherController.deleteBooking);
 
 // Reports
 router.get('/weekly-report', requireRole('admin', 'teacher', 'manager'), teacherController.getWeeklyReport);
