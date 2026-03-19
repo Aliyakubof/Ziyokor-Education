@@ -678,6 +678,45 @@ export function initSocket(io: Server) {
                 socket.emit('error', 'Duelni boshlashda xatolik');
             }
         });
+
+        socket.on('player-get-status', async ({ pin, studentId }: { pin: string, studentId?: string }) => {
+            const game = await store.getGame(pin);
+            if (!game) return;
+
+            const pId = studentId || (socket as any).studentId || socket.id;
+            const player = await store.getPlayer(pin, pId);
+            if (!player) return;
+
+            // Send current game state to player
+            if (game.status === 'ACTIVE') {
+                if (game.isUnitQuiz) {
+                    socket.emit('unit-game-started', {
+                        questions: game.quiz.questions,
+                        title: game.quiz.title,
+                        isDuel: (game as any).isDuel,
+                        createdAt: (game as any).createdAt
+                    });
+                } else {
+                    socket.emit('game-started', { title: game.quiz.title });
+                    // If in normal mode, also send the current question if active
+                    if (game.currentQuestionIndex >= 0 && game.currentQuestionIndex < game.quiz.questions.length) {
+                        const question = game.quiz.questions[game.currentQuestionIndex];
+                        const timeLimit = game.timePerQuestion || question.timeLimit || 20;
+                        socket.emit('question-start', {
+                            info: question.info,
+                            questionIndex: game.currentQuestionIndex + 1,
+                            timeLimit,
+                            type: question.type,
+                            text: question.text,
+                            options: question.options,
+                            startTime: Date.now() // Note: this isn't perfect for sync but better than nothing
+                        });
+                    }
+                }
+            } else if (game.status === 'FINISHED') {
+                socket.emit('game-over', game.players);
+            }
+        });
         
         socket.on('disconnect', () => {
             console.log('Client disconnected:', socket.id);
