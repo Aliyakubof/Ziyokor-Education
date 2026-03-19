@@ -21,7 +21,7 @@ async function notifyTeacherOfSoloResult(studentId: string, quizTitle: string, s
         if (teacherRes.rows[0]?.telegram_chat_id) {
             const { telegram_chat_id, student_name, group_name } = teacherRes.rows[0];
             const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-            const status = percentage > 59 ? "(O'tdi ✅)" : "(O'tmadi ❌)";
+            const status = percentage >= 70 ? "(O'tdi ✅)" : "(O'tmadi ❌)";
             await notifyTeacher(telegram_chat_id, `🎯 <b>Mashq tugatildi (Solo Mode):</b>\n\n👤 O'quvchi: ${student_name}\n🏫 Guruh: ${group_name}\n📝 Test: ${quizTitle}\n📊 Natija: ${score} / ${maxScore} (${percentage}%) ${status}`);
         }
     } catch (e) {
@@ -393,6 +393,17 @@ export const getCurrentBattleByGroup = async (req: Request, res: Response) => {
         res.json(result.rows[0] || null);
     } catch (err) {
         res.status(500).json({ error: 'Error fetching battle' });
+    }
+};
+
+export const getAvailableDuelQuizzes = async (req: Request, res: Response) => {
+    try {
+        const studentRes = await query('SELECT g.level FROM students s JOIN groups g ON s.group_id = g.id WHERE s.id = $1', [req.params.studentId]);
+        const level = studentRes.rows[0]?.level || 'Beginner';
+        const result = await query('SELECT id, title, daraja FROM duel_quizzes WHERE daraja = $1 AND is_active = TRUE ORDER BY created_at DESC', [level]);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch available duel quizzes' });
     }
 };
 

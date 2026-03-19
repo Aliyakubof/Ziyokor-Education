@@ -628,35 +628,31 @@ export function initSocket(io: Server) {
             await store.setSocket(studentId, socket.id);
         });
 
-        socket.on('duel-invite', async ({ targetStudentId, studentName }: { targetStudentId: string, studentName: string }) => {
+        socket.on('duel-invite', async ({ targetStudentId, studentName, quizId, quizTitle }: { targetStudentId: string, studentName: string, quizId: string, quizTitle: string }) => {
             const targetSocketId = await store.getSocket(targetStudentId);
             if (targetSocketId) {
-                io.to(targetSocketId).emit('duel-invited', { fromId: (socket as any).studentId, fromName: studentName });
+                io.to(targetSocketId).emit('duel-invited', { fromId: (socket as any).studentId, fromName: studentName, quizId, quizTitle });
             } else {
                 socket.emit('error', 'O\'quvchi hozirda onlayn emas');
             }
         });
 
-        socket.on('duel-accept', async ({ fromId }: { fromId: string }) => {
+        socket.on('duel-accept', async ({ fromId, quizId }: { fromId: string, quizId: string }) => {
             const fromSocketId = await store.getSocket(fromId);
             const studentId = (socket as any).studentId;
             if (!fromSocketId || !studentId) return;
 
             try {
-                const studentRes = await query('SELECT g.level FROM students s JOIN groups g ON s.group_id = g.id WHERE s.id = $1', [studentId]);
-                const level = studentRes.rows[0]?.level || 'Beginner';
-
-                const duelQuizRes = await query('SELECT * FROM duel_quizzes WHERE daraja = $1 AND is_active = TRUE ORDER BY RANDOM() LIMIT 1', [level]);
+                const quizRes = await query('SELECT * FROM duel_quizzes WHERE id = $1', [quizId]);
                 let quiz;
-                if ((duelQuizRes.rowCount || 0) > 0) {
-                    quiz = duelQuizRes.rows[0];
+                if ((quizRes.rowCount || 0) > 0) {
+                    quiz = quizRes.rows[0];
                 } else {
-                    const unitQuizRes = await query('SELECT * FROM unit_quizzes WHERE level = $1 ORDER BY RANDOM() LIMIT 1', [level]);
-                    if (unitQuizRes.rowCount === 0) return socket.emit('error', 'No questions found');
+                    const unitQuizRes = await query('SELECT * FROM unit_quizzes WHERE id = $1', [quizId]);
+                    if ((unitQuizRes.rowCount || 0) === 0) return socket.emit('error', 'Test topilmadi');
                     quiz = unitQuizRes.rows[0];
                 }
 
-                const quizId = quiz.id;
                 const duelId = uuidv4();
                 await query('INSERT INTO duels (id, player1_id, player2_id, quiz_id, status) VALUES ($1, $2, $3, $4, $5)', [duelId, fromId, studentId, quizId, 'active']);
 
