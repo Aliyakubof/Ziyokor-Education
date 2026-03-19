@@ -60,6 +60,10 @@ router.get('/student/:id/purchases', requireRole('student', 'teacher', 'admin', 
 // Extra aliasing for Manager specifically if they use flat /manager paths
 router.get('/manager/groups', requireRole('admin', 'manager', 'teacher'), teacherController.getGroups);
 router.get('/manager/weekly-report', requireRole('admin', 'manager', 'teacher'), teacherController.getWeeklyReport);
+router.get('/manager/shop/items', requireRole('admin', 'manager'), shopController.getManagerShopItems);
+router.post('/manager/shop/items', requireRole('admin', 'manager'), shopController.createShopItem);
+router.put('/manager/shop/items/:id', requireRole('admin', 'manager'), shopController.updateShopItem);
+router.delete('/manager/shop/items/:id', requireRole('admin', 'manager'), shopController.deleteShopItem);
 
 // GroupDetails compatibility (Round 2 Fixes)
 router.get('/groups/:groupId/results', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupResults);

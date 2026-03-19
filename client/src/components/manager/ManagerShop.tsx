@@ -146,8 +146,11 @@ export default function ManagerShop() {
                             <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Narxi (Coin)</label>
                             <input
                                 type="number"
-                                value={editingItem.price}
-                                onChange={e => setEditingItem({ ...editingItem, price: parseInt(e.target.value) })}
+                                value={editingItem.price || ''}
+                                onChange={e => {
+                                    const val = parseInt(e.target.value);
+                                    setEditingItem({ ...editingItem, price: isNaN(val) ? 0 : val });
+                                }}
                                 className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-indigo-500 transition-colors"
                             />
                         </div>

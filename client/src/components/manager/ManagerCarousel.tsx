@@ -160,8 +160,11 @@ export default function ManagerCarousel() {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Tartib (Order)</label>
                                 <input
                                     type="number"
-                                    value={orderIndex}
-                                    onChange={(e) => setOrderIndex(parseInt(e.target.value))}
+                                    value={orderIndex || 0}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        setOrderIndex(isNaN(val) ? 0 : val);
+                                    }}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none"
                                 />
                             </div>
