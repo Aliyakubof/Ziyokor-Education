@@ -21,9 +21,11 @@ export default function AdminVocabBattles() {
             const res = await apiFetch('/api/manager/settings');
             if (res.ok) {
                 const data = await res.json();
-                const activeSetting = data.find((s: any) => s.key === 'vocab_battle_active');
-                if (activeSetting) {
-                    setIsActive(activeSetting.value === true || activeSetting.value === 'true');
+                if (Array.isArray(data)) {
+                    const activeSetting = data.find((s: any) => s.key === 'vocab_battle_active');
+                    if (activeSetting) {
+                        setIsActive(activeSetting.value === true || activeSetting.value === 'true');
+                    }
                 }
             }
         } catch (error) {
@@ -51,7 +53,7 @@ export default function AdminVocabBattles() {
             const res = await apiFetch('/api/admin/vocab-battles');
             if (res.ok) {
                 const data = await res.json();
-                setBattles(data);
+                setBattles(Array.isArray(data) ? data : []);
             }
         } catch (error) {
             console.error(error);
@@ -113,7 +115,7 @@ export default function AdminVocabBattles() {
                     <div className="text-center p-12 text-slate-400 font-black uppercase tracking-widest">Yuklanmoqda...</div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {battles.map(battle => (
+                        {Array.isArray(battles) && battles.map(battle => (
                             <div key={battle.id} className="p-6 rounded-[2rem] border shadow-sm transition-all hover:shadow-xl flex flex-col gap-4 group bg-white border-slate-200">
                                 <div className="flex justify-between items-start">
                                     <div>

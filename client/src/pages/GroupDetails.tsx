@@ -232,13 +232,16 @@ const GroupDetails = () => {
 
     const safeParseResults = (resultsData: any) => {
         if (!resultsData) return [];
-        if (Array.isArray(resultsData)) return resultsData;
-        try {
-            return typeof resultsData === 'string' ? JSON.parse(resultsData) : resultsData;
-        } catch (e) {
-            console.error('Error parsing player results:', e);
-            return [];
+        let parsed = resultsData;
+        if (typeof resultsData === 'string') {
+            try {
+                parsed = JSON.parse(resultsData);
+            } catch (e) {
+                console.error('Error parsing player results:', e);
+                return [];
+            }
         }
+        return Array.isArray(parsed) ? parsed : [];
     };
 
     // Add Student State
@@ -328,7 +331,8 @@ const GroupDetails = () => {
         setPdfLoading(true);
         try {
             const res = await apiFetch(`/api/groups/${groupId}/contact-logs?filter=${filter}`);
-            const logs: any[] = await res.json();
+            const logsData = await res.json();
+            const logs: any[] = Array.isArray(logsData) ? logsData : [];
 
             const doc = new jsPDF();
 
@@ -521,7 +525,7 @@ const GroupDetails = () => {
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
-                                                    {students.map(student => (
+                                                    {Array.isArray(students) && students.map(student => (
                                                         <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
                                                             <td className="p-4">
                                                                 <div className="flex flex-col">
@@ -631,7 +635,7 @@ const GroupDetails = () => {
 
                                         {/* Mobile List View */}
                                         <div className="md:hidden space-y-4">
-                                            {students.map(student => (
+                                            {Array.isArray(students) && students.map(student => (
                                                 <div key={student.id} className="bg-slate-50/50 rounded-2xl border border-slate-100 p-4 shadow-sm">
                                                     <div className="flex justify-between items-start mb-3">
                                                         <div className="flex-1 min-w-0">
@@ -733,7 +737,7 @@ const GroupDetails = () => {
                     {/* Right Column: Quiz History */}
                     <div className="space-y-6">
                         <h2 className="text-xl font-bold text-slate-900 px-2">Test Tarixi</h2>
-                        {results.length > 0 ? (
+                        {Array.isArray(results) && results.length > 0 ? (
                             results.map((result) => (
                                 <div key={result.id} className="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all">
                                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -946,7 +950,7 @@ const GroupDetails = () => {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {historyLogs.map((log) => (
+                                        {Array.isArray(historyLogs) && historyLogs.map((log) => (
                                             <div key={log.id} className="flex gap-4">
                                                 <div className="flex flex-col items-center">
                                                     <div className="w-2 h-2 rounded-full bg-indigo-400 mt-2"></div>
