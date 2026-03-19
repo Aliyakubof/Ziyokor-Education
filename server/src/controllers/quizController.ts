@@ -106,6 +106,18 @@ export const getUnitQuizById = async (req: Request, res: Response) => {
     }
 };
 
+export const getDuelQuizById = async (req: Request, res: Response) => {
+    try {
+        const result = await query('SELECT * FROM duel_quizzes WHERE id = $1', [req.params.id]);
+        if (result.rowCount === 0) return res.status(404).send('Duel Quiz not found');
+        res.json(result.rows[0]);
+    } catch (err: any) {
+        console.error('Error fetching duel quiz:', err);
+        res.status(500).json({ error: 'Error fetching duel quiz', details: err.message });
+    }
+};
+
+
 export const createUnitQuiz = async (req: Request, res: Response) => {
     try {
         const { title, questions, level, unit, time_limit } = req.body;

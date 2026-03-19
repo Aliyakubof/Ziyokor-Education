@@ -23,7 +23,9 @@ router.post('/solo-quizzes/submit', quizController.submitSoloQuizPDFReport);
 
 // Duel Quizzes
 router.get('/duel-quizzes', quizController.getDuelQuizzes);
+router.get('/duel-quizzes/:id', quizController.getDuelQuizById);
 router.post('/duel-quizzes', quizController.createDuelQuiz);
+
 router.put('/duel-quizzes/:id', quizController.updateDuelQuiz);
 router.delete('/duel-quizzes/:id', quizController.deleteDuelQuiz);
 

@@ -36,11 +36,15 @@ import { requireRole } from '../middleware/auth';
 router.get('/groups', requireRole('admin', 'teacher', 'manager'), teacherController.getGroups);
 router.get('/admin/groups', requireRole('admin', 'teacher', 'manager'), teacherController.getGroups);
 router.get('/unit-quizzes', requireRole('admin', 'teacher', 'manager'), quizController.getUnitQuizzes);
+router.get('/unit-quizzes/:id', requireRole('admin', 'teacher', 'manager'), quizController.getUnitQuizById);
 router.get('/solo-quizzes', requireRole('admin', 'teacher', 'manager'), quizController.getSoloQuizzes);
+router.get('/solo-quizzes/:id', requireRole('admin', 'teacher', 'manager'), quizController.getSoloQuizById);
 router.get('/duel-quizzes', requireRole('admin', 'teacher', 'manager', 'student'), quizController.getDuelQuizzes);
+router.get('/duel-quizzes/:id', requireRole('admin', 'teacher', 'manager', 'student'), quizController.getDuelQuizById);
 router.post('/duel-quizzes', requireRole('admin', 'teacher'), quizController.createDuelQuiz);
 router.put('/duel-quizzes/:id', requireRole('admin', 'teacher'), quizController.updateDuelQuiz);
 router.delete('/duel-quizzes/:id', requireRole('admin', 'teacher'), quizController.deleteDuelQuiz);
+
 router.get('/available-slots', requireRole('admin', 'manager', 'teacher'), adminController.getAvailableSlots);
 router.get('/slots', requireRole('admin', 'manager', 'teacher'), adminController.getAvailableSlots);
 
@@ -48,8 +52,12 @@ router.get('/slots', requireRole('admin', 'manager', 'teacher'), adminController
 import * as shopController from '../controllers/shopController';
 router.get('/teachers', requireRole('admin', 'manager'), adminController.getTeachersList);
 router.get('/students', requireRole('admin'), adminController.getStudentsWithPagination);
+router.put('/students/:id', requireRole('admin', 'teacher'), teacherController.updateStudent);
+router.delete('/students/:id', requireRole('admin'), teacherController.deleteStudent);
+router.put('/students/:id/move', requireRole('admin'), teacherController.moveStudent);
 router.get('/leaderboard', requireRole('admin', 'teacher', 'manager', 'student'), studentController.getLeaderboard);
 router.get('/shop-items', requireRole('admin', 'teacher', 'student', 'manager'), shopController.getItems);
+
 
 // Critical legacy redirects
 router.post('/login', authController.login);
