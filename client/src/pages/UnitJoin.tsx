@@ -2,23 +2,30 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
 import { LogIn, AlertCircle } from 'lucide-react';
+import { useAuth } from '../AuthContext';
 
 const UnitJoin = () => {
     const { pin: urlPin } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [pin, setPin] = useState(urlPin || '');
     const [studentId, setStudentId] = useState('');
     const [error, setError] = useState('');
     const [joined, setJoined] = useState(false);
 
     useEffect(() => {
-        // Auto-fill studentId from localStorage if available (e.g. from Dashboard)
-        const savedId = localStorage.getItem('student-id');
+        // Auto-fill studentId from AuthContext or localStorage
         let currentStudentId = studentId;
 
-        if (savedId && !studentId) {
-            setStudentId(savedId);
-            currentStudentId = savedId;
+        if (user?.id) {
+            setStudentId(user.id);
+            currentStudentId = user.id;
+        } else {
+            const savedId = localStorage.getItem('student-id');
+            if (savedId && !studentId) {
+                setStudentId(savedId);
+                currentStudentId = savedId;
+            }
         }
 
         socket.connect();
@@ -27,7 +34,7 @@ const UnitJoin = () => {
         if (urlPin && currentStudentId && !joined) {
             localStorage.setItem('kahoot-pin', urlPin);
             localStorage.setItem('student-id', currentStudentId);
-            socket.emit('student-join', { pin: urlPin, studentId: currentStudentId });
+            socket.emit('join-game', { pin: urlPin, studentId: currentStudentId, name: user?.name || 'O\'quvchi' });
         }
 
         socket.on('joined', () => {
@@ -70,7 +77,7 @@ const UnitJoin = () => {
         if (!pin || !studentId) return;
         localStorage.setItem('kahoot-pin', pin); // Store for PlayerGame
         localStorage.setItem('student-id', studentId); // Store for PlayerGame State recovery
-        socket.emit('student-join', { pin, studentId });
+        socket.emit('join-game', { pin, studentId, name: user?.name || 'O\'quvchi' });
     };
 
     if (joined) {

@@ -425,6 +425,9 @@ export function initSocket(io: Server) {
                 await store.setPlayer(pin, existingPlayer);
                 socket.join(pin);
                 socket.emit('joined', { name: existingPlayer.name, playerId });
+                if (game.status === 'ACTIVE') {
+                    socket.emit(game.isUnitQuiz ? 'unit-game-started' : 'game-started');
+                }
                 await broadcastPlayerUpdate(io, pin, playerId);
                 return;
             }
@@ -450,6 +453,9 @@ export function initSocket(io: Server) {
             await store.addPlayer(pin, newPlayer);
             socket.join(pin);
             socket.emit('joined', { name, playerId });
+            if (game.status === 'ACTIVE') {
+                socket.emit(game.isUnitQuiz ? 'unit-game-started' : 'game-started');
+            }
             await broadcastPlayerUpdate(io, pin, playerId);
         });
 
