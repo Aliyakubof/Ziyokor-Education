@@ -23,7 +23,6 @@ router.post('/solo-quizzes/submit', quizController.submitSoloQuizPDFReport);
 
 // Duel Quizzes
 router.get('/duel-quizzes', quizController.getDuelQuizzes);
-router.get('/students/:studentId/available-duel-quizzes', quizController.getAvailableDuelQuizzes);
 router.get('/duel-quizzes/:id', quizController.getDuelQuizById);
 router.post('/duel-quizzes', quizController.createDuelQuiz);
 

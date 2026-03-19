@@ -53,6 +53,7 @@ import * as shopController from '../controllers/shopController';
 router.get('/teachers', requireRole('admin', 'manager'), adminController.getTeachersList);
 router.get('/students', requireRole('admin'), adminController.getStudentsWithPagination);
 router.get('/students/search', requireRole('admin', 'teacher', 'student', 'manager'), teacherController.searchStudents);
+router.get('/students/:studentId/available-duel-quizzes', requireRole('admin', 'teacher', 'student', 'manager'), quizController.getAvailableDuelQuizzes);
 router.put('/students/:id', requireRole('admin', 'teacher'), teacherController.updateStudent);
 router.delete('/students/:id', requireRole('admin'), teacherController.deleteStudent);
 router.put('/students/:id/move', requireRole('admin'), teacherController.moveStudent);
