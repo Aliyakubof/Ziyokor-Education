@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS duels (
     id UUID PRIMARY KEY,
     player1_id TEXT REFERENCES students(id) ON DELETE CASCADE,
     player2_id TEXT REFERENCES students(id) ON DELETE CASCADE,
-    quiz_id UUID REFERENCES unit_quizzes(id) ON DELETE CASCADE,
+    quiz_id UUID,
     player1_score INT DEFAULT 0,
     player2_score INT DEFAULT 0,
     winner_id TEXT,
