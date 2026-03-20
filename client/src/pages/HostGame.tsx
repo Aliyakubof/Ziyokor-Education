@@ -88,7 +88,6 @@ export default function HostGame() {
     const [timeLeft, setTimeLeft] = useState(0);
     const [showResult, setShowResult] = useState(false);
     const [leaderboard, setLeaderboard] = useState<{ name: string; score: number }[] | null>(null);
-    const [totalTimeMinutes, setTotalTimeMinutes] = useState(10);
     const [gameStarted, setGameStarted] = useState(false);
     const [globalEndTime, setGlobalEndTime] = useState<number | null>(null);
     const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null);
@@ -194,10 +193,6 @@ export default function HostGame() {
         }
     }, [globalEndTime]);
 
-    const startGame = () => {
-        if (totalTimeMinutes < 1) return alert("Vaqtni kiriting");
-        socket.emit('host-start-game', { pin, totalTimeMinutes });
-    };
 
     const nextQuestion = () => {
         socket.emit('host-next-question', pin);
@@ -277,7 +272,6 @@ export default function HostGame() {
 
     if (isUnitMode) {
         return (
-            // ... (Unit Mode UI return moved up)
             <div className="flex flex-col h-screen bg-slate-50 relative overflow-hidden">
                 <header className="bg-white p-6 flex justify-between items-center border-b border-slate-200 shadow-sm z-10 shrink-0">
                     <div>
@@ -294,7 +288,8 @@ export default function HostGame() {
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Qolgan vaqt</p>
                                 <div className={`text-3xl font-black px-6 py-2 rounded-2xl border-2 transition-all shadow-sm
                                     ${globalTimeLeft < 60 ? 'bg-red-50 border-red-200 text-red-600 animate-pulse' : 'bg-slate-50 border-slate-100 text-slate-700'}`}>
-                                    {Math.floor(globalTimeLeft / 60)}:{(globalTimeLeft % 60).toString().padStart(2, '0').replace('-', '')}
+                                    {Math.floor(Math.abs(globalTimeLeft) / 60)}:{(Math.abs(globalTimeLeft) % 60).toString().padStart(2, '0')}
+                                    {globalTimeLeft < 0 && ' (Tugadi)'}
                                 </div>
                             </div>
                         )}
@@ -321,7 +316,7 @@ export default function HostGame() {
                     {unitPlayers.length === 0 && (
                         <div className="h-full flex flex-col items-center justify-center text-slate-300">
                             <div className="w-20 h-20 border-4 border-slate-100 border-t-indigo-200 rounded-full animate-spin mb-6"></div>
-                            <p className="font-black uppercase tracking-widest text-sm">O'quvchilar javoblarini kutmoqdamiz...</p>
+                            <p className="font-black uppercase tracking-widest text-sm text-center">O'quvchilar javoblarini kutmoqdamiz...<br/><span className="text-[10px] normal-case font-bold mt-2">(Pin: {pin})</span></p>
                         </div>
                     )}
                 </main>
@@ -353,30 +348,9 @@ export default function HostGame() {
     if (!question && !gameStarted) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-transparent relative">
-                <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-200 text-center max-w-md w-full">
-                    <h1 className="text-3xl font-black text-slate-800 mb-2">O'yinni Boshlash</h1>
-                    <p className="text-slate-500 mb-8 font-medium">O'quvchilar qo'shilishini kuting...</p>
-
-                    <div className="mb-8 text-left">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block mb-2">Umumiy Vaqt (Daqiqa)</label>
-                        <input
-                            type="number"
-                            value={totalTimeMinutes}
-                            onChange={(e) => setTotalTimeMinutes(Number(e.target.value))}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-center"
-                            min="1"
-                        />
-                        <p className="text-xs text-slate-400 mt-2 text-center">Har bir savolga {(totalTimeMinutes * 60 / (10)).toFixed(0)}~ soniya ajratiladi (taxminan)</p>
-                    </div>
-
-                    <button
-                        onClick={startGame}
-                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-indigo-500/20 btn-premium flex items-center justify-center gap-3 active:scale-95"
-                    >
-                        <Play size={24} />
-                        BOSHLASH
-                    </button>
-                </div>
+                <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-400 font-black uppercase tracking-widest text-xs animate-pulse">Test boshlanmoqda, kuting...</p>
+                <p className="text-[10px] text-slate-300 mt-2 font-bold">Host status: {socket.connected ? 'Connected' : 'Reconnecting...'}</p>
             </div>
         );
     }

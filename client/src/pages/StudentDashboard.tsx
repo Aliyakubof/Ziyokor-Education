@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
 import imageCompression from 'browser-image-compression';
@@ -21,31 +20,25 @@ import MobileNav from '../components/StudentDashboard/MobileNav';
 
 export default function StudentDashboard() {
     const { user, logout, setActiveThemeId } = useAuth();
-    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'home' | 'history' | 'profile'>('home');
-    const [stats, setStats] = useState(() => {
-        const cached = localStorage.getItem(`stats_${user?.id}`);
-        return cached ? JSON.parse(cached) : {
-            gamesPlayed: 0,
-            totalScore: 0,
-            rank: 0,
-            coins: 0,
-            streakCount: 0,
-            isHero: false,
-            hasTrophy: false,
-            weeklyBattleScore: 0,
-            groupId: '',
-            avatarUrl: null as string | null,
-            hasAvatarUnlock: false
-        };
-    });
+    const [stats, setStats] = useState<any>(() => ({
+        gamesPlayed: 0,
+        totalScore: 0,
+        rank: 0,
+        coins: 0,
+        streakCount: 0,
+        isHero: false,
+        hasTrophy: false,
+        weeklyBattleScore: 0,
+        groupId: '',
+        avatarUrl: null as string | null,
+        hasAvatarUnlock: false,
+        active_theme_color: null
+    }));
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-    const [battle, setBattle] = useState<any>(() => {
-        const cached = localStorage.getItem(`battle_${user?.id}`);
-        return cached ? JSON.parse(cached) : null;
-    });
+    const [battle, setBattle] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(!localStorage.getItem(`stats_${user?.id}`));
+    const [isLoading, setIsLoading] = useState(true);
     
     // Booking State
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -56,15 +49,25 @@ export default function StudentDashboard() {
 
     useEffect(() => {
         if (user?.id) {
+            const cachedStats = localStorage.getItem(`stats_${user.id}`);
+            if (cachedStats) {
+                setStats(JSON.parse(cachedStats));
+                setIsLoading(false);
+            }
+            const cachedBattle = localStorage.getItem(`battle_${user.id}`);
+            if (cachedBattle) {
+                setBattle(JSON.parse(cachedBattle));
+            }
             fetchData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]);
 
     useEffect(() => {
-        if (stats.active_theme_color) {
+        if (stats?.active_theme_color) {
             setActiveThemeId(stats.active_theme_color);
         }
-    }, [stats.active_theme_color, setActiveThemeId]);
+    }, [stats?.active_theme_color, setActiveThemeId]);
 
     const fetchData = async () => {
         try {

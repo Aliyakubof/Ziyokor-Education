@@ -79,6 +79,7 @@ router.delete('/manager/shop/items/:id', requireRole('admin', 'manager'), shopCo
 
 // GroupDetails compatibility (Round 2 Fixes)
 router.get('/groups/:groupId/results', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupResults);
+router.get('/groups/:groupId/students', requireRole('admin', 'teacher', 'manager'), teacherController.getStudentsByGroup);
 router.get('/groups/:groupId/contact-logs', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupContactLogs);
 router.get('/groups/:groupId/contact-info-pdf', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupContactInfoPDF);
 router.get('/students/:groupId', requireRole('admin', 'teacher', 'manager'), teacherController.getStudentsByGroup);

@@ -477,14 +477,31 @@ export function initSocket(io: Server) {
             await broadcastPlayerUpdate(io, pin, playerId);
         });
 
-        socket.on('host-start-game', async (pin: string) => {
+        socket.on('host-start-game', async (data: any) => {
+            const pin = typeof data === 'string' ? data : data.pin;
+            const timeLimit = typeof data === 'object' ? (data.timeLimit || data.totalTimeMinutes) : null;
+
             const game = await store.getGame(pin);
             if (game && game.hostId === socket.id) {
                 game.status = 'ACTIVE';
-                game.currentQuestionIndex = 0;
-                await store.setGame(pin, game);
-                io.to(pin).emit('game-started');
-                await sendQuestion(io, pin);
+                
+                if (game.isUnitQuiz) {
+                    if (timeLimit) {
+                        (game as any).endTime = Date.now() + (timeLimit * 60 * 1000);
+                    }
+                    await store.setGame(pin, game);
+                    io.to(pin).emit('unit-game-started', {
+                        questions: game.quiz.questions,
+                        endTime: (game as any).endTime,
+                        title: game.quiz.title,
+                        createdAt: (game as any).createdAt
+                    });
+                } else {
+                    game.currentQuestionIndex = 0;
+                    await store.setGame(pin, game);
+                    io.to(pin).emit('game-started', { title: game.quiz.title });
+                    await sendQuestion(io, pin);
+                }
             }
         });
 
@@ -673,6 +690,34 @@ export function initSocket(io: Server) {
                 console.error('[Duel-Accept] Error starting duel:', err);
                 socket.emit('error', 'Duelni boshlashda xatolik');
             }
+        });
+
+        socket.on('host-get-status', async (pin: string) => {
+            const game = await store.getGame(pin);
+            if (!game || game.hostId !== socket.id) return;
+
+            if (game.status === 'ACTIVE') {
+                if (game.isUnitQuiz) {
+                    socket.emit('unit-game-started', {
+                        questions: game.quiz.questions,
+                        endTime: (game as any).endTime,
+                        title: game.quiz.title,
+                        createdAt: (game as any).createdAt
+                    });
+                } else {
+                    socket.emit('game-started', { title: game.quiz.title });
+                    const question = game.quiz.questions[game.currentQuestionIndex];
+                    if (question) {
+                        socket.emit('question-new', {
+                            ...question,
+                            timeLimit: game.timePerQuestion || question.timeLimit || 20,
+                            questionIndex: game.currentQuestionIndex + 1,
+                            totalQuestions: game.quiz.questions.length
+                        });
+                    }
+                }
+            }
+            await broadcastPlayerUpdate(io, pin);
         });
 
         socket.on('player-get-status', async ({ pin, studentId }: { pin: string, studentId?: string }) => {

@@ -232,7 +232,7 @@ const ScheduleModal = ({
         try {
             const [bRes, sRes, tRes] = await Promise.all([
                 apiFetch(`/api/groups/${group.id}/extra-class-bookings`),
-                apiFetch(`/api/groups/${group.id}/students`),
+                apiFetch(`/api/students/${group.id}`),
                 apiFetch('/api/level-topics')
             ]);
             if (bRes.ok) setBookings(await bRes.json());
