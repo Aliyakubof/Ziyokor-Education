@@ -741,9 +741,9 @@ export function initSocket(io: Server) {
 
                 if (improved) {
                     // Damage calculation
-                    const baseDamage = 10;
-                    const speedBonus = Math.max(0, Math.floor(((totalTime - timeTaken) / totalTime) * 10)); // Up to 10 bonus
-                    const comboBonus = (player.combo || 0) * 2; // +2 per combo
+                    const baseDamage = 5;
+                    const speedBonus = Math.max(0, Math.floor(((totalTime - timeTaken) / totalTime) * 5)); // Up to 5 bonus
+                    const comboBonus = (player.combo || 0) * 1; // +1 per combo
                     
                     damage = baseDamage + speedBonus + comboBonus;
                     player.combo = (player.combo || 0) + 1;

@@ -71,6 +71,7 @@ export default function PlayerGame() {
     const [isDuel, setIsDuel] = useState(false);
     const [duelSync, setDuelSync] = useState<any[]>([]);
     const [battleEffects, setBattleEffects] = useState<any[]>([]);
+    const [isShaking, setIsShaking] = useState(false);
 
     const pinFromStore = localStorage.getItem('kahoot-pin');
     const idFromStore = localStorage.getItem('student-id');
@@ -199,6 +200,14 @@ export default function PlayerGame() {
         socket.on('duel-damage', (data: { targetId: string, damage: number, attackerId: string, combo: number }) => {
             const id = Math.random().toString(36).substring(7);
             setBattleEffects(prev => [...prev.slice(-5), { id, ...data, type: 'DAMAGE' }]);
+            
+            // Screen shake on damage
+            const myId = localStorage.getItem('student-id') || socket.id;
+            if (data.targetId === myId) {
+                setIsShaking(true);
+                setTimeout(() => setIsShaking(false), 500);
+            }
+
             setTimeout(() => {
                 setBattleEffects(prev => prev.filter(e => e.id !== id));
             }, 2000);
@@ -340,11 +349,64 @@ export default function PlayerGame() {
     };
 
     if (view === 'FINISHED') {
+        const myId = localStorage.getItem('student-id') || socket.id;
+        const me = duelSync.find(p => p.id === myId);
+        const opponent = duelSync.find(p => p.id !== myId);
+        const amIWinner = me && opponent ? me.hp > opponent.hp : true;
+
+        if (isDuel) {
+            return (
+                <div className="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden" style={{ backgroundColor: '#0f172a' }}>
+                    {/* Background decor */}
+                    <div className="absolute inset-0 z-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at center, #f43f5e 0%, transparent 70%)' }}></div>
+                    
+                    <motion.div 
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="relative z-10 rounded-[3.5rem] p-10 text-center max-w-xl w-full shadow-2xl border-4 backdrop-blur-xl transition-colors" 
+                        style={{ backgroundColor: 'rgba(30, 41, 59, 0.7)', borderColor: amIWinner ? '#fbbf24' : '#f43f5e' }}
+                    >
+                        <div className={`w-32 h-32 ${amIWinner ? 'bg-amber-500 shadow-amber-500/50' : 'bg-rose-500 shadow-rose-500/50'} rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-2xl animate-bounce`}>
+                            {amIWinner ? <Trophy className="text-white" size={64} /> : <XCircle className="text-white" size={64} />}
+                        </div>
+                        
+                        <h1 className="text-5xl font-black mb-2 text-white italic tracking-tighter">
+                            {amIWinner ? "G'ALABA!" : "MAG'LUBIYAT"}
+                        </h1>
+                        <p className="font-black text-xs uppercase tracking-[0.3em] mb-10 opacity-60 text-white">Duel yakunlandi</p>
+
+                        <div className="grid grid-cols-2 gap-4 mb-10">
+                            <div className="p-6 rounded-3xl bg-white/5 border border-white/10">
+                                <p className="text-[10px] font-black uppercase opacity-40 text-white mb-1">SIZNING BALLINGIZ</p>
+                                <p className="text-3xl font-black text-amber-400">{me?.score || 0}</p>
+                            </div>
+                            <div className="p-6 rounded-3xl bg-white/5 border border-white/10">
+                                <p className="text-[10px] font-black uppercase opacity-40 text-white mb-1">RAQIB BALLI</p>
+                                <p className="text-3xl font-black text-rose-400">{opponent?.score || 0}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <button onClick={() => setView('UNIT_SUMMARY')} className="w-full bg-white/10 hover:bg-white/20 text-white font-black py-4 rounded-2xl transition-all border border-white/10">NATIJALARNI KO'RISH</button>
+                            <button onClick={() => navigate('/student/dashboard', { replace: true })} className="w-full text-white font-black py-4 rounded-2xl shadow-xl transition-transform active:scale-95" style={{ backgroundColor: amIWinner ? '#f59e0b' : '#e11d48' }}>DASHBOARDGA QAYTISH</button>
+                        </div>
+                    </motion.div>
+                </div>
+            );
+        }
+
         if (isUnitMode) {
-            setTimeout(() => { navigate('/student/dashboard', { replace: true }); }, 100);
+            setTimeout(() => { navigate('/student/dashboard', { replace: true }); }, 3000); // Increased from 100ms
             return (
                 <div className="flex flex-col items-center justify-center min-h-screen p-6 transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
-                    <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                    <motion.div 
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="text-center"
+                    >
+                        <div className="w-20 h-20 border-4 border-primary-color border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+                        <h2 className="text-2xl font-black" style={{ color: 'var(--text-color)' }}>Natijalar yuborilmoqda...</h2>
+                    </motion.div>
                 </div>
             );
         }
@@ -979,8 +1041,49 @@ export default function PlayerGame() {
     };
 
     return (
-        <div className="flex flex-col h-[100dvh] transition-colors" style={{ backgroundColor: 'var(--bg-color)' }}>
-            <header className="backdrop-blur-md p-4 flex justify-between items-center border-b shrink-0 transition-colors" style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--border-color)' }}>
+        <div className={`flex flex-col h-[100dvh] transition-colors relative overflow-hidden ${isDuel ? 'bg-[#0f172a]' : ''}`} style={{ backgroundColor: isDuel ? '' : 'var(--bg-color)' }}>
+            {/* Battle Background Elements */}
+            <AnimatePresence>
+                {isDuel && (
+                    <>
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.4 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-0 pointer-events-none"
+                            style={{ 
+                                background: 'radial-gradient(circle at 50% 120%, rgba(244, 63, 94, 0.2) 0%, transparent 60%), radial-gradient(circle at 50% -20%, rgba(99, 102, 241, 0.1) 0%, transparent 60%)'
+                            }}
+                        />
+                        {/* Floating particles */}
+                        {[...Array(12)].map((_, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ y: '110vh', x: `${Math.random() * 100}vw`, opacity: 0, scale: Math.random() * 0.5 + 0.5 }}
+                                animate={{ 
+                                    y: '-10vh', 
+                                    opacity: [0, 0.8, 0],
+                                    x: `${(Math.random() * 100) + (Math.sin(i) * 10)}vw` 
+                                }}
+                                transition={{ 
+                                    duration: Math.random() * 5 + 5, 
+                                    repeat: Infinity, 
+                                    delay: Math.random() * 10,
+                                    ease: "linear"
+                                }}
+                                className="absolute w-1 h-1 bg-rose-500 rounded-full blur-[1px] z-0"
+                            />
+                        ))}
+                    </>
+                )}
+            </AnimatePresence>
+
+            <motion.div 
+                animate={isShaking ? { x: [-10, 10, -10, 10, 0] } : { x: 0 }}
+                transition={{ duration: 0.4 }}
+                className="flex flex-col h-full relative z-10"
+            >
+                <header className="backdrop-blur-md p-4 flex justify-between items-center border-b shrink-0 transition-colors" style={{ backgroundColor: isDuel ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.05)', borderColor: isDuel ? 'rgba(255,255,255,0.1)' : 'var(--border-color)' }}>
                 <div className="flex items-center gap-3">
                     <div className="border px-4 py-1.5 rounded-xl transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                         <span className="text-[10px] font-black uppercase block opacity-40" style={{ color: 'var(--text-color)' }}>{isUnitMode ? 'Unit' : 'Savol'}</span>
@@ -1006,9 +1109,9 @@ export default function PlayerGame() {
             </main>
 
             {isUnitMode && (view === 'PLAYING' || view === 'UNIT_REVIEW') && (
-                <footer className="p-4 border-t flex items-center justify-between shrink-0 transition-colors" style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--border-color)' }}>
-                    <button onClick={() => { if (currentUnitIndex > 0) goToQuestion(currentUnitIndex - 1); }} disabled={currentUnitIndex === 0} className="px-6 py-3 rounded-2xl font-bold disabled:opacity-30 border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}>← Orqaga</button>
-                    <div className="flex-1 flex justify-center font-black" style={{ color: 'var(--text-color)', opacity: 0.5 }}>
+                <footer className="p-4 border-t flex items-center justify-between shrink-0 transition-colors" style={{ backgroundColor: isDuel ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.05)', borderColor: isDuel ? 'rgba(255,255,255,0.1)' : 'var(--border-color)' }}>
+                    <button onClick={() => { if (currentUnitIndex > 0) goToQuestion(currentUnitIndex - 1); }} disabled={currentUnitIndex === 0} className="px-6 py-3 rounded-2xl font-bold disabled:opacity-30 border transition-colors" style={{ backgroundColor: isDuel ? 'rgba(255,255,255,0.05)' : 'var(--card-bg)', borderColor: isDuel ? 'rgba(255,255,255,0.1)' : 'var(--border-color)', color: 'white' }}>← Orqaga</button>
+                    <div className="flex-1 flex justify-center font-black" style={{ color: isDuel ? 'white' : 'var(--text-color)', opacity: 0.5 }}>
                         {(() => {
                             const nonInfoTotal = unitQuestions.filter(q => q.type !== 'info-slide').length;
                             const nonInfoCurrent = unitQuestions.slice(0, currentUnitIndex + 1).filter(q => q.type !== 'info-slide').length;
@@ -1016,12 +1119,13 @@ export default function PlayerGame() {
                         })()}
                     </div>
                     {currentUnitIndex === unitQuestions.length - 1 ? (
-                        <button onClick={() => setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY')} className="px-6 py-3 rounded-2xl font-black text-white shadow-lg" style={{ backgroundColor: 'var(--primary-color)' }}>SUBMIT</button>
+                        <button onClick={() => setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY')} className="px-6 py-3 rounded-2xl font-black text-white shadow-lg" style={{ backgroundColor: isDuel ? '#e11d48' : 'var(--primary-color)' }}>SUBMIT</button>
                     ) : (
-                        <button onClick={() => goToQuestion(currentUnitIndex + 1)} className="px-6 py-3 text-white rounded-2xl font-bold shadow-lg" style={{ backgroundColor: 'var(--primary-color)' }}>Keyingisi →</button>
+                        <button onClick={() => goToQuestion(currentUnitIndex + 1)} className="px-6 py-3 text-white rounded-2xl font-bold shadow-lg" style={{ backgroundColor: isDuel ? '#e11d48' : 'var(--primary-color)' }}>Keyingisi →</button>
                     )}
                 </footer>
             )}
-        </div>
+        </motion.div>
+    </div>
     );
 }

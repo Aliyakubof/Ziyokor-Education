@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { socket } from '../socket';
-import { Swords, ChevronLeft, X, Check, Loader2, AlertCircle, Search, UserMinus } from 'lucide-react';
+import { Swords, ChevronLeft, X, Check, Loader2, AlertCircle, Search, UserMinus, BookOpen, Shield, Zap, Target, Award, Dice5 } from 'lucide-react';
 import { apiFetch } from '../api';
 
 export default function DuelLobby() {
@@ -285,6 +285,35 @@ export default function DuelLobby() {
                             Mag'lubiyat uchun streak kamaymaydi.
                         </li>
                     </ul>
+                </div>
+
+                {/* Character Roles Section */}
+                <div className="space-y-4">
+                    <h3 className="font-black text-xs uppercase tracking-widest pl-2 opacity-50" style={{ color: 'var(--text-color)' }}>
+                        Jangchi Qahramonlar
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3">
+                        {[
+                            { name: "Bilimdon", desc: "Bilim - eng katta kuch. Har bir to'g'ri javob uchun barqaror va ishonchli zarar yetkazadi.", icon: BookOpen, color: "text-blue-500", bg: "bg-blue-500/10" },
+                            { name: "Botir", desc: "Tezkor hujum ustasi. Tez va chaqqon javob berilganda raqibga juda katta zarar yetkazadi.", icon: Zap, color: "text-yellow-500", bg: "bg-yellow-500/10" },
+                            { name: "Mergab", desc: "Aniq va xatosiz. Kombosini uzoq ushlab tura oladi va har bir kombinatsiya uchun qo'shimcha bonus oladi.", icon: Target, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                            { name: "Lochin", desc: "O'tkir nigoh. Raqibning xatolaridan unumli foydalanadi va kutilmagan kuchli (kritik) zarba beradi.", icon: Award, color: "text-indigo-500", bg: "bg-indigo-500/10" },
+                            { name: "Himoyachi", desc: "Mustahkam qalqon. O'z nomiga munosib - u raqibdan keladigan zararlarning bir qismini qaytara oladi.", icon: Shield, color: "text-rose-500", bg: "bg-rose-500/10" },
+                            { name: "Omadli", desc: "Kutilmagan zarbalar ustasi. Har bir javobda omad kulib boqsa, zararni 2 barobargacha oshirishi mumkin.", icon: Dice5, color: "text-purple-500", bg: "bg-purple-500/10" }
+                        ].map((hero, i) => (
+                            <div key={i} className="p-4 rounded-[2rem] border transition-all hover:scale-[1.01]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                                <div className="flex items-start gap-4">
+                                    <div className={`p-3 rounded-2xl ${hero.bg} ${hero.color} shrink-0`}>
+                                        <hero.icon size={24} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-sm mb-1" style={{ color: 'var(--text-color)' }}>{hero.name}</h4>
+                                        <p className="text-[11px] font-medium leading-relaxed opacity-60" style={{ color: 'var(--text-color)' }}>{hero.desc}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 
