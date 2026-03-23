@@ -26,7 +26,8 @@ export const getTeacherStats = async (req: Request, res: Response) => {
 export const getGroups = async (req: Request, res: Response) => {
     try {
         const result = await query(`
-            SELECT g.*, t.name as teacher_name 
+            SELECT g.*, t.name as teacher_name,
+                   (SELECT COUNT(*) FROM students s WHERE s.group_id = g.id) as student_count
             FROM groups g 
             LEFT JOIN teachers t ON g.teacher_id = t.id
         `);
@@ -40,7 +41,12 @@ export const getGroups = async (req: Request, res: Response) => {
 export const getTeacherGroups = async (req: Request, res: Response) => {
     try {
         const { teacherId } = req.params;
-        const result = await query('SELECT * FROM groups WHERE teacher_id = $1', [teacherId]);
+        const result = await query(`
+            SELECT *, 
+                   (SELECT COUNT(*) FROM students s WHERE s.group_id = groups.id) as student_count 
+            FROM groups 
+            WHERE teacher_id = $1
+        `, [teacherId]);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: 'Error fetching teacher groups' });

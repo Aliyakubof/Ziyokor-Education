@@ -87,7 +87,7 @@ export default function HostGame() {
     const [answersCount, setAnswersCount] = useState(0);
     const [timeLeft, setTimeLeft] = useState(0);
     const [showResult, setShowResult] = useState(false);
-    const [leaderboard, setLeaderboard] = useState<{ name: string; score: number }[] | null>(null);
+    const [leaderboard, setLeaderboard] = useState<any[] | null>(null);
     const [gameStarted, setGameStarted] = useState(false);
     const [globalEndTime, setGlobalEndTime] = useState<number | null>(null);
     const [globalTimeLeft, setGlobalTimeLeft] = useState<number | null>(null);
@@ -277,11 +277,55 @@ export default function HostGame() {
                         )}
                     </div>
 
+                    {/* FULL LIST FOR ALL STUDENTS */}
+                    <div className="w-full max-w-4xl mt-16 bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden p-8">
+                        <div className="flex items-center justify-between mb-8">
+                           <h3 className="text-2xl font-black text-slate-800 uppercase tracking-widest">Barcha Natijalar</h3>
+                           <span className="px-4 py-1 bg-slate-100 rounded-full text-xs font-black text-slate-500">{leaderboard.length} O'quvchi</span>
+                        </div>
+                        
+                        <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-4">
+                            <table className="w-full">
+                                <thead className="text-left border-b border-slate-100">
+                                    <tr>
+                                        <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">O'rin</th>
+                                        <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">O'quvchi</th>
+                                        <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Ball</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {leaderboard.map((p, idx) => (
+                                        <tr key={p.id} className={`group hover:bg-slate-50 transition-colors ${idx < 3 ? 'bg-slate-50/50' : ''}`}>
+                                            <td className="py-4">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm
+                                                    ${idx === 0 ? 'bg-yellow-100 text-yellow-600' : 
+                                                      idx === 1 ? 'bg-blue-100 text-blue-600' :
+                                                      idx === 2 ? 'bg-indigo-100 text-indigo-600' :
+                                                      'bg-slate-100 text-slate-400'}`}>
+                                                    {idx + 1}
+                                                </div>
+                                            </td>
+                                            <td className="py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="font-black text-slate-700">{p.name}</div>
+                                                    {p.isFinished && <CheckCircle2 size={14} className="text-emerald-500" />}
+                                                </div>
+                                            </td>
+                                            <td className="py-4 text-right">
+                                                <span className="font-black text-slate-900 text-lg">{p.score}</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <button
                         onClick={() => navigate('/')}
-                        className="mt-20 px-10 py-4 bg-white hover:bg-slate-50 text-slate-800 font-black rounded-2xl transition-all btn-premium border border-slate-200 shadow-lg hover:shadow-xl"
+                        className="mt-12 px-10 py-5 bg-slate-900 hover:bg-black text-white font-black rounded-2xl transition-all shadow-xl hover:shadow-2xl active:scale-95 uppercase tracking-widest text-sm"
                     >
-                        TUGATISH
+                        Asosiy Sahifaga Qaytish
                     </button>
                 </div>
             </div>
