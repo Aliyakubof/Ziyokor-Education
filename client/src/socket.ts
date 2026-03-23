@@ -11,3 +11,7 @@ export const socket = io(BACKEND_URL, {
     timeout: 20000,
     transports: ['websocket'],
 });
+
+socket.on('connect_error', (err) => {
+    console.error('[Socket] Connection Error:', err.message);
+});

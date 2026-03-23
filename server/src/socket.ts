@@ -719,7 +719,14 @@ export function initSocket(io: Server) {
 
         socket.on('host-get-status', async (pin: string) => {
             const game = await store.getGame(pin);
-            if (!game || game.hostId !== socket.id) return;
+            if (!game) return;
+
+            // Allow the re-connecting socket to become the host if it's not system-hosted
+            if (game.hostId !== 'system') {
+                game.hostId = socket.id;
+                await store.setGame(pin, game);
+                socket.join(pin);
+            }
 
             if (game.status === 'ACTIVE') {
                 if (game.isUnitQuiz) {
