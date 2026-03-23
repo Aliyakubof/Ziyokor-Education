@@ -348,16 +348,44 @@ export const getVocabBattleById = async (req: Request, res: Response) => {
 export const bookExtraClass = async (req: Request, res: Response) => {
     try {
         const { studentId } = req.params;
-        const { groupId, timeSlot, isForced, topic } = req.body;
-        const existingRes = await query('SELECT 1 FROM extra_class_bookings WHERE student_id = $1', [studentId]);
-        if (existingRes && existingRes.rowCount && existingRes.rowCount > 0) return res.status(400).json({ error: "Ushbu o'quvchida allaqachon bron mavjud!" });
-        const countRes = await query(`SELECT COUNT(*) FROM extra_class_bookings WHERE group_id = $1 AND time_slot = $2 AND is_forced = $3`, [groupId, timeSlot, !!isForced]);
+        const { groupId, timeSlot, isForced, topic, bookingDate } = req.body;
+
+        // Check if student already has an ACTIVE (non-past, non-completed) booking
+        const existingRes = await query(
+            `SELECT id, booking_date, is_completed FROM extra_class_bookings WHERE student_id = $1`,
+            [studentId]
+        );
+        if (existingRes && existingRes.rowCount && existingRes.rowCount > 0) {
+            const existing = existingRes.rows[0];
+            const bookDate = existing.booking_date;
+            const isCompleted = existing.is_completed;
+            // Consider booking stale if date has passed OR is_completed
+            const isPast = bookDate ? new Date(bookDate + 'T23:59:59') < new Date() : false;
+            if (!isPast && !isCompleted) {
+                return res.status(400).json({ error: "Sizda allaqachon faol bron mavjud!" });
+            }
+            // Stale booking — auto-clean it
+            await query('DELETE FROM extra_class_bookings WHERE student_id = $1', [studentId]);
+        }
+
+        // Check slot capacity for this specific date + time
+        const countRes = await query(
+            `SELECT COUNT(*) FROM extra_class_bookings WHERE group_id = $1 AND time_slot = $2 AND is_forced = $3 AND (booking_date = $4 OR booking_date IS NULL)`,
+            [groupId, timeSlot, !!isForced, bookingDate || null]
+        );
         const count = parseInt(countRes.rows[0].count);
-        if (isForced ? count >= 5 : count >= 4) return res.status(400).json({ error: "Joy qolmagan!" });
+        if (isForced ? count >= 5 : count >= 4) {
+            return res.status(400).json({ error: "Bu vaqt uchun joy qolmagan!" });
+        }
+
         const id = uuidv4();
-        await query('INSERT INTO extra_class_bookings (id, student_id, group_id, time_slot, topic, is_forced) VALUES ($1, $2, $3, $4, $5, $6)', [id, studentId, groupId, timeSlot, topic, !!isForced]);
+        await query(
+            'INSERT INTO extra_class_bookings (id, student_id, group_id, time_slot, topic, is_forced, booking_date) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            [id, studentId, groupId, timeSlot, topic, !!isForced, bookingDate || null]
+        );
         res.json({ success: true, id });
     } catch (err) {
+        console.error('bookExtraClass error:', err);
         res.status(500).json({ error: 'Xatolik' });
     }
 };

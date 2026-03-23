@@ -96,6 +96,7 @@ router.post('/student/purchase', requireRole('student'), shopController.purchase
 router.post('/student/vocab-battles/submit', requireRole('student'), quizController.submitVocabBattle);
 router.get('/student/quizzes', requireRole('student'), quizController.getSoloQuizzes);
 router.post('/students/:studentId/book-extra-class', requireRole('student', 'admin', 'teacher'), studentController.bookExtraClass);
+router.patch('/extra-class-bookings/:id/complete', requireRole('admin', 'teacher', 'manager'), teacherController.completeBooking);
 router.delete('/extra-class-bookings/:id', requireRole('admin', 'teacher', 'manager', 'student'), teacherController.deleteBooking);
 
 // Unit Quizzes (Plural Management)

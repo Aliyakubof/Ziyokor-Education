@@ -132,54 +132,26 @@ export default function StudentDashboard() {
         }
     };
 
-    const handleBook = async (slot: string, topic: string) => {
+    const handleBook = async (slot: string, topic: string, bookingDate: string) => {
         if (!groupSettings?.extra_class_days || groupSettings.extra_class_days.length === 0) {
             alert("Hali qo'shimcha dars kunlari belgilanmagan!");
             return;
         }
-
-        const daysMap: Record<string, number> = {
-            'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3, 'Payshanba': 4, 'Juma': 5, 'Shanba': 6, 'Yakshanba': 0
-        };
-        
-        const now = new Date();
-        
-        let found = false;
-        for (let i = 1; i <= 7; i++) {
-            const checkDate = new Date();
-            checkDate.setDate(now.getDate() + i);
-            const checkDayName = Object.keys(daysMap).find(key => daysMap[key] === checkDate.getDay());
-            
-            if (checkDayName && groupSettings.extra_class_days.includes(checkDayName)) {
-                const diffHours = (checkDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-                if (diffHours >= 24) {
-                    found = true;
-                    break;
-                }
-            }
-        }
-
-        if (!found) {
-            alert("Yaqin 24 soat ichida bo'sh dars kunlari yo'q. Keyinroq urinib ko'ring.");
-            return;
-        }
-
-        if (!topic) {
-            alert("Iltimos, o'tmoqchi bo'lgan mavzuni tanlang!");
-            return;
-        }
-
-        if (!window.confirm(`${slot} vaqtiga "${topic}" mavzusi bilan bronlamoqchimisiz?`)) return;
+        if (!window.confirm(`${bookingDate} — ${slot} vaqtiga bron qilmoqchimisiz?`)) return;
 
         try {
             const res = await apiFetch(`/api/students/${user?.id}/book-extra-class`, {
                 method: 'POST',
-                body: JSON.stringify({ groupId: stats.groupId, timeSlot: slot, topic: topic })
+                body: JSON.stringify({
+                    groupId: stats.groupId,
+                    timeSlot: slot,
+                    topic: topic,
+                    bookingDate: bookingDate
+                })
             });
             if (res.ok) {
-                alert("Bron qilindi!");
-                fetchBookingData(stats.groupId);
                 setIsBookingModalOpen(false);
+                fetchBookingData(stats.groupId);
             } else {
                 const err = await res.json();
                 alert(err.error || "Xatolik yuz berdi!");
