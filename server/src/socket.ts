@@ -294,25 +294,30 @@ async function finishGame(io: Server, pin: string) {
                         const sendPromises = [];
                         
                         // 1. Send to Teacher
+                        console.log(`[finishGame] Sending PDF to Teacher: ${teacherRes.rows[0].telegram_chat_id}`);
                         sendPromises.push(bot.telegram.sendDocument(teacherRes.rows[0].telegram_chat_id, {
                             source: pdfBuffer,
                             filename: pdfFilename
                         }, {
                             caption: pdfCaption,
                             parse_mode: 'HTML'
-                        }));
+                        }).then(() => console.log(`[finishGame] PDF sent to Teacher.`))
+                          .catch(err => console.error(`[finishGame] Failed to send PDF to Teacher:`, err)));
 
                         // 2. Fetch and Send to Manager & Admin
-                        const oversightRes = await query('SELECT telegram_chat_id FROM teachers WHERE id = ANY($1) AND telegram_chat_id IS NOT NULL', [[ADMIN_ID, MANAGER_ID]]);
+                        const oversightRes = await query('SELECT name, telegram_chat_id FROM teachers WHERE id = ANY($1) AND telegram_chat_id IS NOT NULL', [[ADMIN_ID, MANAGER_ID]]);
+                        console.log(`[finishGame] Oversight list: ${oversightRes.rows.length} recipients`);
                         oversightRes.rows.forEach((row: any) => {
                             if (row.telegram_chat_id !== teacherRes.rows[0].telegram_chat_id) {
+                                console.log(`[finishGame] Sending PDF to Oversight (${row.name}): ${row.telegram_chat_id}`);
                                 sendPromises.push(bot.telegram.sendDocument(row.telegram_chat_id, {
                                     source: pdfBuffer,
                                     filename: pdfFilename
                                 }, {
                                     caption: `${pdfCaption}\n👤 O'qituvchi: ${teacherRes.rows[0].name}`,
                                     parse_mode: 'HTML'
-                                }));
+                                }).then(() => console.log(`[finishGame] PDF sent to Oversight (${row.name}).`))
+                                  .catch(err => console.error(`[finishGame] Failed to send PDF to Oversight (${row.name}):`, err)));
                             }
                         });
 
@@ -521,8 +526,11 @@ export function initSocket(io: Server) {
             if (existingPlayer) {
                 existingPlayer.socketId = socket.id;
                 // If they rejoined, they might have a generic name but now we resolved it
-                if (studentId) existingPlayer.name = name; 
-
+                if (studentId) {
+                    existingPlayer.name = name;
+                    (socket as any).studentId = studentId; // Persist identity
+                }
+                
                 await store.setPlayer(pin, existingPlayer);
                 socket.join(pin);
                 socket.emit('joined', { name: existingPlayer.name, playerId });
@@ -551,6 +559,8 @@ export function initSocket(io: Server) {
                 return;
             }
 
+            if (studentId) (socket as any).studentId = studentId; // Persist identity
+            
             const newPlayer = {
                 id: playerId,
                 socketId: socket.id,
@@ -862,6 +872,8 @@ export function initSocket(io: Server) {
         });
 
         socket.on('player-get-status', async ({ pin, studentId }: { pin: string, studentId?: string }) => {
+            if (studentId) (socket as any).studentId = studentId; // Persist identity
+            
             const game = await store.getGame(pin);
             if (!game) return;
 
