@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { query } from './db';
 import { setupTelegramGame } from './telegram_game';
 import { generateNextDaySchedulePDF } from './pdfGenerator';
+import { ADMIN_ID, MANAGER_ID } from './constants';
 
 const token = process.env.TELEGRAM_BOT_TOKEN || '8564105202:AAFHcou7QISJjWQe0UQqjPLITIbkZq_2-c4';
 export const bot = new Telegraf(token);
@@ -659,6 +660,10 @@ export async function sendSoloQuizPDF(studentId: string, pdfBuffer: Buffer, file
         const allChatIds = new Set<string>();
         subs.rows.forEach((s: any) => allChatIds.add(s.telegram_chat_id));
         teacherRes.rows.forEach((t: any) => allChatIds.add(t.telegram_chat_id));
+
+        // Also find Manager and Admin and notify them
+        const oversightRes = await query('SELECT telegram_chat_id FROM teachers WHERE id = ANY($1) AND telegram_chat_id IS NOT NULL', [[ADMIN_ID, MANAGER_ID]]);
+        oversightRes.rows.forEach((row: any) => allChatIds.add(row.telegram_chat_id));
 
         for (const chatId of allChatIds) {
             try {

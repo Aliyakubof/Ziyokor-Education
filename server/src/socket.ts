@@ -6,6 +6,7 @@ import { Worker } from 'worker_threads';
 import { store, generatePin, generateParentId } from './store';
 import { query } from './db';
 import { bot } from './bot';
+import { ADMIN_ID, MANAGER_ID } from './constants';
 import { generateQuizResultPDF, generateGroupContactPDF } from './pdfGenerator';
 import { checkAnswer, countCorrectParts } from './utils';
 import { checkAnswersWithAIBatch } from './aiChecker';
@@ -44,7 +45,6 @@ function scrubSinglePlayer(game: any, p: any) {
             return isValidAnswer && isNotInfoSlide;
         }).length;
 
-        console.log(`[Progress Debug] Player: ${p.id}, name: ${p.name}, answers keys: ${JSON.stringify(Object.keys(p.answers || {}))}, questions: ${questionsArr.length}, count: ${answeredCount}`);
 
         return {
             id: p.id,
@@ -71,7 +71,6 @@ async function broadcastPlayerUpdate(io: Server, pin: string, playerId?: string)
 
     updateThrottles[pin] = setTimeout(async () => {
         const metadata = await store.getGameMetadata(pin);
-        console.log(`[Broadcast Debug] Pin ${pin}, hostId: ${metadata?.hostId}, hasQuiz: ${!!metadata?.quiz}, hasQuestions: ${!!metadata?.quiz?.questions}`);
         if (!metadata || !metadata.hostId || metadata.hostId === 'system') {
             updateThrottles[pin] = null;
             return;
@@ -289,14 +288,38 @@ async function finishGame(io: Server, pin: string) {
                 if (teacherRes.rowCount && teacherRes.rowCount > 0 && teacherRes.rows[0].telegram_chat_id) {
                     try {
                         const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
-                        await bot.telegram.sendDocument(teacherRes.rows[0].telegram_chat_id, {
+                        const pdfFilename = `Result_${sanitizedGroupName}_${Date.now()}.pdf`;
+                        const pdfCaption = `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}`;
+
+                        const sendPromises = [];
+                        
+                        // 1. Send to Teacher
+                        sendPromises.push(bot.telegram.sendDocument(teacherRes.rows[0].telegram_chat_id, {
                             source: pdfBuffer,
-                            filename: `Result_${sanitizedGroupName}_${Date.now()}.pdf`
+                            filename: pdfFilename
                         }, {
-                            caption: `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}`,
+                            caption: pdfCaption,
                             parse_mode: 'HTML'
+                        }));
+
+                        // 2. Fetch and Send to Manager & Admin
+                        const oversightRes = await query('SELECT telegram_chat_id FROM teachers WHERE id = ANY($1) AND telegram_chat_id IS NOT NULL', [[ADMIN_ID, MANAGER_ID]]);
+                        oversightRes.rows.forEach((row: any) => {
+                            if (row.telegram_chat_id !== teacherRes.rows[0].telegram_chat_id) {
+                                sendPromises.push(bot.telegram.sendDocument(row.telegram_chat_id, {
+                                    source: pdfBuffer,
+                                    filename: pdfFilename
+                                }, {
+                                    caption: `${pdfCaption}\n👤 O'qituvchi: ${teacherRes.rows[0].name}`,
+                                    parse_mode: 'HTML'
+                                }));
+                            }
                         });
-                    } catch (e) {}
+
+                        await Promise.allSettled(sendPromises);
+                    } catch (e) {
+                        console.error('[finishGame] Error sending telegram documents:', e);
+                    }
                 }
 
                 bulkAwardRewards(game.players);
