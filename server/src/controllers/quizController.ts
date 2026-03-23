@@ -257,11 +257,33 @@ export const submitStudentQuiz = async (req: Request, res: Response) => {
             results.push({ question: q.text, studentAnswer: studentAns, isCorrect, score: currentScore, pending: isPending });
         }
 
+        const studentRes = await query('SELECT group_id, name FROM students WHERE id = $1', [studentId]);
+        const groupId = studentRes.rows[0]?.group_id;
+        const studentName = studentRes.rows[0]?.name || 'Student';
+
         let maxScore = 0;
         questions.forEach((q: any) => {
             if (q.type === 'info-slide') return;
             maxScore += (q.type === 'matching' || q.type === 'word-box') ? (q.acceptedAnswers ? q.acceptedAnswers.length : 1) : 1;
         });
+
+        const resultId = uuidv4();
+        const playerResults = [{
+            id: studentId,
+            name: studentName,
+            score: immediateScore,
+            maxScore,
+            answers,
+            status: aiCheckPending.length > 0 ? 'pending' : 'completed',
+            results // detailed results for each question
+        }];
+
+        if (groupId) {
+            await query(
+                'INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results) VALUES ($1, $2, $3, $4, $5)',
+                [resultId, groupId, quiz.title, maxScore, JSON.stringify(playerResults)]
+            );
+        }
 
         await awardRewards(studentId, immediateScore);
 
@@ -271,21 +293,43 @@ export const submitStudentQuiz = async (req: Request, res: Response) => {
                     const aiResults = await checkAnswersWithAIBatch(aiCheckPending);
                     let aiScore = 0;
                     aiCheckPending.forEach((item, idx) => {
-                        if (aiResults[idx]?.isCorrect) {
+                        const air = aiResults[idx];
+                        if (air?.isCorrect) {
                             aiScore += 1;
                         }
+                        // Update the results array for the final save
+                        const resIdx = results.findIndex(r => r.question === item.text && r.pending);
+                        if (resIdx !== -1) {
+                            results[resIdx].isCorrect = air?.isCorrect || false;
+                            results[resIdx].score = air?.isCorrect ? 1 : 0;
+                            results[resIdx].feedback = air?.feedback;
+                            results[resIdx].pending = false;
+                        }
                     });
+
                     if (aiScore > 0) await awardRewards(studentId, aiScore);
+                    
+                    // Update game_results if we have a groupId
+                    if (groupId) {
+                        playerResults[0].score = immediateScore + aiScore;
+                        playerResults[0].status = 'completed';
+                        playerResults[0].results = results;
+                        await query(
+                            'UPDATE game_results SET player_results = $1 WHERE id = $2',
+                            [JSON.stringify(playerResults), resultId]
+                        );
+                    }
+
                     await notifyTeacherOfSoloResult(studentId, quiz.title, immediateScore + aiScore, maxScore);
                 } catch (err) {
                     console.error('Background AI Check failed:', err);
                     await notifyTeacherOfSoloResult(studentId, quiz.title, immediateScore, maxScore);
                 }
             })();
-            res.json({ results, pending: true, immediateScore, maxScore });
+            res.json({ results, pending: true, immediateScore, maxScore, resultId });
         } else {
             await notifyTeacherOfSoloResult(studentId, quiz.title, immediateScore, maxScore);
-            res.json({ results, pending: false, immediateScore, maxScore });
+            res.json({ results, pending: false, immediateScore, maxScore, resultId });
         }
     } catch (err) {
         console.error('Submission error:', err);

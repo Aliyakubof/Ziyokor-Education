@@ -18,9 +18,17 @@ interface QuestionData {
 }
 
 const normalizeAnswer = (val: string | number): string => {
-    let s = String(val).toLowerCase().trim();
-    // Replace all non-alphanumeric characters with space to ignore symbols in scoring
-    s = s.replace(/[^a-z0-9]/g, " ");
+    if (val === null || val === undefined) return "";
+    let s = String(val).toLowerCase();
+
+    // Normalize various Uzbek/English apostrophes to '
+    s = s.replace(/[ʻ’‘`]/g, "'");
+    
+    // Replace anything that is NOT a letter or a number or an apostrophe with a space
+    // We use \p{L} for any Unicode letter and \p{N} for any number
+    s = s.replace(/[^\p{L}\p{N}']/gu, " ");
+    
+    // Normalize multiple spaces and ensure trimmed
     s = s.replace(/\s+/g, " ");
     return s.trim();
 };

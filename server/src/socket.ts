@@ -380,6 +380,30 @@ export function initSocket(io: Server) {
         // Host: Create Unit Game
         socket.on('host-create-unit-game', async ({ quizId, groupId }: { quizId: string, groupId: string }) => {
             try {
+                // Check if a game already exists for this (quizId, groupId) that is not FINISHED
+                const allGames = await store.getAllGames();
+                const existingGamePin = Object.keys(allGames).find(pin => {
+                    const g = allGames[pin];
+                    return g.isUnitQuiz && g.groupId === groupId && 
+                           (typeof g.quiz === 'object' ? g.quiz.id === quizId : g.quiz === quizId) && 
+                           g.status !== 'FINISHED';
+                });
+
+                if (existingGamePin) {
+                    const game = allGames[existingGamePin];
+                    game.hostId = socket.id; // Update hostId to current socket
+                    await store.setGame(existingGamePin, game);
+                    socket.join(existingGamePin);
+                    socket.emit('game-created', existingGamePin);
+                    
+                    // Also broadcast current players to the rejoined host
+                    const fullGame = await store.getGame(existingGamePin);
+                    if (fullGame) {
+                        socket.emit('player-update', scrubPlayers(fullGame));
+                    }
+                    return;
+                }
+
                 const result = await query('SELECT * FROM unit_quizzes WHERE id = $1', [quizId]);
                 if (result.rowCount === 0) return socket.emit('error', 'Quiz topilmadi');
                 
@@ -400,6 +424,7 @@ export function initSocket(io: Server) {
                 socket.join(pin);
                 socket.emit('game-created', pin);
             } catch (err) {
+                console.error('[host-create-unit-game] error:', err);
                 socket.emit('error', 'Xatolik yuz berdi');
             }
         });

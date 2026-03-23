@@ -1,0 +1,17 @@
+[
+  {
+    "constraint_name": "duels_pkey",
+    "constraint_type": "PRIMARY KEY",
+    "column_name": "id"
+  },
+  {
+    "constraint_name": "duels_player1_id_fkey",
+    "constraint_type": "FOREIGN KEY",
+    "column_name": "player1_id"
+  },
+  {
+    "constraint_name": "duels_player2_id_fkey",
+    "constraint_type": "FOREIGN KEY",
+    "column_name": "player2_id"
+  }
+]

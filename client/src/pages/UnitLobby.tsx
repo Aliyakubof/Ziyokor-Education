@@ -26,7 +26,9 @@ const UnitLobby = () => {
 
         socket.on('game-created', (newPin: string) => {
             setPin(newPin);
-            setPlayers([]); // IMPORTANT: Clear players list for the new session
+            // On refresh, we might be reconnecting to an existing game.
+            // The server will send a 'player-update' immediately after 'game-created' if it's an existing game.
+            // We only clear if we are explicitly starting a fresh session and we weren't just refreshed.
         });
 
         socket.on('player-update', (updatedPlayers: Player[]) => {

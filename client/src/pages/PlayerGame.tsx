@@ -18,9 +18,17 @@ interface QuestionData {
 }
 
 const normalizeAnswer = (val: string | number): string => {
-    let s = String(val).toLowerCase().trim();
-    // Replace all non-alphanumeric characters with space to ignore symbols in scoring
-    s = s.replace(/[^a-z0-9]/g, " ");
+    if (val === null || val === undefined) return "";
+    let s = String(val).toLowerCase();
+
+    // Normalize various Uzbek/English apostrophes to '
+    s = s.replace(/[ʻ’‘`]/g, "'");
+    
+    // Replace anything that is NOT a letter or a number or an apostrophe with a space
+    // We use \p{L} for any Unicode letter and \p{N} for any number
+    s = s.replace(/[^\p{L}\p{N}']/gu, " ");
+    
+    // Normalize multiple spaces and ensure trimmed
     s = s.replace(/\s+/g, " ");
     return s.trim();
 };
@@ -120,7 +128,7 @@ export default function PlayerGame() {
             setView('WAITING');
             if (data?.title) setQuizTitle(data.title);
         });
-        socket.on('unit-game-started', (data: { questions: any[], endTime: number, title: string, createdAt?: number }) => {
+        socket.on('unit-game-started', (data: { questions: any[], endTime: number, title: string, createdAt?: number, isDuel?: boolean }) => {
             console.log('[Unit] Game started event received:', data);
 
             if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
@@ -168,7 +176,7 @@ export default function PlayerGame() {
             if (data.isDuel) setIsDuel(true);
         });
 
-        socket.on('duel-started', (data: { pin: string, duelId: string }) => {
+        socket.on('duel-started', () => {
             setIsDuel(true);
             setIsUnitMode(true);
         });
