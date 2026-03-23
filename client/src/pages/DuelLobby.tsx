@@ -60,7 +60,7 @@ export default function DuelLobby() {
 
         const checkQuizzes = async () => {
             try {
-                const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/duel-quizzes`);
+                const res = await apiFetch('/api/duel-quizzes');
                 if (res.ok) {
                     const data = await res.json();
                     // Assuming user object has daraja or we just check if any active exist

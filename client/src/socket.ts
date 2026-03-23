@@ -9,5 +9,5 @@ export const socket = io(BACKEND_URL, {
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
     timeout: 20000,
-    transports: ['websocket'],
+    transports: ['polling', 'websocket'],
 });

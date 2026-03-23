@@ -43,9 +43,8 @@ export default function ManagerShop() {
         formData.append('image', file);
 
         try {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/manager/upload`, {
+            const res = await apiFetch('/api/manager/upload', {
                 method: 'POST',
-                credentials: 'include',
                 body: formData
             });
 

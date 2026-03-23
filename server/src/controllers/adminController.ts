@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../db';
+import fs from 'fs';
+import path from 'path';
 import { ADMIN_ID } from '../constants';
 import { generateGroupContactPDF } from '../pdfGenerator';
 import { SettingsService } from '../services/settings';
@@ -358,5 +360,57 @@ export const uploadImage = async (req: Request, res: Response) => {
     } catch (err: any) {
         console.error('Upload error:', err);
         res.status(500).json({ error: 'Yuklashda xatolik' });
+    }
+};
+
+// Carousel Management
+export const getCarouselSlides = async (req: Request, res: Response) => {
+    try {
+        const result = await query('SELECT * FROM carousel_slides ORDER BY order_index ASC, created_at DESC');
+        res.json(result.rows);
+    } catch (err: any) {
+        console.error('Error fetching carousel slides:', err);
+        res.status(500).json({ error: 'Error fetching slides', details: err.message });
+    }
+};
+
+export const createCarouselSlide = async (req: Request, res: Response) => {
+    try {
+        const { title, description, order_index } = req.body;
+        if (!req.file) return res.status(400).json({ error: 'Rasm yuklanmadi' });
+
+        const id = uuidv4();
+        const imageUrl = `/uploads/${req.file.filename}`;
+
+        await query(
+            'INSERT INTO carousel_slides (id, image_url, title, description, order_index) VALUES ($1, $2, $3, $4, $5)',
+            [id, imageUrl, title, description, parseInt(order_index) || 0]
+        );
+
+        res.json({ id, image_url: imageUrl, title, description, order_index });
+    } catch (err: any) {
+        console.error('Error creating carousel slide:', err);
+        res.status(500).json({ error: 'Xatolik', details: err.message });
+    }
+};
+
+export const deleteCarouselSlide = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const slideRes = await query('SELECT image_url FROM carousel_slides WHERE id = $1', [id]);
+
+        if (slideRes.rowCount && slideRes.rowCount > 0) {
+            const imageUrl = slideRes.rows[0].image_url;
+            const filePath = path.join(__dirname, '..', '..', 'storage', 'uploads', path.basename(imageUrl));
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
+        await query('DELETE FROM carousel_slides WHERE id = $1', [id]);
+        res.json({ success: true, id });
+    } catch (err: any) {
+        console.error('Error deleting carousel slide:', err);
+        res.status(500).json({ error: 'Xatolik', details: err.message });
     }
 };

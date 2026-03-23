@@ -8,7 +8,6 @@ import autoTable from 'jspdf-autotable';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capawesome-team/capacitor-file-opener';
 import { Capacitor } from '@capacitor/core';
-import { API_URL } from '../api';
 
 interface GameResult {
     id: string;
@@ -410,38 +409,31 @@ const GroupDetails = () => {
         setPdfLoading(true);
         try {
             const fileName = `Contacts_${groupName.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
-            const url = `${API_URL}/api/groups/${groupId}/contact-info-pdf`;
+            const url = `/api/groups/${groupId}/contact-info-pdf`;
+
+            // Use apiFetch for consistent credentials/cookies
+            const response = await apiFetch(url);
+            if (!response.ok) throw new Error('PDF yuklab olishda xatolik');
+            
+            const blob = await response.blob();
 
             if (Capacitor.isNativePlatform()) {
-                // For APK: Download via blob and save to filesystem
-                const response = await fetch(url, {
-                    headers: {
-                        'x-user-role': role || '',
-                        'x-user-phone': localStorage.getItem('userPhone') || ''
-                    }
-                });
-                const blob = await response.blob();
-                
-                // Convert blob to base64
+                // For Mobile/APK: Save to filesystem and open
                 const reader = new FileReader();
                 reader.readAsDataURL(blob);
                 reader.onloadend = async () => {
                     const base64data = (reader.result as string).split(',')[1];
-                    
                     const savedFile = await Filesystem.writeFile({
                         path: fileName,
                         data: base64data,
                         directory: Directory.Documents,
                     });
-
                     await FileOpener.openFile({
                         path: savedFile.uri,
                     });
                 };
             } else {
                 // Web download
-                const response = await apiFetch(url);
-                const blob = await response.blob();
                 const blobUrl = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = blobUrl;
@@ -449,6 +441,7 @@ const GroupDetails = () => {
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
+                window.URL.revokeObjectURL(blobUrl);
             }
         } catch (err) {
             console.error('Contact PDF error:', err);

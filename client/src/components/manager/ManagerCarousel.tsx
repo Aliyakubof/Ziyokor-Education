@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiFetch } from '../../api';
+import { apiFetch, API_URL } from '../../api';
 import { Image as ImageIcon, Plus, Trash2, Upload, Layout, AlertCircle, Check } from 'lucide-react';
 
 interface CarouselSlide {
@@ -61,13 +61,8 @@ export default function ManagerCarousel() {
         formData.append('order_index', String(orderIndex));
 
         try {
-            const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
-            const res = await fetch(`${baseUrl}/api/manager/carousel`, {
+            const res = await apiFetch('/api/manager/carousel', {
                 method: 'POST',
-                headers: {
-                    'x-user-role': localStorage.getItem('user-role') || '',
-                    'x-user-phone': localStorage.getItem('user-phone') || '',
-                },
                 body: formData
             });
 
@@ -103,7 +98,7 @@ export default function ManagerCarousel() {
         }
     };
 
-    const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
+    const baseUrl = API_URL;
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
