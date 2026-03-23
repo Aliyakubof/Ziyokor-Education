@@ -160,7 +160,7 @@ ${batchInfo}`;
                     if (parsed.results && parsed.results.length === chunk.length) {
                         console.log(`[AI Batch Check] Chunk ${idx + 1}/${chunks.length} | Success`);
                         const mappedResults = parsed.results.map(r => ({
-                            isCorrect: !!r.isCorrect,
+                            isCorrect: String(r.isCorrect).trim().toLowerCase() === "true" || r.isCorrect === true,
                             grammarScore: Math.min(100, Math.max(0, Number(r.grammarScore) || 0)),
                             contentScore: Math.min(100, Math.max(0, Number(r.contentScore) || 0)),
                             feedback: String(r.feedback || "")

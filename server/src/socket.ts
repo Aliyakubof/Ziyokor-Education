@@ -21,6 +21,7 @@ const pendingPlayerUpdates: Record<string, Set<string>> = {};
 // AI Queue Manager
 const aiCheckQueues: Record<string, { pin: string, playerId: string, qIdx: number, text: string, answer: string, type: string, acceptedAnswers?: string[] }[]> = {};
 const aiQueueThrottles: Record<string, NodeJS.Timeout | null> = {};
+const activeAIPromises: Record<string, Promise<void>[]> = {};
 
 function scrubPlayers(game: any, players?: any[]) {
     const list = players || game.players || [];
@@ -112,6 +113,57 @@ async function broadcastPlayerUpdate(io: Server, pin: string, playerId?: string)
     }, 1000);
 }
 
+async function processAIBatch(io: Server, pin: string, queue: any[]) {
+    try {
+        console.log(`[AI Queue] Processing ${queue.length} items for pin ${pin}...`);
+        const results = await checkAnswersWithAIBatch(queue.map(item => ({
+            text: item.text,
+            studentAnswer: item.answer,
+            type: item.type,
+            acceptedAnswers: item.acceptedAnswers
+        })));
+
+        let modCount = 0;
+        const uniquePlayerIds = new Set(queue.map((item: any) => item.playerId));
+
+        for (const pId of uniquePlayerIds) {
+            const player = await store.getPlayer(pin, pId as string);
+            if (!player) continue;
+
+            let playerModded = false;
+            queue.forEach((item, i) => {
+                if (item.playerId !== pId) return;
+                const aiResult = results[i];
+                if (!aiResult) return;
+
+                (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
+                (player as any).aiFeedbackMap[item.qIdx] = aiResult.feedback;
+
+                if (aiResult.isCorrect) {
+                    if (!(player as any).partialScoreMap) (player as any).partialScoreMap = {};
+                    const currentPartial = (player as any).partialScoreMap[item.qIdx] || 0;
+                    if (currentPartial === 0) {
+                        player.score += 1;
+                        (player as any).partialScoreMap[item.qIdx] = 1;
+                        playerModded = true;
+                        modCount++;
+                    }
+                } else {
+                    playerModded = true;
+                }
+            });
+
+            if (playerModded) {
+                await store.setPlayer(pin, player);
+                await broadcastPlayerUpdate(io, pin, pId as string);
+            }
+        }
+        console.log(`[AI Queue] Finished batch for pin ${pin}. Updated ${modCount} scores.`);
+    } catch (err) {
+        console.error('[AI Queue] Background processing error:', err);
+    }
+}
+
 async function enqueueAICheck(io: Server, pin: string, playerId: string, qIdx: number, text: string, answer: string, type: string, acceptedAnswers?: string[]) {
     if (!aiCheckQueues[pin]) aiCheckQueues[pin] = [];
     aiCheckQueues[pin].push({ pin, playerId, qIdx, text, answer, type, acceptedAnswers });
@@ -125,57 +177,43 @@ async function enqueueAICheck(io: Server, pin: string, playerId: string, qIdx: n
 
         if (!queue || queue.length === 0) return;
 
+        if (!activeAIPromises[pin]) activeAIPromises[pin] = [];
+        const promise = processAIBatch(io, pin, queue);
+        activeAIPromises[pin].push(promise);
+        
         try {
-            console.log(`[AI Queue] Processing ${queue.length} items for pin ${pin}...`);
-            const results = await checkAnswersWithAIBatch(queue.map(item => ({
-                text: item.text,
-                studentAnswer: item.answer,
-                type: item.type,
-                acceptedAnswers: item.acceptedAnswers
-            })));
-
-            let modCount = 0;
-            const uniquePlayerIds = new Set(queue.map(item => item.playerId));
-
-            for (const pId of uniquePlayerIds) {
-                const player = await store.getPlayer(pin, pId);
-                if (!player) continue;
-
-                let playerModded = false;
-                queue.forEach((item, i) => {
-                    if (item.playerId !== pId) return;
-                    const aiResult = results[i];
-                    if (!aiResult) return;
-
-                    (player as any).aiFeedbackMap = (player as any).aiFeedbackMap || {};
-                    (player as any).aiFeedbackMap[item.qIdx] = aiResult.feedback;
-
-                    if (aiResult.isCorrect) {
-                        if (!(player as any).partialScoreMap) (player as any).partialScoreMap = {};
-                        const currentPartial = (player as any).partialScoreMap[item.qIdx] || 0;
-                        if (currentPartial === 0) {
-                            player.score += 1;
-                            (player as any).partialScoreMap[item.qIdx] = 1;
-                            playerModded = true;
-                            modCount++;
-                        }
-                    } else {
-                        playerModded = true;
-                    }
-                });
-
-                if (playerModded) {
-                    await store.setPlayer(pin, player);
-                    await broadcastPlayerUpdate(io, pin, pId);
-                }
+            await promise;
+        } finally {
+            if (activeAIPromises[pin]) {
+                activeAIPromises[pin] = activeAIPromises[pin].filter(p => p !== promise);
             }
-            console.log(`[AI Queue] Finished batch for pin ${pin}. Updated ${modCount} scores.`);
-        } catch (err) {
-            console.error('[AI Queue] Background processing error:', err);
         }
     }, 4000);
 }
 
+async function flushAndAwaitAI(io: Server, pin: string) {
+    if (aiQueueThrottles[pin]) {
+        clearTimeout(aiQueueThrottles[pin]!);
+        aiQueueThrottles[pin] = null;
+        const queue = aiCheckQueues[pin];
+        if (queue && queue.length > 0) {
+            delete aiCheckQueues[pin];
+            if (!activeAIPromises[pin]) activeAIPromises[pin] = [];
+            const promise = processAIBatch(io, pin, queue);
+            activeAIPromises[pin].push(promise);
+            promise.finally(() => {
+                if (activeAIPromises[pin]) {
+                    activeAIPromises[pin] = activeAIPromises[pin].filter(p => p !== promise);
+                }
+            }).catch(e => console.error("Flush AI error:", e));
+        }
+    }
+    
+    if (activeAIPromises[pin] && activeAIPromises[pin].length > 0) {
+        console.log(`[finishGame] Awaiting ${activeAIPromises[pin].length} active AI checks for pin ${pin}...`);
+        await Promise.allSettled(activeAIPromises[pin]);
+    }
+}
 function generatePDFInWorker(quiz: any, players: any, groupName: string, teacherName: string): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         try {
@@ -207,6 +245,10 @@ function generatePDFInWorker(quiz: any, players: any, groupName: string, teacher
 async function finishGame(io: Server, pin: string) {
     try {
         console.log(`[finishGame] Starting for pin ${pin}`);
+        
+        // Ensure AI checks are fully processed before finishing
+        await flushAndAwaitAI(io, pin);
+
         const game = await store.getGame(pin);
         if (!game) {
             console.log(`[finishGame] Game not found for pin ${pin}`);
