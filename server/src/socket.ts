@@ -44,7 +44,7 @@ function scrubSinglePlayer(game: any, p: any) {
             return isValidAnswer && isNotInfoSlide;
         }).length;
 
-        console.log(`[Progress Debug] Player: ${p.id}, name: ${p.name}, answers: ${Object.keys(p.answers || {}).length}, questions: ${questionsArr.length}, count: ${answeredCount}`);
+        console.log(`[Progress Debug] Player: ${p.id}, name: ${p.name}, answers keys: ${JSON.stringify(Object.keys(p.answers || {}))}, questions: ${questionsArr.length}, count: ${answeredCount}`);
 
         return {
             id: p.id,
@@ -60,66 +60,54 @@ function scrubSinglePlayer(game: any, p: any) {
 }
 
 async function broadcastPlayerUpdate(io: Server, pin: string, playerId?: string) {
-    const metadata = await store.getGameMetadata(pin);
-    if (!metadata || !metadata.hostId || metadata.hostId === 'system') return;
+    if (!pendingPlayerUpdates[pin]) pendingPlayerUpdates[pin] = new Set();
+    if (playerId) {
+        pendingPlayerUpdates[pin].add(playerId);
+    } else {
+        pendingPlayerUpdates[pin].add('ALL');
+    }
 
-    if (metadata.isUnitQuiz) {
-        if (metadata.status === 'LOBBY') {
-            const fullGame = await store.getGame(pin);
-            if (fullGame) {
-                io.to(pin).emit('player-update', scrubPlayers(fullGame));
-            }
+    if (updateThrottles[pin]) return;
+
+    updateThrottles[pin] = setTimeout(async () => {
+        const metadata = await store.getGameMetadata(pin);
+        console.log(`[Broadcast Debug] Pin ${pin}, hostId: ${metadata?.hostId}, hasQuiz: ${!!metadata?.quiz}, hasQuestions: ${!!metadata?.quiz?.questions}`);
+        if (!metadata || !metadata.hostId || metadata.hostId === 'system') {
+            updateThrottles[pin] = null;
             return;
         }
 
-        if (!pendingPlayerUpdates[pin]) pendingPlayerUpdates[pin] = new Set();
-        if (playerId) {
-            pendingPlayerUpdates[pin].add(playerId);
-        } else {
-            pendingPlayerUpdates[pin].add('ALL');
-        }
+        const updates = Array.from(pendingPlayerUpdates[pin]);
+        pendingPlayerUpdates[pin].clear();
+        updateThrottles[pin] = null;
 
-        if (updateThrottles[pin]) return;
+        if (updates.length === 0) return;
 
-        updateThrottles[pin] = setTimeout(async () => {
-            const updates = pendingPlayerUpdates[pin];
-            if (!updates) return;
-
-            try {
-                if (updates.has('ALL')) {
-                    const fullGame = await store.getGame(pin);
-                    if (fullGame) {
-                        io.to(pin).emit('player-update', scrubPlayers(fullGame));
-                    }
-                } else {
-                    const changedPlayers: any[] = [];
-                    for (const pId of Array.from(updates)) {
-                        if (pId === 'ALL') continue;
-                        const p = await store.getPlayer(pin, pId as string);
-                        if (p) {
-                            changedPlayers.push(scrubSinglePlayer(metadata, p));
-                        }
-                    }
-
-                    if (changedPlayers.length > 0) {
-                        io.to(pin).emit('player-update-delta', changedPlayers);
+        try {
+            if (updates.includes('ALL')) {
+                const fullGame = await store.getGame(pin);
+                if (fullGame) {
+                    io.to(pin).emit('player-update', scrubPlayers(fullGame));
+                }
+            } else {
+                const changedPlayers: any[] = [];
+                for (const pId of updates) {
+                    if (pId === 'ALL') continue;
+                    const p = await store.getPlayer(pin, pId as string);
+                    if (p) {
+                        const scrubbed = scrubSinglePlayer(metadata, p);
+                        changedPlayers.push(scrubbed);
                     }
                 }
-            } catch (err) {
-                console.error('[broadcastPlayerUpdate] Error:', err);
-            } finally {
-                if (pendingPlayerUpdates[pin]) {
-                    pendingPlayerUpdates[pin].clear();
+
+                if (changedPlayers.length > 0) {
+                    io.to(pin).emit('player-update-delta', changedPlayers);
                 }
-                updateThrottles[pin] = null;
             }
-        }, 1000);
-    } else {
-        const game = await store.getGame(pin);
-        if (game) {
-            io.to(pin).emit('player-update', scrubPlayers(game));
+        } catch (err) {
+            console.error('[broadcastPlayerUpdate] Error:', err);
         }
-    }
+    }, 1000);
 }
 
 async function enqueueAICheck(io: Server, pin: string, playerId: string, qIdx: number, text: string, answer: string, type: string, acceptedAnswers?: string[]) {
