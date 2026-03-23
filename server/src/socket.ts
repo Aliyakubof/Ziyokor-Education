@@ -31,18 +31,23 @@ function scrubPlayers(game: any, players?: any[]) {
 
 function scrubSinglePlayer(game: any, p: any) {
     if (game.isUnitQuiz) {
+        let questions = game.quiz?.questions;
+        if (typeof questions === 'string') {
+            try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+        }
+        const questionsArr = Array.isArray(questions) ? questions : [];
+        
+        const answeredCount = Object.entries(p.answers || {}).filter(([qIdx, a]) => {
+            const idx = Number(qIdx);
+            const isValidAnswer = a !== "" && a !== null && a !== undefined;
+            const isNotInfoSlide = questionsArr[idx]?.type !== 'info-slide';
+            return isValidAnswer && isNotInfoSlide;
+        }).length;
+
         return {
             id: p.id,
             name: p.name,
-            answeredCount: Object.entries(p.answers || {}).filter(([qIdx, a]) => {
-                const isValidAnswer = a !== "" && a !== null && a !== undefined;
-                let questions = game.quiz?.questions;
-                if (typeof questions === 'string') {
-                    try { questions = JSON.parse(questions); } catch (e) { questions = []; }
-                }
-                const isNotInfoSlide = (questions as any[])?.[Number(qIdx)]?.type !== 'info-slide';
-                return isValidAnswer && isNotInfoSlide;
-            }).length,
+            answeredCount,
             status: p.status,
             isFinished: p.isFinished,
             isCheater: p.isCheater,
@@ -849,6 +854,36 @@ export function initSocket(io: Server) {
                 }
             } else if (game.status === 'FINISHED') {
                 socket.emit('game-over', game.players);
+            }
+        });
+
+        socket.on('host-end-game', async (pin: string) => {
+            const game = await store.getGame(pin);
+            if (game && (game.hostId === socket.id || game.hostId === 'system')) {
+                await finishGame(io, pin);
+            }
+        });
+
+        socket.on('unit-player-finish', async ({ pin }: { pin: string }) => {
+            const playerId = (socket as any).studentId || socket.id;
+            const player = await store.getPlayer(pin, playerId);
+            if (player) {
+                player.isFinished = true;
+                await store.setPlayer(pin, player);
+                
+                // Fetch full game to check if we should send results immediately
+                const game = await store.getGame(pin);
+                if (game) {
+                    // Send confirmation to the student themselves
+                    // Usually we might want to send correct answers here if it's a unit quiz
+                    socket.emit('unit-finished', { 
+                        score: player.score, 
+                        // hidden: game.isUnitQuiz // If we want to hide results until teacher ends it
+                    });
+
+                    // Update the host so they see the "Barchasi tayyor" status
+                    await broadcastPlayerUpdate(io, pin, playerId);
+                }
             }
         });
         

@@ -12,6 +12,7 @@ export interface Player {
     hp?: number;
     combo?: number;
     lastAnswerTime?: number;
+    isFinished?: boolean;
 }
 
 export interface Teacher {
