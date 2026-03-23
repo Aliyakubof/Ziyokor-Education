@@ -126,9 +126,14 @@ export default function HostGame() {
         });
         // ... (rest of the useEffect is similar, but I'll update the whole block for safety)
 
-        socket.on('unit-game-started', (data: { questions: any[], endTime?: number, title?: string }) => {
+        socket.on('unit-game-started', (data: { questions: any, endTime?: number, title?: string }) => {
             setIsUnitMode(true);
-            setTotalQuestionsCount(data.questions.filter(q => q.type !== 'info-slide').length);
+            let questions = data.questions;
+            if (typeof questions === 'string') {
+                try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+            }
+            const questionsArr = Array.isArray(questions) ? questions : [];
+            setTotalQuestionsCount(questionsArr.filter((q: any) => q.type !== 'info-slide').length);
             setGlobalEndTime(data.endTime || null);
             setQuizTitle(data.title || '');
             setGameStarted(true);

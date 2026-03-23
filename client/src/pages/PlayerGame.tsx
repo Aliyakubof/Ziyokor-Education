@@ -128,10 +128,15 @@ export default function PlayerGame() {
             setView('WAITING');
             if (data?.title) setQuizTitle(data.title);
         });
-        socket.on('unit-game-started', (data: { questions: any[], endTime: number, title: string, createdAt?: number, isDuel?: boolean }) => {
+        socket.on('unit-game-started', (data: { questions: any, endTime: number, title: string, createdAt?: number, isDuel?: boolean }) => {
             console.log('[Unit] Game started event received:', data);
 
-            if (!data || !data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
+            let questions = data?.questions;
+            if (typeof questions === 'string') {
+                try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+            }
+
+            if (!questions || !Array.isArray(questions) || questions.length === 0) {
                 console.error('Invalid questions data received for unit game:', data);
                 setError('Savollar yuklanishida xatolik yuz berdi.');
                 setView('WAITING');
@@ -152,7 +157,7 @@ export default function PlayerGame() {
             }
 
             setIsUnitMode(true);
-            setUnitQuestions(data.questions);
+            setUnitQuestions(questions);
             setQuizTitle(data.title);
 
             // Reload answers after possible reset
@@ -167,11 +172,11 @@ export default function PlayerGame() {
             }
 
             // Find first unanswered question or stay at 0
-            const firstUnanswered = data.questions.findIndex((_, idx) => savedAnswers[idx] === undefined);
+            const firstUnanswered = questions.findIndex((_, idx) => savedAnswers[idx] === undefined);
             const nextIdx = firstUnanswered === -1 ? 0 : firstUnanswered;
 
             setCurrentUnitIndex(nextIdx);
-            setQuestion(data.questions[nextIdx]);
+            setQuestion(questions[nextIdx]);
             setView('PLAYING');
             if (data.isDuel) setIsDuel(true);
         });

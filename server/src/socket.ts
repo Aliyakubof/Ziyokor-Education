@@ -332,7 +332,12 @@ async function sendQuestion(io: Server, pin: string) {
     const game = await store.getGame(pin);
     if (!game) return;
 
-    const question = game.quiz.questions[game.currentQuestionIndex];
+    let questions = game.quiz.questions;
+    if (typeof questions === 'string') {
+        try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+    }
+    const questionsArr = Array.isArray(questions) ? questions : [];
+    const question = questionsArr[game.currentQuestionIndex];
     if (!question) return;
 
     const timeLimit = game.timePerQuestion || question.timeLimit || 20;
@@ -341,7 +346,7 @@ async function sendQuestion(io: Server, pin: string) {
         ...question,
         timeLimit,
         questionIndex: game.currentQuestionIndex + 1,
-        totalQuestions: game.quiz.questions.length
+        totalQuestions: questionsArr.length
     });
 
     const questionDataForPlayer: any = {
@@ -523,8 +528,12 @@ export function initSocket(io: Server) {
                 socket.emit('joined', { name: existingPlayer.name, playerId });
                 if (game.status === 'ACTIVE') {
                     if (game.isUnitQuiz) {
+                        let questions = game.quiz.questions;
+                        if (typeof questions === 'string') {
+                            try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+                        }
                         socket.emit('unit-game-started', {
-                            questions: game.quiz.questions,
+                            questions,
                             title: game.quiz.title,
                             isDuel: (game as any).isDuel,
                             createdAt: (game as any).createdAt
@@ -560,8 +569,12 @@ export function initSocket(io: Server) {
             socket.emit('joined', { name, playerId });
             if (game.status === 'ACTIVE') {
                 if (game.isUnitQuiz) {
+                    let questions = game.quiz.questions;
+                    if (typeof questions === 'string') {
+                        try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+                    }
                     socket.emit('unit-game-started', {
-                        questions: game.quiz.questions,
+                        questions,
                         title: game.quiz.title,
                         isDuel: (game as any).isDuel,
                         createdAt: (game as any).createdAt
@@ -586,8 +599,12 @@ export function initSocket(io: Server) {
                         (game as any).endTime = Date.now() + (timeLimit * 60 * 1000);
                     }
                     await store.setGame(pin, game);
+                    let questions = game.quiz.questions;
+                    if (typeof questions === 'string') {
+                        try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+                    }
                     io.to(pin).emit('unit-game-started', {
-                        questions: game.quiz.questions,
+                        questions,
                         endTime: (game as any).endTime,
                         title: game.quiz.title,
                         createdAt: (game as any).createdAt
@@ -811,21 +828,32 @@ export function initSocket(io: Server) {
 
             if (game.status === 'ACTIVE') {
                 if (game.isUnitQuiz) {
+                    let questions = game.quiz.questions;
+                    if (typeof questions === 'string') {
+                        try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+                    }
                     socket.emit('unit-game-started', {
-                        questions: game.quiz.questions,
+                        questions,
                         endTime: (game as any).endTime,
                         title: game.quiz.title,
                         createdAt: (game as any).createdAt
                     });
                 } else {
                     socket.emit('game-started', { title: game.quiz.title });
-                    const question = game.quiz.questions[game.currentQuestionIndex];
+
+                    let questions = game.quiz.questions;
+                    if (typeof questions === 'string') {
+                        try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+                    }
+                    const questionsArr = Array.isArray(questions) ? questions : [];
+
+                    const question = questionsArr[game.currentQuestionIndex];
                     if (question) {
                         socket.emit('question-new', {
                             ...question,
                             timeLimit: game.timePerQuestion || question.timeLimit || 20,
                             questionIndex: game.currentQuestionIndex + 1,
-                            totalQuestions: game.quiz.questions.length
+                            totalQuestions: questionsArr.length
                         });
                     }
                 }
@@ -844,8 +872,12 @@ export function initSocket(io: Server) {
             // Send current game state to player
             if (game.status === 'ACTIVE') {
                 if (game.isUnitQuiz) {
+                    let questions = game.quiz.questions;
+                    if (typeof questions === 'string') {
+                        try { questions = JSON.parse(questions); } catch (e) { questions = []; }
+                    }
                     socket.emit('unit-game-started', {
-                        questions: game.quiz.questions,
+                        questions,
                         title: game.quiz.title,
                         isDuel: (game as any).isDuel,
                         createdAt: (game as any).createdAt
