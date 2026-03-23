@@ -560,19 +560,19 @@ export default function PlayerGame() {
             };
 
             return (
-                <div className="w-full max-w-4xl mx-auto space-y-6">
-                    <div className="rounded-[2.5rem] p-8 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                <div className="w-full max-w-4xl mx-auto space-y-4">
+                    <div className="rounded-[2rem] p-4 md:p-8 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                         {isReview && (
-                            <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isAllCorrect ? 'bg-emerald-50 text-emerald-600' : (earned > 0 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600')}`}>
+                            <div className={`mb-4 p-3 rounded-2xl text-center font-black text-sm ${isAllCorrect ? 'bg-emerald-50 text-emerald-600' : (earned > 0 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600')}`}>
                                 NATIJA: {earned}/{total}
                             </div>
                         )}
 
-                        <h2 className="text-center text-xl font-bold opacity-30 italic mb-8" style={{ color: 'var(--text-color)' }}>Fill in the blanks from the box</h2>
+                        <h2 className="text-center text-sm font-bold opacity-30 italic mb-4" style={{ color: 'var(--text-color)' }}>So'zlar qutisidan to'ldiring</h2>
 
-                        {/* Word Box - clickable words */}
-                        <div className="flex flex-wrap justify-center gap-2 mb-10 p-4 rounded-2xl border-2 border-dashed min-h-[100px] transition-colors" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}>
-                            {question.options.map((opt, i) => {
+                        {/* Word Bank — compact & scrollable on mobile */}
+                        <div className="flex flex-wrap justify-center gap-2 mb-6 p-3 rounded-2xl border-2 border-dashed transition-colors" style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}>
+                            {question.options.map((opt: string, i: number) => {
                                 const isUsed = usedWords.has(opt);
                                 return (
                                     <motion.button
@@ -581,14 +581,11 @@ export default function PlayerGame() {
                                         onClick={() => !isUsed && handleWordClick(opt)}
                                         disabled={isReview || isUsed}
                                         initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: isUsed ? 0.3 : 1, scale: isUsed ? 0.9 : 1 }}
-                                        whileHover={{ scale: isUsed ? 0.9 : 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        className={`px-4 py-2 rounded-xl border font-bold shadow-sm transition-all
-                                            ${isUsed
-                                                ? 'opacity-20 cursor-not-allowed line-through'
-                                                : 'shadow-md active:scale-95 cursor-pointer'
-                                            }`}
+                                        animate={{ opacity: isUsed ? 0.25 : 1, scale: isUsed ? 0.9 : 1 }}
+                                        whileTap={{ scale: 0.92 }}
+                                        className={`px-3 py-1.5 rounded-xl border-2 font-bold text-sm transition-all ${
+                                            isUsed ? 'cursor-not-allowed line-through' : 'active:scale-95 cursor-pointer shadow-sm'
+                                        }`}
                                         style={{ 
                                             backgroundColor: isUsed ? 'transparent' : 'var(--card-bg)', 
                                             borderColor: isUsed ? 'var(--border-color)' : 'var(--primary-color)',
@@ -598,12 +595,12 @@ export default function PlayerGame() {
                                         {opt}
                                     </motion.button>
                                 );
-                            })}
+            })}
                         </div>
 
                         {/* Question text with blank slots */}
-                        <div className="text-xl md:text-2xl leading-loose text-center" style={{ color: 'var(--text-color)' }}>
-                            {parts.map((part, i) => (
+                        <div className="text-base md:text-2xl leading-loose text-center" style={{ color: 'var(--text-color)' }}>
+                            {parts.map((part: string, i: number) => (
                                 <span key={i}>
                                     {part}
                                     {i < parts.length - 1 && (
@@ -615,25 +612,25 @@ export default function PlayerGame() {
                                                     disabled={isReview}
                                                     initial={{ scale: 0.8 }}
                                                     animate={{ scale: 1 }}
-                                                    whileHover={{ scale: 1.1 }}
-                                                    className={`mx-2 px-3 py-1 rounded-xl border-2 font-bold transition-all align-middle
+                                                    whileTap={{ scale: 0.92 }}
+                                                    className={`mx-1 px-2 py-0.5 rounded-xl border-2 font-bold transition-all align-middle inline-flex items-center gap-1
                                                         ${isReview
                                                             ? (currentAnswersList[i]?.toLowerCase().trim() === question.acceptedAnswers?.[i]?.toLowerCase().trim()
                                                                 ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
                                                                 : 'bg-red-50 border-red-400 text-red-700')
-                                                            : 'hover:bg-red-50 hover:border-red-300 hover:text-red-600'
+                                                            : 'active:bg-red-50 active:border-red-300 active:text-red-600'
                                                         }`}
                                                     style={{ 
                                                         backgroundColor: isReview ? '' : 'color-mix(in srgb, var(--primary-color), transparent 90%)',
                                                         borderColor: isReview ? '' : 'var(--primary-color)',
                                                         color: isReview ? '' : 'var(--primary-color)'
                                                     }}
-                                                    title={!isReview ? "O'chirish uchun bosing" : undefined}
                                                 >
                                                     {currentAnswersList[i]}
+                                                    {!isReview && <span className="text-xs opacity-60">✕</span>}
                                                 </motion.button>
                                             ) : (
-                                                <span className="mx-2 inline-block w-24 border-b-2 border-dashed border-slate-400 text-center text-slate-300 align-middle">
+                                                <span className="mx-1 inline-block w-16 md:w-24 border-b-2 border-dashed border-slate-400 text-center text-slate-300 align-middle">
                                                     ?
                                                 </span>
                                             )

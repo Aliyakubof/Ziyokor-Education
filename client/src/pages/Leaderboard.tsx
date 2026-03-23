@@ -264,11 +264,10 @@ export default function Leaderboard() {
                                         />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className={`font-bold truncate`} style={{ color: 'var(--text-color)' }}>
+                                        <h3 className="font-bold truncate" style={{ color: 'var(--text-color)' }}>
                                             {player.name}
                                             {player.id === user?.id && <span className="ml-2 text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full" style={{ color: 'inherit' }}>Siz</span>}
                                         </h3>
-                                        <p className="text-[10px] font-semibold uppercase opacity-50" style={{ color: 'var(--text-color)' }}>{player.group_name}</p>
                                     </div>
                                     
                                     {/* Challenge Button */}

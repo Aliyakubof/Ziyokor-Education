@@ -94,12 +94,11 @@ export default function DuelLobby() {
         setInvitations(prev => prev.filter(i => i.fromId !== fromId));
     };
 
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (searchTerm.length < 3) return;
+    const handleSearch = async (query: string) => {
+        if (query.length < 3) { setSearchResults([]); return; }
         setIsSearching(true);
         try {
-            const res = await apiFetch(`/api/students/search?q=${encodeURIComponent(searchTerm)}`);
+            const res = await apiFetch(`/api/students/search?q=${encodeURIComponent(query)}`);
             if (res.ok) setSearchResults(await res.json());
         } catch (err) {
             console.error(err);
@@ -107,6 +106,12 @@ export default function DuelLobby() {
             setIsSearching(false);
         }
     };
+
+    // Live search: debounced auto-search as user types
+    useEffect(() => {
+        const timer = setTimeout(() => handleSearch(searchTerm), 350);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     const handleChallengeClick = async (targetId: string, targetName: string) => {
         if (!user?.id) return;
@@ -215,7 +220,7 @@ export default function DuelLobby() {
                         <h2 className="text-lg font-black" style={{ color: 'var(--text-color)' }}>Raqib qidirish</h2>
                     </div>
 
-                    <form onSubmit={handleSearch} className="relative">
+                    <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchTerm); }} className="relative">
                         <input
                             type="text"
                             placeholder="Ism yoki ID orqali qidirish..."
@@ -296,7 +301,7 @@ export default function DuelLobby() {
                         {[
                             { name: "Bilimdon", desc: "Bilim - eng katta kuch. Har bir to'g'ri javob uchun barqaror va ishonchli zarar yetkazadi.", icon: BookOpen, color: "text-blue-500", bg: "bg-blue-500/10" },
                             { name: "Botir", desc: "Tezkor hujum ustasi. Tez va chaqqon javob berilganda raqibga juda katta zarar yetkazadi.", icon: Zap, color: "text-yellow-500", bg: "bg-yellow-500/10" },
-                            { name: "Mergab", desc: "Aniq va xatosiz. Kombosini uzoq ushlab tura oladi va har bir kombinatsiya uchun qo'shimcha bonus oladi.", icon: Target, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                            { name: "Mergan", desc: "Aniq va xatosiz. Kombosini uzoq ushlab tura oladi va har bir kombinatsiya uchun qo'shimcha bonus oladi.", icon: Target, color: "text-emerald-500", bg: "bg-emerald-500/10" },
                             { name: "Lochin", desc: "O'tkir nigoh. Raqibning xatolaridan unumli foydalanadi va kutilmagan kuchli (kritik) zarba beradi.", icon: Award, color: "text-indigo-500", bg: "bg-indigo-500/10" },
                             { name: "Himoyachi", desc: "Mustahkam qalqon. O'z nomiga munosib - u raqibdan keladigan zararlarning bir qismini qaytara oladi.", icon: Shield, color: "text-rose-500", bg: "bg-rose-500/10" },
                             { name: "Omadli", desc: "Kutilmagan zarbalar ustasi. Har bir javobda omad kulib boqsa, zararni 2 barobargacha oshirishi mumkin.", icon: Dice5, color: "text-purple-500", bg: "bg-purple-500/10" }

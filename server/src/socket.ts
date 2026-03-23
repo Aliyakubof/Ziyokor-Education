@@ -967,17 +967,30 @@ export function initSocket(io: Server) {
                 player.isFinished = true;
                 await store.setPlayer(pin, player);
                 
-                // Fetch full game to check if we should send results immediately
                 const game = await store.getGame(pin);
                 if (game) {
-                    // Send confirmation to the student themselves
-                    // Usually we might want to send correct answers here if it's a unit quiz
+                    // Send results to this player
                     socket.emit('unit-finished', { 
                         score: player.score, 
-                        // hidden: game.isUnitQuiz // If we want to hide results until teacher ends it
                     });
 
-                    // Update the host so they see the "Barchasi tayyor" status
+                    // --- DUEL: force-finish the opponent too ---
+                    if ((game as any).isDuel) {
+                        const opponent = game.players.find((p: any) => p.id !== playerId);
+                        if (opponent && !opponent.isFinished) {
+                            opponent.isFinished = true;
+                            await store.setPlayer(pin, opponent);
+                            // Notify the opponent that the game has ended
+                            const opponentSocketId = await store.getSocket(opponent.id);
+                            if (opponentSocketId) {
+                                io.to(opponentSocketId).emit('unit-finished', {
+                                    score: opponent.score,
+                                });
+                            }
+                        }
+                    }
+
+                    // Update host dashboard
                     await broadcastPlayerUpdate(io, pin, playerId);
                 }
             }
