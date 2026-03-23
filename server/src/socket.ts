@@ -351,34 +351,68 @@ export function initSocket(io: Server) {
     io.on('connection', (socket: Socket) => {
         console.log('New client connected:', socket.id);
 
-        // Host: Create Game
-        socket.on('host-create-game', async (quizId: string) => {
+        // Host: Create Game (Standard Quizzes)
+        socket.on('host-create-game', async (data: any) => {
             try {
+                const quizId = typeof data === 'string' ? data : data.quizId;
+                const clientHostId = typeof data === 'object' ? data.hostId : null;
+
                 const result = await query('SELECT * FROM quizzes WHERE id = $1', [quizId]);
                 if (result.rowCount === 0) {
                     socket.emit('error', 'Quiz not found');
                     return;
                 }
                 const quiz = result.rows[0];
+
+                // Persistence: Check if this host already has an active lobby for this quiz
+                if (clientHostId) {
+                    const allGames = await store.getAllGames();
+                    const existingGamePin = Object.keys(allGames).find(pin => {
+                        const g = allGames[pin];
+                        return !g.isUnitQuiz && g.quiz.id === quizId && 
+                               (g as any).hostId_original === clientHostId && 
+                               g.status !== 'FINISHED';
+                    });
+
+                    if (existingGamePin) {
+                        const g = allGames[existingGamePin];
+                        g.hostId = socket.id; // Update current socket
+                        await store.setGame(existingGamePin, g);
+                        socket.join(existingGamePin);
+                        socket.emit('game-created', existingGamePin);
+                        
+                        // Send existing players if any
+                        const players = g.players || [];
+                        socket.emit('player-update', players);
+                        
+                        console.log(`[host-create-game] Recovered existing lobby: ${existingGamePin} for host ${clientHostId}`);
+                        return;
+                    }
+                }
+
                 const pin = await generatePin();
                 const game = {
                     pin,
                     quiz,
                     hostId: socket.id,
+                    hostId_original: clientHostId, // Store original ID for persistence
                     players: [],
                     status: 'LOBBY' as 'LOBBY',
-                    currentQuestionIndex: -1
+                    currentQuestionIndex: -1,
+                    isUnitQuiz: false,
+                    createdAt: Date.now()
                 };
                 await store.setGame(pin, game);
                 socket.join(pin);
                 socket.emit('game-created', pin);
             } catch (err) {
+                console.error('[host-create-game] error:', err);
                 socket.emit('error', 'Database error');
             }
         });
 
         // Host: Create Unit Game
-        socket.on('host-create-unit-game', async ({ quizId, groupId }: { quizId: string, groupId: string }) => {
+        socket.on('host-create-unit-game', async ({ quizId, groupId, hostId }: { quizId: string, groupId: string, hostId?: string }) => {
             try {
                 // Check if a game already exists for this (quizId, groupId) that is not FINISHED
                 const allGames = await store.getAllGames();
@@ -392,6 +426,7 @@ export function initSocket(io: Server) {
                 if (existingGamePin) {
                     const game = allGames[existingGamePin];
                     game.hostId = socket.id; // Update hostId to current socket
+                    if (hostId) (game as any).hostId_original = hostId;
                     await store.setGame(existingGamePin, game);
                     socket.join(existingGamePin);
                     socket.emit('game-created', existingGamePin);
@@ -401,6 +436,7 @@ export function initSocket(io: Server) {
                     if (fullGame) {
                         socket.emit('player-update', scrubPlayers(fullGame));
                     }
+                    console.log(`[host-create-unit-game] Reconnected to existing unit game: ${existingGamePin}`);
                     return;
                 }
 
@@ -414,6 +450,7 @@ export function initSocket(io: Server) {
                     quiz,
                     groupId,
                     hostId: socket.id,
+                    hostId_original: hostId,
                     players: [],
                     status: 'LOBBY' as 'LOBBY',
                     currentQuestionIndex: -1,
@@ -442,11 +479,27 @@ export function initSocket(io: Server) {
                 return;
             }
 
+            // Server-side Name Resolution: Always trust DB if studentId is provided
+            if (studentId) {
+                try {
+                    const studentRes = await query('SELECT name FROM students WHERE id = $1', [studentId]);
+                    if (studentRes.rowCount && studentRes.rowCount > 0) {
+                        name = studentRes.rows[0].name;
+                        console.log(`[join-game] Resolved name for ${studentId}: ${name}`);
+                    }
+                } catch (err) {
+                    console.error('[join-game] DB name resolution error:', err);
+                }
+            }
+
             const playerId = studentId || socket.id;
             const existingPlayer = await store.getPlayer(pin, playerId);
 
             if (existingPlayer) {
                 existingPlayer.socketId = socket.id;
+                // If they rejoined, they might have a generic name but now we resolved it
+                if (studentId) existingPlayer.name = name; 
+
                 await store.setPlayer(pin, existingPlayer);
                 socket.join(pin);
                 socket.emit('joined', { name: existingPlayer.name, playerId });
@@ -719,13 +772,21 @@ export function initSocket(io: Server) {
 
         socket.on('host-get-status', async (pin: string) => {
             const game = await store.getGame(pin);
-            if (!game) return;
+            if (!game) {
+                socket.emit('error', 'O\'yin topilmadi yoki yakunlangan.');
+                return;
+            }
 
-            // Allow the re-connecting socket to become the host if it's not system-hosted
+            // Allow any socket to claim host role on this PIN if it's not system-hosted
             if (game.hostId !== 'system') {
                 game.hostId = socket.id;
                 await store.setGame(pin, game);
                 socket.join(pin);
+            }
+
+            if (game.status === 'LOBBY') {
+                // If they refresh in a lobby, make sure they get the PIN back
+                socket.emit('game-created', pin);
             }
 
             if (game.status === 'ACTIVE') {

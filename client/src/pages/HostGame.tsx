@@ -105,8 +105,19 @@ export default function HostGame() {
             socket.connect();
         }
 
-        // Request status immediately
-        socket.emit('host-get-status', pin);
+        const handleConnect = () => {
+            socket.emit('host-get-status', pin);
+        };
+
+        socket.on('connect', handleConnect);
+        if (socket.connected) {
+            handleConnect();
+        }
+
+        socket.on('error', (msg) => {
+            alert(msg || "O'yin topilmadi yoki yakunlangan.");
+            navigate('/teacher');
+        });
 
         socket.on('game-started', (data: any) => {
             if (data?.endTime) setGlobalEndTime(data.endTime);
@@ -157,6 +168,8 @@ export default function HostGame() {
         });
 
         return () => {
+            socket.off('connect', handleConnect);
+            socket.off('error');
             socket.off('game-started');
             socket.off('unit-game-started');
             socket.off('player-update');
@@ -165,7 +178,7 @@ export default function HostGame() {
             socket.off('answers-count');
             socket.off('game-over');
         };
-    }, [pin]);
+    }, [pin, navigate]);
 
     useEffect(() => {
         // Per-question timer (only runs if NO global timer or if we want both. For now, let's keep it for visual)

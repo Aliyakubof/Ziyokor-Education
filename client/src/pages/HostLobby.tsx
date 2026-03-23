@@ -3,16 +3,18 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Play } from 'lucide-react';
 import { socket } from '../socket';
+import { useAuth } from '../AuthContext';
 
 export default function HostLobby() {
     const { quizId } = useParams();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [pin, setPin] = useState('');
     const [players, setPlayers] = useState<any[]>([]);
 
     useEffect(() => {
         socket.connect();
-        socket.emit('host-create-game', quizId);
+        socket.emit('host-create-game', { quizId, hostId: user?.id || user?.name });
 
         socket.on('game-created', (gamePin) => {
             setPin(gamePin);
