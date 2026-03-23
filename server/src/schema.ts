@@ -226,6 +226,7 @@ CREATE TABLE IF NOT EXISTS extra_class_bookings (
     topic TEXT,
     is_forced BOOLEAN DEFAULT FALSE,
     is_completed BOOLEAN DEFAULT FALSE,
+    booking_date DATE,
     created_at TIMESTAMP DEFAULT NOW()
 );
 

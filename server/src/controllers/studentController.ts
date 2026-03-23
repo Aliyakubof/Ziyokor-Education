@@ -350,22 +350,24 @@ export const bookExtraClass = async (req: Request, res: Response) => {
         const { studentId } = req.params;
         const { groupId, timeSlot, isForced, topic, bookingDate } = req.body;
 
-        // Check if student already has an ACTIVE (non-past, non-completed) booking
+        // Clean up stale/completed bookings (past date or is_completed)
         const existingRes = await query(
             `SELECT id, booking_date, is_completed FROM extra_class_bookings WHERE student_id = $1`,
             [studentId]
         );
         if (existingRes && existingRes.rowCount && existingRes.rowCount > 0) {
-            const existing = existingRes.rows[0];
-            const bookDate = existing.booking_date;
-            const isCompleted = existing.is_completed;
-            // Consider booking stale if date has passed OR is_completed
-            const isPast = bookDate ? new Date(bookDate + 'T23:59:59') < new Date() : false;
-            if (!isPast && !isCompleted) {
-                return res.status(400).json({ error: "Sizda allaqachon faol bron mavjud!" });
+            for (const existing of existingRes.rows) {
+                const bookDate = existing.booking_date;
+                const isCompleted = existing.is_completed;
+                const isPast = bookDate ? new Date(bookDate + 'T23:59:59') < new Date() : false;
+                if (isPast || isCompleted) {
+                    // Stale — auto-clean it
+                    await query('DELETE FROM extra_class_bookings WHERE id = $1', [existing.id]);
+                } else if (bookDate && bookingDate && bookDate === bookingDate) {
+                    // Student already has an active booking on the SAME date
+                    return res.status(400).json({ error: "Siz bu kunga allaqachon bron qilgansiz! Bir kunda faqat 1 ta bron mumkin." });
+                }
             }
-            // Stale booking — auto-clean it
-            await query('DELETE FROM extra_class_bookings WHERE student_id = $1', [studentId]);
         }
 
         // Check slot capacity for this specific date + time

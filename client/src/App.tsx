@@ -294,6 +294,14 @@ function App() {
               }
             />
             <Route
+              path="/manager/group/:groupId"
+              element={
+                <ProtectedRoute requiredRole="manager">
+                  <GroupDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/unit-lobby/:quizId/:groupId"
               element={
                 <ProtectedRoute>

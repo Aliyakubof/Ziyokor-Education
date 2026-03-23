@@ -83,7 +83,6 @@ router.get('/groups/:groupId/results', requireRole('admin', 'teacher', 'manager'
 router.get('/groups/:groupId/students', requireRole('admin', 'teacher', 'manager'), teacherController.getStudentsByGroup);
 router.get('/groups/:groupId/contact-logs', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupContactLogs);
 router.get('/groups/:groupId/contact-info-pdf', requireRole('admin', 'teacher', 'manager'), teacherController.getGroupContactInfoPDF);
-router.get('/students/:groupId', requireRole('admin', 'teacher', 'manager'), teacherController.getStudentsByGroup);
 
 // Teacher/Manager Dashboard Plural Aliases (Round 3 Fixes)
 router.get('/teachers/:teacherId/groups', requireRole('admin', 'teacher', 'manager'), teacherController.getTeacherGroups);

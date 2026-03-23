@@ -217,6 +217,7 @@ export const deleteStudent = async (req: Request, res: Response) => {
         await query('DELETE FROM contact_logs WHERE student_id = $1', [id]);
         await query('DELETE FROM student_purchases WHERE student_id = $1', [id]);
         await query('DELETE FROM student_telegram_subscriptions WHERE student_id = $1', [id]);
+        await query('DELETE FROM extra_class_bookings WHERE student_id = $1', [id]);
         const result = await query('DELETE FROM students WHERE id = $1', [id]);
         if (result.rowCount === 0) return res.status(404).json({ error: 'Student not found' });
         res.json({ success: true });

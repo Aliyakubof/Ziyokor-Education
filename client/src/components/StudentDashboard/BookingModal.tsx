@@ -16,14 +16,6 @@ const DAY_MAP: Record<string, number> = {
     'Chorshanba': 3, 'Payshanba': 4, 'Juma': 5, 'Shanba': 6
 };
 
-// Gets next occurrence of a weekday (dayIndex) on or after `from` date
-function nextOccurrence(from: Date, dayIndex: number): Date {
-    const d = new Date(from);
-    d.setHours(0, 0, 0, 0);
-    const diff = (dayIndex - d.getDay() + 7) % 7;
-    d.setDate(d.getDate() + (diff === 0 ? 7 : diff)); // if today is same day, go NEXT week
-    return d;
-}
 
 // Format date as "Seshanba, 25-mart"
 const MONTH_UZ = ['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr'];
@@ -39,44 +31,54 @@ const BookingModal: React.FC<BookingModalProps> = ({ groupSettings, availableTop
     const [selectedTopic, setSelectedTopic] = useState('');
     const [selectedSlot, setSelectedSlot] = useState<{ time: string; date: Date; key: string } | null>(null);
 
-    // Build list of (dayName, date, time) combos for the next 3 weeks
+    // Build list of (dayName, date, time) combos for only the SINGLE nearest extra class day
     const slots = useMemo(() => {
         const days: string[] = groupSettings?.extra_class_days || [];
         const times: string[] = groupSettings?.extra_class_times || [];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const result: { dayName: string; date: Date; time: string; key: string }[] = [];
+
+        if (days.length === 0 || times.length === 0) return [];
+
+        // Find the nearest upcoming extra class date (today counts if today is an extra day)
+        let nearestDate: Date | null = null;
+        let nearestDayName = '';
 
         days.forEach(dayName => {
             const dayIdx = DAY_MAP[dayName];
             if (dayIdx === undefined) return;
-
-            // Generate next 3 occurrences
-            for (let week = 0; week < 3; week++) {
-                const base = nextOccurrence(new Date(today.getTime() + week * 7 * 86400000), dayIdx);
-                // Skip if result already has this date (dedup)
-                times.forEach(range => {
-                    const parts = range.split('-');
-                    if (parts.length < 2) return;
-                    const start = parts[0].trim();
-                    const end = parts[1].trim();
-                    // generate 30 min slots within range
-                    let cur = new Date(`2000-01-01T${start}:00`);
-                    const endLimit = new Date(`2000-01-01T${end}:00`);
-                    while (cur < endLimit) {
-                        const timeStr = cur.toTimeString().slice(0, 5);
-                        const key = `${toISO(base)}_${timeStr}`;
-                        if (!result.find(r => r.key === key)) {
-                            result.push({ dayName, date: base, time: timeStr, key });
-                        }
-                        cur.setMinutes(cur.getMinutes() + 30);
-                    }
-                });
+            // If today is the same day of the week, use today; otherwise find next occurrence
+            const candidate = new Date(today);
+            const diff = (dayIdx - today.getDay() + 7) % 7;
+            candidate.setDate(today.getDate() + diff); // diff=0 means today
+            if (!nearestDate || candidate < nearestDate) {
+                nearestDate = candidate;
+                nearestDayName = dayName;
             }
         });
 
-        // Sort by date then time
-        result.sort((a, b) => a.date.getTime() - b.date.getTime() || a.time.localeCompare(b.time));
+        if (!nearestDate) return [];
+
+        const result: { dayName: string; date: Date; time: string; key: string }[] = [];
+        times.forEach(range => {
+            const parts = range.split('-');
+            if (parts.length < 2) return;
+            const start = parts[0].trim();
+            const end = parts[1].trim();
+            let cur = new Date(`2000-01-01T${start}:00`);
+            const endLimit = new Date(`2000-01-01T${end}:00`);
+            while (cur < endLimit) {
+                const timeStr = cur.toTimeString().slice(0, 5);
+                const key = `${toISO(nearestDate!)}_${timeStr}`;
+                if (!result.find(r => r.key === key)) {
+                    result.push({ dayName: nearestDayName, date: nearestDate!, time: timeStr, key });
+                }
+                cur.setMinutes(cur.getMinutes() + 30);
+            }
+        });
+
+        // Sort by time
+        result.sort((a, b) => a.time.localeCompare(b.time));
         return result;
     }, [groupSettings]);
 

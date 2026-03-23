@@ -163,7 +163,7 @@ export const deleteUnitQuiz = async (req: Request, res: Response) => {
 export const submitVocabBattle = async (req: Request, res: Response) => {
     try {
         const { studentId, battleId, score, total } = req.body;
-        if (!studentId || score === undefined || !total) {
+        if (!studentId || !battleId || score === undefined || !total) {
             return res.status(400).json({ error: 'Invalid data' });
         }
 
