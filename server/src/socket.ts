@@ -44,6 +44,8 @@ function scrubSinglePlayer(game: any, p: any) {
             return isValidAnswer && isNotInfoSlide;
         }).length;
 
+        console.log(`[Progress Debug] Player: ${p.id}, name: ${p.name}, answers: ${Object.keys(p.answers || {}).length}, questions: ${questionsArr.length}, count: ${answeredCount}`);
+
         return {
             id: p.id,
             name: p.name,
@@ -644,9 +646,11 @@ export function initSocket(io: Server) {
             (player as any).partialScoreMap[qIdx] = currentScore;
 
             await store.setPlayer(pin, player);
+            console.log(`[Answer Debug] Player ${player.id} answered Q${qIdx} in pin ${pin}. Answer: ${answer}`);
             if (callback) callback({ success: true });
 
             if (metadata.isUnitQuiz) {
+                console.log(`[Answer Debug] Triggering broadcast for unit quiz ${pin}`);
                 await broadcastPlayerUpdate(io, pin, player.id);
             }
 
