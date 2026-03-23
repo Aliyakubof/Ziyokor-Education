@@ -128,6 +128,12 @@ export default function PlayerGame() {
             setView('WAITING');
             if (data?.title) setQuizTitle(data.title);
         });
+
+        socket.on('unit-finished', (data: { score: number }) => {
+            setIsSubmitting(false);
+            setView('FINISHED');
+            console.log('[Unit] Finished successfully:', data);
+        });
         socket.on('unit-game-started', (data: { questions: any, endTime: number, title: string, createdAt?: number, isDuel?: boolean }) => {
             console.log('[Unit] Game started event received:', data);
 

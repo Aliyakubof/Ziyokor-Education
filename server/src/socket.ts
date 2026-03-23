@@ -83,10 +83,12 @@ async function broadcastPlayerUpdate(io: Server, pin: string, playerId?: string)
         if (updates.length === 0) return;
 
         try {
+            console.log(`[broadcastPlayerUpdate] Processing ${updates.length} updates for pin ${pin}. Throttled 1s.`);
             if (updates.includes('ALL')) {
                 const fullGame = await store.getGame(pin);
                 if (fullGame) {
                     io.to(pin).emit('player-update', scrubPlayers(fullGame));
+                    console.log(`[broadcastPlayerUpdate] Emitted player-update (FULL) to pin ${pin}. Players: ${fullGame.players.length}`);
                 }
             } else {
                 const changedPlayers: any[] = [];
@@ -101,6 +103,7 @@ async function broadcastPlayerUpdate(io: Server, pin: string, playerId?: string)
 
                 if (changedPlayers.length > 0) {
                     io.to(pin).emit('player-update-delta', changedPlayers);
+                    console.log(`[broadcastPlayerUpdate] Emitted player-update-delta to pin ${pin} for ${changedPlayers.length} players. IDs: ${changedPlayers.map(p => p.id).join(', ')}`);
                 }
             }
         } catch (err) {
@@ -202,134 +205,168 @@ function generatePDFInWorker(quiz: any, players: any, groupName: string, teacher
 }
 
 async function finishGame(io: Server, pin: string) {
-    const game = await store.getGame(pin);
-    if (!game) return;
-
-    game.status = 'FINISHED';
-    await store.setGame(pin, game);
-    const leaderboard = [...game.players].sort((a, b) => b.score - a.score);
-    if (game.isUnitQuiz) {
-        const hiddenLeaderboard = leaderboard.map(p => ({ ...p, score: 0 }));
-        if (game.hostId && game.hostId !== 'system') {
-            io.to(game.hostId).emit('game-over', leaderboard);
-        }
-        io.to(pin).emit('game-over', hiddenLeaderboard);
-    } else {
-        io.to(pin).emit('game-over', leaderboard);
-    }
-
-    if (game.isUnitQuiz) {
-        io.to(pin).emit('unit-finished', { hidden: true });
-    }
-
-    if (game.isDuel && game.duelId) {
-        const p1 = game.players[0];
-        const p2 = game.players[1];
-        
-        let winnerId = null;
-        if (p1 && p2) {
-            if ((p1.hp || 0) > (p2.hp || 0)) winnerId = p1.id;
-            else if ((p2.hp || 0) > (p1.hp || 0)) winnerId = p2.id;
-            else if (p1.score > p2.score) winnerId = p1.id;
-            else if (p2.score > p1.score) winnerId = p2.id;
+    try {
+        console.log(`[finishGame] Starting for pin ${pin}`);
+        const game = await store.getGame(pin);
+        if (!game) {
+            console.log(`[finishGame] Game not found for pin ${pin}`);
+            return;
         }
 
-        await query(
-            'UPDATE duels SET player1_score = $1, player2_score = $2, winner_id = $3, status = $4 WHERE id = $5',
-            [p1?.score || 0, p2?.score || 0, winnerId, 'completed', game.duelId]
-        );
-    }
+        // Mark game as finished in store
+        game.status = 'FINISHED';
+        await store.setGame(pin, game);
 
-    if (game.isUnitQuiz && game.groupId) {
+        const leaderboard = [...game.players].sort((a, b) => b.score - a.score);
+        if (game.isUnitQuiz) {
+            const hiddenLeaderboard = leaderboard.map(p => ({ ...p, score: 0 }));
+            if (game.hostId && game.hostId !== 'system') {
+                io.to(game.hostId).emit('game-over', leaderboard);
+            }
+            io.to(pin).emit('game-over', hiddenLeaderboard);
+            io.to(pin).emit('unit-finished', { hidden: true });
+            console.log(`[finishGame] Emitted unit-finished and game-over to pin ${pin}`);
+        } else {
+            io.to(pin).emit('game-over', leaderboard);
+        }
+
+        if (game.isDuel && game.duelId) {
+            const p1 = game.players[0];
+            const p2 = game.players[1];
+            
+            let winnerId = null;
+            if (p1 && p2) {
+                if ((p1.hp || 0) > (p2.hp || 0)) winnerId = p1.id;
+                else if ((p2.hp || 0) > (p1.hp || 0)) winnerId = p2.id;
+                else if (p1.score > p2.score) winnerId = p1.id;
+                else if (p2.score > p1.score) winnerId = p2.id;
+            }
+
+            await query(
+                'UPDATE duels SET player1_score = $1, player2_score = $2, winner_id = $3, status = $4 WHERE id = $5',
+                [p1?.score || 0, p2?.score || 0, winnerId, 'completed', game.duelId]
+            );
+            console.log(`[finishGame] Duel ${game.duelId} marked as completed.`);
+        }
+
+        let questions: any[] = [];
         try {
-            let questions: any[] = [];
-            try {
-                if (Array.isArray(game.quiz.questions)) {
-                    questions = game.quiz.questions;
-                } else if (typeof game.quiz.questions === 'string') {
-                    questions = JSON.parse(game.quiz.questions);
-                }
-            } catch (e) { questions = []; }
+            const quizQuestions = game.quiz?.questions;
+            if (Array.isArray(quizQuestions)) {
+                questions = quizQuestions;
+            } else if (typeof quizQuestions === 'string') {
+                questions = JSON.parse(quizQuestions);
+            }
+        } catch (e) {
+            console.error(`[finishGame] Error parsing questions:`, e);
+            questions = [];
+        }
 
-            let totalPossibleScore = 0;
-            questions.forEach((q: any) => {
-                if (q.type === 'info-slide') return;
-                if (q.type === 'matching' || q.type === 'word-box') {
-                    totalPossibleScore += q.acceptedAnswers?.length || 0;
+        let totalPossibleScore = 0;
+        questions.forEach((q: any) => {
+            if (q.type === 'info-slide') return;
+            if (q.type === 'matching' || q.type === 'word-box') {
+                totalPossibleScore += q.acceptedAnswers?.length || 0;
+            } else {
+                totalPossibleScore += 1;
+            }
+        });
+
+        // 1. Save results to DB
+        try {
+            console.log(`[finishGame] Inserting game results to DB for group ${game.groupId}`);
+            await query(
+                'INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results) VALUES ($1, $2, $3, $4, $5)',
+                [uuidv4(), game.groupId || null, game.quiz.title, totalPossibleScore, JSON.stringify(game.players)]
+            );
+            console.log(`[finishGame] DB insertion successful.`);
+        } catch (dbErr) {
+            console.error(`[finishGame] Database insertion failed:`, dbErr);
+        }
+
+        // 2. Generate and Send PDF
+        try {
+            let groupName = 'Noma\'lum Guruh';
+            let teacherName = 'Noma\'lum O\'qituvchi';
+            let teacherChatId = null;
+
+            if (game.groupId) {
+                const groupRes = await query('SELECT name, teacher_id FROM groups WHERE id = $1', [game.groupId]);
+                if (groupRes.rowCount && groupRes.rowCount > 0) {
+                    groupName = groupRes.rows[0].name;
+                    const teacherRes = await query('SELECT name, telegram_chat_id FROM teachers WHERE id = $1', [groupRes.rows[0].teacher_id]);
+                    if (teacherRes.rowCount && teacherRes.rowCount > 0) {
+                        teacherName = teacherRes.rows[0].name;
+                        teacherChatId = teacherRes.rows[0].telegram_chat_id;
+                    }
                 } else {
-                    totalPossibleScore += 1;
+                    console.log(`[finishGame] Group ID ${game.groupId} not found in DB.`);
+                }
+            } else {
+                console.log(`[finishGame] No group ID in game state.`);
+            }
+
+            console.log(`[finishGame] Generating PDF for ${groupName} by ${teacherName}...`);
+            let pdfBuffer: Buffer;
+            try {
+                pdfBuffer = await generatePDFInWorker(game.quiz, game.players, groupName, teacherName);
+            } catch (workerErr) {
+                console.error(`[finishGame] Worker PDF generation failed, falling back:`, workerErr);
+                pdfBuffer = await generateQuizResultPDF(game.quiz, game.players, groupName, teacherName);
+            }
+
+            const sanitizedGroupName = groupName.replace(/[^a-zA-Z0-9]/g, '_');
+            const pdfFilename = `Result_${sanitizedGroupName}_${Date.now()}.pdf`;
+            const pdfCaption = `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${groupName}\n👤 O'qituvchi: ${teacherName}`;
+
+            const sendPromises = [];
+
+            // Send to Teacher
+            if (teacherChatId) {
+                console.log(`[finishGame] Sending PDF to Teacher: ${teacherChatId}`);
+                sendPromises.push(bot.telegram.sendDocument(teacherChatId, {
+                    source: pdfBuffer,
+                    filename: pdfFilename
+                }, {
+                    caption: pdfCaption,
+                    parse_mode: 'HTML'
+                }).then(() => console.log(`[finishGame] PDF sent to Teacher.`))
+                  .catch(err => console.error(`[finishGame] Failed to send PDF to Teacher (${teacherChatId}):`, err)));
+            } else {
+                console.log(`[finishGame] Skipping Teacher Telegram: No chat ID.`);
+            }
+
+            // Send to Admin & Manager
+            const oversightRes = await query('SELECT name, telegram_chat_id FROM teachers WHERE id = ANY($1) AND telegram_chat_id IS NOT NULL', [[ADMIN_ID, MANAGER_ID]]);
+            console.log(`[finishGame] Oversight recipients found: ${oversightRes.rows.length}`);
+            oversightRes.rows.forEach((row: any) => {
+                if (row.telegram_chat_id && row.telegram_chat_id !== teacherChatId) {
+                    console.log(`[finishGame] Sending PDF to Oversight (${row.name}): ${row.telegram_chat_id}`);
+                    sendPromises.push(bot.telegram.sendDocument(row.telegram_chat_id, {
+                        source: pdfBuffer,
+                        filename: pdfFilename
+                    }, {
+                        caption: `${pdfCaption}\n👤 Mas'ul: ${row.name}`,
+                        parse_mode: 'HTML'
+                    }).then(() => console.log(`[finishGame] PDF sent to Oversight (${row.name}).`))
+                      .catch(err => console.error(`[finishGame] Failed to send PDF to Oversight (${row.name}):`, err)));
                 }
             });
 
-            await query(
-                'INSERT INTO game_results (id, group_id, quiz_title, total_questions, player_results) VALUES ($1, $2, $3, $4, $5)',
-                [uuidv4(), game.groupId, game.quiz.title, totalPossibleScore, JSON.stringify(game.players)]
-            );
+            await Promise.allSettled(sendPromises);
+        } catch (pdfErr) {
+            console.error(`[finishGame] PDF/Telegram process failed:`, pdfErr);
+        }
 
-            const groupRes = await query('SELECT name, teacher_id FROM groups WHERE id = $1', [game.groupId]);
-            if (groupRes.rowCount && groupRes.rowCount > 0) {
-                const group = groupRes.rows[0];
-                const teacherRes = await query('SELECT name, telegram_chat_id FROM teachers WHERE id = $1', [group.teacher_id]);
-                const teacherName = teacherRes.rowCount && teacherRes.rowCount > 0 ? teacherRes.rows[0].name : 'Noma\'lum';
+        // 3. Award Rewards
+        try {
+            bulkAwardRewards(game.players);
+        } catch (rewardErr) {
+            console.error(`[finishGame] Failed to award rewards:`, rewardErr);
+        }
 
-                let pdfBuffer: Buffer;
-                try {
-                    pdfBuffer = await generatePDFInWorker(game.quiz, game.players, group.name, teacherName);
-                } catch (workerErr) {
-                    pdfBuffer = await generateQuizResultPDF(game.quiz, game.players, group.name, teacherName);
-                }
-
-                try {
-                    const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
-                    const filePath = path.join(RESULTS_DIR, `Result_${sanitizedGroupName}_${Date.now()}.pdf`);
-                    fs.writeFileSync(filePath, pdfBuffer);
-                } catch (saveErr) {}
-
-                if (teacherRes.rowCount && teacherRes.rowCount > 0 && teacherRes.rows[0].telegram_chat_id) {
-                    try {
-                        const sanitizedGroupName = group.name.replace(/[^a-zA-Z0-9]/g, '_');
-                        const pdfFilename = `Result_${sanitizedGroupName}_${Date.now()}.pdf`;
-                        const pdfCaption = `📊 <b>${game.quiz.title}</b> natijalari\n🏫 Guruh: ${group.name}`;
-
-                        const sendPromises = [];
-                        
-                        // 1. Send to Teacher
-                        console.log(`[finishGame] Sending PDF to Teacher: ${teacherRes.rows[0].telegram_chat_id}`);
-                        sendPromises.push(bot.telegram.sendDocument(teacherRes.rows[0].telegram_chat_id, {
-                            source: pdfBuffer,
-                            filename: pdfFilename
-                        }, {
-                            caption: pdfCaption,
-                            parse_mode: 'HTML'
-                        }).then(() => console.log(`[finishGame] PDF sent to Teacher.`))
-                          .catch(err => console.error(`[finishGame] Failed to send PDF to Teacher:`, err)));
-
-                        // 2. Fetch and Send to Manager & Admin
-                        const oversightRes = await query('SELECT name, telegram_chat_id FROM teachers WHERE id = ANY($1) AND telegram_chat_id IS NOT NULL', [[ADMIN_ID, MANAGER_ID]]);
-                        console.log(`[finishGame] Oversight list: ${oversightRes.rows.length} recipients`);
-                        oversightRes.rows.forEach((row: any) => {
-                            if (row.telegram_chat_id !== teacherRes.rows[0].telegram_chat_id) {
-                                console.log(`[finishGame] Sending PDF to Oversight (${row.name}): ${row.telegram_chat_id}`);
-                                sendPromises.push(bot.telegram.sendDocument(row.telegram_chat_id, {
-                                    source: pdfBuffer,
-                                    filename: pdfFilename
-                                }, {
-                                    caption: `${pdfCaption}\n👤 O'qituvchi: ${teacherRes.rows[0].name}`,
-                                    parse_mode: 'HTML'
-                                }).then(() => console.log(`[finishGame] PDF sent to Oversight (${row.name}).`))
-                                  .catch(err => console.error(`[finishGame] Failed to send PDF to Oversight (${row.name}):`, err)));
-                            }
-                        });
-
-                        await Promise.allSettled(sendPromises);
-                    } catch (e) {
-                        console.error('[finishGame] Error sending telegram documents:', e);
-                    }
-                }
-
-                bulkAwardRewards(game.players);
-            }
-        } catch (err) {}
+    } catch (err) {
+        console.error(`[finishGame] Global Critical error:`, err);
     }
 }
 
