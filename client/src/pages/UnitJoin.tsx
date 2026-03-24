@@ -32,9 +32,10 @@ const UnitJoin = () => {
 
         // If we have both PIN and StudentId, attempt auto-join
         if (urlPin && currentStudentId && !joined) {
+            const trimmedCurrentId = currentStudentId.trim();
             localStorage.setItem('kahoot-pin', urlPin);
-            localStorage.setItem('student-id', currentStudentId);
-            socket.emit('join-game', { pin: urlPin, studentId: currentStudentId, name: user?.name || 'O\'quvchi' });
+            localStorage.setItem('student-id', trimmedCurrentId);
+            socket.emit('join-game', { pin: urlPin, studentId: trimmedCurrentId, name: user?.name || 'O\'quvchi' });
         }
 
         socket.on('joined', () => {
@@ -74,10 +75,11 @@ const UnitJoin = () => {
 
     const handleJoin = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!pin || !studentId) return;
+        const trimmedStudentId = studentId.trim();
+        if (!pin || !trimmedStudentId) return;
         localStorage.setItem('kahoot-pin', pin); // Store for PlayerGame
-        localStorage.setItem('student-id', studentId); // Store for PlayerGame State recovery
-        socket.emit('join-game', { pin, studentId, name: user?.name || 'O\'quvchi' });
+        localStorage.setItem('student-id', trimmedStudentId); // Store for PlayerGame State recovery
+        socket.emit('join-game', { pin, studentId: trimmedStudentId, name: user?.name || 'O\'quvchi' });
     };
 
     if (joined) {

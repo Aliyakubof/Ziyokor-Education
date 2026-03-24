@@ -586,16 +586,34 @@ export function initSocket(io: Server) {
                 return;
             }
 
-            // Server-side Name Resolution: Always trust DB if studentId is provided
+            if (game.isUnitQuiz && !studentId) {
+                socket.emit('error', "ID kiritish majburiy!");
+                return;
+            }
+
+            // Server-side Name Resolution & Group Validation
             if (studentId) {
+                studentId = studentId.trim();
                 try {
+                    // Group restriction check for unit quizzes
+                    if (game.isUnitQuiz && game.groupId) {
+                        const groupCheck = await query('SELECT id FROM students WHERE id = $1 AND group_id = $2', [studentId, game.groupId]);
+                        if (groupCheck.rowCount === 0) {
+                            socket.emit('error', "Siz bu guruhga tegishli emassiz!");
+                            return;
+                        }
+                    }
+
                     const studentRes = await query('SELECT name FROM students WHERE id = $1', [studentId]);
-                    if (studentRes.rowCount && studentRes.rowCount > 0) {
+                    if (studentRes.rowCount && studentRes.rowCount > 0 && studentRes.rows[0].name) {
                         name = studentRes.rows[0].name;
                         console.log(`[join-game] Resolved name for ${studentId}: ${name}`);
+                    } else if (game.isUnitQuiz) {
+                        socket.emit('error', "O'quvchi bazadan topilmadi!");
+                        return;
                     }
                 } catch (err) {
-                    console.error('[join-game] DB name resolution error:', err);
+                    console.error('[join-game] DB resolution error:', err);
                 }
             }
 
@@ -838,6 +856,47 @@ export function initSocket(io: Server) {
                 enqueueAICheck(io, pin, playerId, qIdx, question.text, String(answer), question.type || 'text-input', question.acceptedAnswers)
                     .catch(e => console.error('[AI-Queue-Error]', e));
             }
+        });
+
+        socket.on('player-sync-answers', async ({ pin, answers }: { pin: string, answers: Record<number, any> }) => {
+            const metadata = await store.getGameMetadata(pin);
+            if (!metadata || metadata.status !== 'ACTIVE') return;
+
+            const playerId = (socket as any).studentId || socket.id;
+            const player = await store.getPlayer(pin, playerId);
+            if (!player) return;
+
+            let newScore = 0;
+            player.partialScoreMap = {};
+            player.answers = answers;
+            
+            // Recalculate score based on synced answers
+            for (const qIdxStr of Object.keys(answers)) {
+                const qIdx = parseInt(qIdxStr);
+                const answer = answers[qIdx];
+                const question = metadata.quiz?.questions?.[qIdx];
+                if (!question) continue;
+                
+                let currentScore = 0;
+                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching', 'vocabulary'];
+                
+                if (question.type === 'matching' || question.type === 'word-box') {
+                    currentScore = countCorrectParts(String(answer), question.acceptedAnswers || []);
+                } else if (textTypes.includes(question.type || '')) {
+                    if (checkAnswer(String(answer), question.acceptedAnswers || [])) {
+                        currentScore = 1;
+                    }
+                } else {
+                    if (Number(answer) === question.correctIndex) currentScore = 1;
+                }
+                
+                (player as any).partialScoreMap[qIdx] = currentScore;
+                newScore += currentScore;
+            }
+            
+            player.score = newScore;
+            await store.setPlayer(pin, player);
+            console.log(`[player-sync-answers] Recalculated score for ${player.id} to ${newScore}`);
         });
 
         socket.on('student-register', async ({ studentId }: { studentId: string }) => {
