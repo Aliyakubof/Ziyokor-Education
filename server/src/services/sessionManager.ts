@@ -29,6 +29,7 @@ interface GameState {
     questionStartTime?: number;
     totalCoinPool?: number;
     inactivityTimer?: NodeJS.Timeout;
+    bonusMessageIds?: number[];
 }
 
 /**

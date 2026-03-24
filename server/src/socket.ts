@@ -1032,8 +1032,8 @@ export function initSocket(io: Server) {
                         }
                     }
 
-                    // Update host dashboard
-                    await broadcastPlayerUpdate(io, pin, playerId);
+                    // Update host dashboard with FULL state to ensure UI catches it
+                    await broadcastPlayerUpdate(io, pin);
                 }
             }
         });

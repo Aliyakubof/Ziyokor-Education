@@ -126,6 +126,33 @@ export const getStudentsWithPagination = async (req: Request, res: Response) => 
     }
 };
 
+export const updateStudentPassword = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { password } = req.body;
+        
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        const result = await query(
+            'UPDATE students SET password = $1, plain_password = $2 WHERE id = $3 RETURNING id',
+            [hashedPassword, password, id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        res.json({ success: true, message: 'Password updated successfully' });
+    } catch (err: any) {
+        console.error('Error updating student password:', err);
+        res.status(500).json({ error: 'Error updating student password', details: err.message });
+    }
+};
+
 // Vocabulary Battles
 export const getVocabBattles = async (req: Request, res: Response) => {
     try {

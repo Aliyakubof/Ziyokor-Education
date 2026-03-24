@@ -5,10 +5,10 @@ import Bottleneck from 'bottleneck';
 import { gameLogger } from './services/logger';
 import { SettingsService } from './services/settings';
 
-// Rate limiter for Telegram API: 1 msg per 50ms (20 msg/sec) to stay safe
+// Rate limiter for Telegram API: optimized for speed
 const limiter = new Bottleneck({
-    minTime: 50,
-    maxConcurrent: 1
+    minTime: 33,
+    maxConcurrent: 10
 });
 
 import { gameSessions, GameState, PlayerEntry } from './services/sessionManager';
@@ -654,7 +654,18 @@ export function setupTelegramGame(bot: Telegraf) {
             }
 
             if (speedBonus) {
-                limiter.schedule(() => bot.telegram.sendMessage(chatId, `⚡ <b>${player.name}</b> juda tez (Speed Bonus +1 ball)!`, { parse_mode: 'HTML' })).catch(() => { });
+                limiter.schedule(() => bot.telegram.sendMessage(chatId, `⚡ <b>${player.name}</b> juda tez (Speed Bonus +1 ball)!`, { parse_mode: 'HTML' }))
+                .then(async (msg) => {
+                    if (msg) {
+                        const latestState = await gameSessions.get(chatId);
+                        if (latestState) {
+                            latestState.bonusMessageIds = latestState.bonusMessageIds || [];
+                            latestState.bonusMessageIds.push(msg.message_id);
+                            await gameSessions.set(chatId, latestState);
+                        }
+                    }
+                })
+                .catch(() => { });
             }
 
             if (player.streak >= 3) {
@@ -961,6 +972,18 @@ async function moveNext(bot: Telegraf, chatId: string) {
             try {
                 await bot.telegram.deleteMessage(chatId, state.mainMessageId).catch(() => { });
             } catch (e) { }
+        }
+
+        // Cleanup Speed Bonus messages every 2 questions
+        if ((state.currentQIndex + 1) % 2 === 0) {
+            const latestState = await gameSessions.get(chatId);
+            if (latestState && latestState.bonusMessageIds && latestState.bonusMessageIds.length > 0) {
+                for (const mId of latestState.bonusMessageIds) {
+                    bot.telegram.deleteMessage(chatId, mId).catch(() => {});
+                }
+                latestState.bonusMessageIds = [];
+                await gameSessions.set(chatId, latestState);
+            }
         }
 
         state.currentQIndex++;

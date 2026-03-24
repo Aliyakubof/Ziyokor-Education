@@ -178,13 +178,27 @@ export default function PlayerGame() {
                 socket.emit('player-sync-answers', { pin: currentPin, answers: savedAnswers });
             }
 
-            // Find first unanswered question or stay at 0
-            const firstUnanswered = questions.findIndex((_, idx) => savedAnswers[idx] === undefined);
-            const nextIdx = firstUnanswered === -1 ? 0 : firstUnanswered;
+            // Determine where to place the user
+            const firstUnanswered = questions.findIndex((_: any, idx: number) => savedAnswers[idx] === undefined);
 
-            setCurrentUnitIndex(nextIdx);
-            setQuestion(questions[nextIdx]);
-            setView('PLAYING');
+            if (viewRef.current !== 'WAITING' && viewRef.current !== 'FINISHED') {
+                // Already playing (socket reconnect without full page reload)
+                // Preserve current view and index
+                setCurrentUnitIndex(currentUnitIndex);
+                setQuestion(questions[currentUnitIndex]);
+            } else {
+                // Initial load
+                if (firstUnanswered === -1) {
+                    // All answered
+                    setView('UNIT_SUMMARY');
+                    setCurrentUnitIndex(0); // fallback index
+                    setQuestion(questions[0]);
+                } else {
+                    setCurrentUnitIndex(firstUnanswered);
+                    setQuestion(questions[firstUnanswered]);
+                    setView('PLAYING');
+                }
+            }
             if (data.isDuel) setIsDuel(true);
         });
 

@@ -11,6 +11,7 @@ router.post('/teachers', requireRole('admin'), adminController.createTeacher);
 router.put('/teachers/:id', requireRole('admin'), adminController.updateTeacher);
 router.delete('/teachers/:id', requireRole('admin'), adminController.deleteTeacher);
 router.get('/students', requireRole('admin'), adminController.getStudentsWithPagination);
+router.put('/students/:id/password', requireRole('admin', 'manager'), adminController.updateStudentPassword);
 
 // Vocab Battles
 router.get('/vocab-battles', requireRole('admin', 'manager', 'teacher'), adminController.getVocabBattles);
