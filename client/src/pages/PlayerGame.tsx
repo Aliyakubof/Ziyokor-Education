@@ -62,6 +62,16 @@ export default function PlayerGame() {
     const [isUnitMode, setIsUnitMode] = useState(false);
     const [unitQuestions, setUnitQuestions] = useState<QuestionData[]>([]);
     const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
+    const currentUnitIndexRef = useRef(currentUnitIndex);
+
+    useEffect(() => { currentUnitIndexRef.current = currentUnitIndex; }, [currentUnitIndex]);
+
+    useEffect(() => {
+        if (isUnitMode) {
+            const pin = localStorage.getItem('kahoot-pin');
+            if (pin) localStorage.setItem(`unit-index-${pin}`, String(currentUnitIndex));
+        }
+    }, [currentUnitIndex, isUnitMode]);
     const [unitAnswers, setUnitAnswers] = useState<Record<number, any>>({});
     const [unitCorrectAnswers, setUnitCorrectAnswers] = useState<any[]>([]);
     const [unitAIFeedback, setUnitAIFeedback] = useState<Record<number, string>>({});
@@ -158,6 +168,7 @@ export default function PlayerGame() {
                 if (lastCreatedAt && lastCreatedAt !== String(data.createdAt)) {
                     console.log('[Session] New session detected. Resetting local answers.');
                     localStorage.removeItem(`unit-answers-${pin}`);
+                    localStorage.removeItem(`unit-index-${pin}`);
                     setUnitAnswers({});
                 }
                 localStorage.setItem(`unit-created-at-${pin}`, String(data.createdAt));
@@ -179,16 +190,24 @@ export default function PlayerGame() {
             }
 
             // Determine where to place the user
+            const savedIndexRaw = currentPin ? localStorage.getItem(`unit-index-${currentPin}`) : null;
+            const savedIndex = savedIndexRaw !== null ? parseInt(savedIndexRaw) : -1;
+
             const firstUnanswered = questions.findIndex((_: any, idx: number) => savedAnswers[idx] === undefined);
 
             if (viewRef.current !== 'WAITING' && viewRef.current !== 'FINISHED') {
                 // Already playing (socket reconnect without full page reload)
-                // Preserve current view and index
-                setCurrentUnitIndex(currentUnitIndex);
-                setQuestion(questions[currentUnitIndex]);
+                // Preserve current view and index using ref to avoid stale closure
+                const preservedIndex = currentUnitIndexRef.current;
+                setCurrentUnitIndex(preservedIndex);
+                setQuestion(questions[preservedIndex]);
             } else {
                 // Initial load
-                if (firstUnanswered === -1) {
+                if (savedIndex !== -1 && savedIndex < questions.length) {
+                    setCurrentUnitIndex(savedIndex);
+                    setQuestion(questions[savedIndex]);
+                    setView('PLAYING');
+                } else if (firstUnanswered === -1) {
                     // All answered
                     setView('UNIT_SUMMARY');
                     setCurrentUnitIndex(0); // fallback index
@@ -249,7 +268,10 @@ export default function PlayerGame() {
         socket.on('unit-finished', (data: { score?: number, correctAnswers?: any[], aiFeedbackMap?: Record<number, string>, hidden?: boolean }) => {
             setIsSubmitting(false);
             const pin = localStorage.getItem('kahoot-pin');
-            if (pin) localStorage.removeItem(`unit-answers-${pin}`);
+            if (pin) {
+                localStorage.removeItem(`unit-answers-${pin}`);
+                localStorage.removeItem(`unit-index-${pin}`);
+            }
             localStorage.removeItem('unit-answers'); // cleanup legacy
             setView('FINISHED');
 

@@ -264,9 +264,12 @@ async function finishGame(io: Server, pin: string) {
             const hiddenLeaderboard = leaderboard.map(p => ({ ...p, score: 0 }));
             if (game.hostId && game.hostId !== 'system') {
                 io.to(game.hostId).emit('game-over', leaderboard);
+                io.to(pin).except(game.hostId).emit('game-over', hiddenLeaderboard);
+                io.to(pin).except(game.hostId).emit('unit-finished', { hidden: true });
+            } else {
+                io.to(pin).emit('game-over', hiddenLeaderboard);
+                io.to(pin).emit('unit-finished', { hidden: true });
             }
-            io.to(pin).emit('game-over', hiddenLeaderboard);
-            io.to(pin).emit('unit-finished', { hidden: true });
             console.log(`[finishGame] Emitted unit-finished and game-over to pin ${pin}`);
         } else {
             io.to(pin).emit('game-over', leaderboard);
@@ -1094,6 +1097,19 @@ export function initSocket(io: Server) {
                     // Update host dashboard with FULL state to ensure UI catches it
                     await broadcastPlayerUpdate(io, pin);
                 }
+            }
+        });
+
+        socket.on('student-status-update', async ({ pin, studentId, status }: { pin: string, studentId: string, status: "Online" | "Offline" | "Cheating" | "joined" }) => {
+            const player = await store.getPlayer(pin, studentId);
+            if (player) {
+                if (status === 'Cheating') {
+                    player.isCheater = true;
+                }
+                player.status = status;
+                await store.setPlayer(pin, player);
+                await broadcastPlayerUpdate(io, pin, studentId);
+                console.log(`[Anti-Cheat] Player ${studentId} in pin ${pin} status updated to: ${status}`);
             }
         });
         

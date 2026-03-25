@@ -93,7 +93,23 @@ app.use(cookieParser());
 
 // generateToken and JWT_SECRET removed (now in middleware/auth.ts or constants.ts)
 
-const httpServer = createServer(app);
+let httpServer;
+if (process.env.USE_HTTPS === 'true') {
+    const keyPath = process.env.SSL_KEY_PATH || path.join(__dirname, '..', 'key.pem');
+    const certPath = process.env.SSL_CERT_PATH || path.join(__dirname, '..', 'cert.pem');
+    try {
+        const privateKey = fs.readFileSync(keyPath, 'utf8');
+        const certificate = fs.readFileSync(certPath, 'utf8');
+        httpServer = https.createServer({ key: privateKey, cert: certificate }, app);
+        console.log('[HTTPS] Server configured for secure connections.');
+    } catch (err) {
+        console.error('[HTTPS] Failed to read certificates. Falling back to HTTP:', err);
+        httpServer = createServer(app);
+    }
+} else {
+    httpServer = createServer(app);
+}
+
 const io = new Server(httpServer, {
     cors: {
         origin: allowedOrigins,

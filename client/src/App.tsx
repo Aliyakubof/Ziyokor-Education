@@ -309,7 +309,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/unit-join/:pin" element={<UnitJoin />} />
+            <Route
+              path="/unit-join/:pin"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <UnitJoin />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
           </Suspense>
         </div>
