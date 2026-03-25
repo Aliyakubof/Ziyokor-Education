@@ -688,7 +688,8 @@ export function initSocket(io: Server) {
                         questions,
                         title: game.quiz.title,
                         isDuel: (game as any).isDuel,
-                        createdAt: (game as any).createdAt
+                        createdAt: (game as any).createdAt,
+                        endTime: (game as any).endTime
                     });
                 } else {
                     socket.emit('game-started', { title: game.quiz.title });
@@ -1027,14 +1028,12 @@ export function initSocket(io: Server) {
             if (game.status === 'ACTIVE') {
                 if (game.isUnitQuiz) {
                     let questions = game.quiz.questions;
-                    if (typeof questions === 'string') {
-                        try { questions = JSON.parse(questions); } catch (e) { questions = []; }
-                    }
                     socket.emit('unit-game-started', {
                         questions,
                         title: game.quiz.title,
                         isDuel: (game as any).isDuel,
-                        createdAt: (game as any).createdAt
+                        createdAt: (game as any).createdAt,
+                        endTime: (game as any).endTime
                     });
                 } else {
                     socket.emit('game-started', { title: game.quiz.title });
