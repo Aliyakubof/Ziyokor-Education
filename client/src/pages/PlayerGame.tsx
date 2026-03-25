@@ -82,6 +82,7 @@ export default function PlayerGame() {
     const [duelSync, setDuelSync] = useState<any[]>([]);
     const [battleEffects, setBattleEffects] = useState<any[]>([]);
     const [isShaking, setIsShaking] = useState(false);
+    const [isUnloading, setIsUnloading] = useState(false);
 
     const pinFromStore = localStorage.getItem('kahoot-pin');
     const idFromStore = localStorage.getItem('student-id');
@@ -304,7 +305,7 @@ export default function PlayerGame() {
 
         // Anti-Cheat listener
         const handleVisibilityChange = () => {
-            if (document.hidden) {
+            if (document.hidden && !isUnloading) {
                 const pin = localStorage.getItem('kahoot-pin');
                 const studentId = localStorage.getItem('student-id') || socket.id;
                 if (pin && studentId && !['FINISHED', 'UNIT_SUMMARY', 'UNIT_REVIEW'].includes(viewRef.current)) {
@@ -313,7 +314,12 @@ export default function PlayerGame() {
             }
         };
 
+        const handleBeforeUnload = () => {
+            setIsUnloading(true);
+        };
+
         document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('beforeunload', handleBeforeUnload);
 
         return () => {
             socket.off('connect', onConnect);
@@ -329,8 +335,9 @@ export default function PlayerGame() {
             socket.off('duel-ko');
             socket.off('error');
             document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, []);
+    }, [isUnloading]);
 
     const saveUnitAnswer = (val: number | string) => {
         const newAnswers = { ...unitAnswers, [currentUnitIndex]: val };

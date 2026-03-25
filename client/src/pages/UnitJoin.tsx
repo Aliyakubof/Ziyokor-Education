@@ -12,6 +12,7 @@ const UnitJoin = () => {
     const [studentId, setStudentId] = useState('');
     const [error, setError] = useState('');
     const [joined, setJoined] = useState(false);
+    const [isUnloading, setIsUnloading] = useState(false);
 
     useEffect(() => {
         // Auto-fill studentId from AuthContext or localStorage
@@ -41,6 +42,10 @@ const UnitJoin = () => {
         socket.on('joined', () => {
             setJoined(true);
             setError('');
+            // After joining, request status to see if game is already active
+            if (urlPin) {
+                socket.emit('player-get-status', { pin: urlPin, studentId: currentStudentId || undefined });
+            }
         });
 
         socket.on('game-started', () => {
@@ -55,14 +60,19 @@ const UnitJoin = () => {
             setError(msg);
         });
 
-        // Anti-Cheat: Visibility Change listener (only send Cheating, never revert to Online)
+        // Anti-Cheat: Visibility Change listener
         const handleVisibilityChange = () => {
-            if (document.hidden && joined && pin && studentId) {
+            if (document.hidden && joined && pin && studentId && !isUnloading) {
                 socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
             }
         };
 
+        const handleBeforeUnload = () => {
+            setIsUnloading(true);
+        };
+
         document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('beforeunload', handleBeforeUnload);
 
         return () => {
             socket.off('joined');
@@ -70,8 +80,9 @@ const UnitJoin = () => {
             socket.off('unit-game-started');
             socket.off('error');
             document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, [navigate]); // Stable dependencies to avoid re-mounting listeners
+    }, [navigate, isUnloading, joined, pin, studentId]);
 
     const handleJoin = (e: React.FormEvent) => {
         e.preventDefault();

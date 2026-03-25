@@ -644,7 +644,8 @@ export function initSocket(io: Server) {
                             questions,
                             title: game.quiz.title,
                             isDuel: (game as any).isDuel,
-                            createdAt: (game as any).createdAt
+                            createdAt: (game as any).createdAt,
+                            endTime: (game as any).endTime
                         });
                     } else {
                         socket.emit('game-started', { title: game.quiz.title });
