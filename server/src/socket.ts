@@ -1101,15 +1101,18 @@ export function initSocket(io: Server) {
         });
 
         socket.on('student-status-update', async ({ pin, studentId, status }: { pin: string, studentId: string, status: "Online" | "Offline" | "Cheating" | "joined" }) => {
+            const game = await store.getGame(pin);
+            if (!game) return;
+
             const player = await store.getPlayer(pin, studentId);
             if (player) {
-                if (status === 'Cheating') {
+                if (status === 'Cheating' && game.status === 'ACTIVE') {
                     player.isCheater = true;
                 }
                 player.status = status;
                 await store.setPlayer(pin, player);
                 await broadcastPlayerUpdate(io, pin, studentId);
-                console.log(`[Anti-Cheat] Player ${studentId} in pin ${pin} status updated to: ${status}`);
+                console.log(`[Anti-Cheat] Player ${studentId} in pin ${pin} status updated to: ${status} (Game Status: ${game.status})`);
             }
         });
         

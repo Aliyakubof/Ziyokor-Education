@@ -341,6 +341,52 @@ bot.on('contact', async (ctx) => {
     handleTeacherLogin(ctx, chatId, phone);
 });
 
+bot.hears('👨‍👩‍👧‍👦 Ota-ona', async (ctx) => {
+    const chatId = ctx.chat?.id.toString();
+    try {
+        const teacherRes = await query('SELECT id FROM teachers WHERE telegram_chat_id = $1', [chatId]);
+        if (teacherRes.rowCount === 0) return ctx.reply('❌ Siz o\'qituvchi sifatida ro\'yxatdan o\'tmagansiz.');
+        const teacherId = teacherRes.rows[0].id;
+
+        const groups = await query('SELECT id, name FROM groups WHERE teacher_id = $1 ORDER BY name ASC', [teacherId]);
+        if (groups.rowCount === 0) return ctx.reply('❌ Sizda guruhlar topilmadi.');
+
+        const buttons = groups.rows.map((g: any) => ([{
+            text: g.name,
+            callback_data: `t_g_${g.id}`
+        }]));
+
+        ctx.reply('📚 Guruhni tanlang:', {
+            reply_markup: { inline_keyboard: buttons }
+        });
+    } catch (err) {
+        ctx.reply('❌ Xatolik yuz berdi.');
+    }
+});
+
+bot.action(/^t_g_(.+)$/, async (ctx) => {
+    const groupId = ctx.match[1];
+    try {
+        const students = await query('SELECT id, name FROM students WHERE group_id = $1 ORDER BY name ASC', [groupId]);
+        if (students.rowCount === 0) return ctx.answerCbQuery('O\'quvchilar yo\'q.');
+
+        const subs = await query('SELECT student_id FROM student_telegram_subscriptions WHERE student_id = ANY($1) AND role = \'parent\'', [students.rows.map((s: any) => s.id)]);
+        const connectedIds = new Set(subs.rows.map((s: any) => s.student_id));
+
+        let msg = `👨‍👩‍👧‍👦 <b>Ota-ona ulanish holati:</b>\n\n`;
+        students.rows.forEach((s: any, i: number) => {
+            const isConnected = connectedIds.has(s.id);
+            msg += `${i + 1}. ${s.name} - ${isConnected ? '✅' : '❌'}\n`;
+        });
+
+        msg += `\n📊 Jami: ${connectedIds.size}/${students.rowCount}`;
+
+        await ctx.editMessageText(msg, { parse_mode: 'HTML' });
+    } catch (err) {
+        ctx.answerCbQuery('Xatolik.');
+    }
+});
+
 bot.hears('📢 Xabar Yuborish', async (ctx) => {
     const chatId = ctx.chat?.id.toString();
     if (!chatId || !await isManager(chatId)) return;
@@ -448,7 +494,10 @@ async function handleTeacherLogin(ctx: any, chatId: string, phone: string) {
             console.log(`[Bot] Teacher logged in: ${result.rows[0].name}`);
             ctx.reply(`✅ Muvaffaqiyatli! Siz O'qituvchi sifatida ulandingiz: ${result.rows[0].name}`, {
                 reply_markup: {
-                    keyboard: [[{ text: "🚪 Chiqish" }]],
+                    keyboard: [
+                        [{ text: "👨‍👩‍👧‍👦 Ota-ona" }],
+                        [{ text: "🚪 Chiqish" }]
+                    ],
                     resize_keyboard: true
                 }
             });

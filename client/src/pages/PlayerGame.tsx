@@ -305,10 +305,10 @@ export default function PlayerGame() {
 
         // Anti-Cheat listener
         const handleVisibilityChange = () => {
-            if (document.hidden && !isUnloading) {
+            if (document.hidden && !isUnloading && viewRef.current === 'PLAYING') {
                 const pin = localStorage.getItem('kahoot-pin');
                 const studentId = localStorage.getItem('student-id') || socket.id;
-                if (pin && studentId && !['FINISHED', 'UNIT_SUMMARY', 'UNIT_REVIEW'].includes(viewRef.current)) {
+                if (pin && studentId) {
                     socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
                 }
             }

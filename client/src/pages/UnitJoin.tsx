@@ -60,18 +60,10 @@ const UnitJoin = () => {
             setError(msg);
         });
 
-        // Anti-Cheat: Visibility Change listener
-        const handleVisibilityChange = () => {
-            if (document.hidden && joined && pin && studentId && !isUnloading) {
-                socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
-            }
-        };
-
         const handleBeforeUnload = () => {
             setIsUnloading(true);
         };
 
-        document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('beforeunload', handleBeforeUnload);
 
         return () => {
@@ -79,7 +71,6 @@ const UnitJoin = () => {
             socket.off('game-started');
             socket.off('unit-game-started');
             socket.off('error');
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
     }, [navigate, isUnloading, joined, pin, studentId]);
