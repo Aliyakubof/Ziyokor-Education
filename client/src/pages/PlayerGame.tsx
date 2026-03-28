@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
-import { Clock, CheckCircle2, XCircle, Info } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, Info, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sword, Zap, Trophy, Crown } from 'lucide-react';
 
@@ -83,6 +83,7 @@ export default function PlayerGame() {
     const [battleEffects, setBattleEffects] = useState<any[]>([]);
     const [isShaking, setIsShaking] = useState(false);
     const [isUnloading, setIsUnloading] = useState(false);
+    const [isBlockedByCheat, setIsBlockedByCheat] = useState(false);
 
     const pinFromStore = localStorage.getItem('kahoot-pin');
     const idFromStore = localStorage.getItem('student-id');
@@ -297,6 +298,31 @@ export default function PlayerGame() {
             setView('FINISHED');
         });
 
+        socket.on('player-accepted', () => {
+            console.log('[Anti-Cheat] Teacher accepted you. Resuming...');
+            setIsBlockedByCheat(false);
+        });
+
+        socket.on('player-update', (players: any[]) => {
+            const myId = localStorage.getItem('student-id') || socket.id;
+            const me = players.find(p => p.id === myId);
+            if (me) {
+                if (me.isCheater) setIsBlockedByCheat(true);
+                else setIsBlockedByCheat(false);
+            }
+        });
+
+        socket.on('player-update-delta', (changedPlayers: any[]) => {
+            const myId = localStorage.getItem('student-id') || socket.id;
+            const me = changedPlayers.find(p => p.id === myId);
+            if (me) {
+                if (me.isCheater !== undefined) {
+                    if (me.isCheater) setIsBlockedByCheat(true);
+                    else setIsBlockedByCheat(false);
+                }
+            }
+        });
+
         // Request status once on mount
         if (pinFromStore) {
             console.log('[Init] Requesting game status for pin:', pinFromStore);
@@ -333,6 +359,9 @@ export default function PlayerGame() {
             socket.off('duel-damage');
             socket.off('duel-effect');
             socket.off('duel-ko');
+            socket.off('player-accepted');
+            socket.off('player-update');
+            socket.off('player-update-delta');
             socket.off('error');
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -1164,6 +1193,30 @@ export default function PlayerGame() {
                         <button onClick={() => goToQuestion(currentUnitIndex + 1)} className="px-6 py-3 text-white rounded-2xl font-bold shadow-lg" style={{ backgroundColor: isDuel ? '#e11d48' : 'var(--primary-color)' }}>Keyingisi →</button>
                     )}
                 </footer>
+            )}
+
+            {isBlockedByCheat && (
+                <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center">
+                    <motion.div 
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl relative overflow-hidden"
+                    >
+                        <div className="absolute top-0 left-0 w-full h-2 bg-red-500"></div>
+                        <div className="w-24 h-24 bg-red-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 animate-pulse">
+                            <AlertTriangle className="text-red-500" size={48} />
+                        </div>
+                        <h2 className="text-3xl font-black text-slate-800 mb-4 italic">DIQQAT!</h2>
+                        <p className="text-slate-500 font-bold mb-10 leading-relaxed text-sm">
+                            Siz test sahifasini tark etdingiz. <br/>
+                            <span className="text-red-500">O'qituvchi sizni qaytadan qabul qilishi kutilmoqda...</span>
+                        </p>
+                        <div className="flex items-center justify-center gap-3 text-slate-400 font-black text-[10px] uppercase tracking-widest">
+                            <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce"></div>
+                            Kuting...
+                        </div>
+                    </motion.div>
+                </div>
             )}
         </motion.div>
     </div>

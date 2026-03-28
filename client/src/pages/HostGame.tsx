@@ -70,6 +70,21 @@ const MemoizedPlayerCard = memo(({ player, totalQuestionsCount }: { player: any;
                 </div>
             </div>
 
+            {isCheating && player.status !== 'Cheating' && player.status !== 'Offline' && (
+                <div className="mt-4 pt-4 border-t border-red-100 flex flex-col items-center gap-2">
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest text-center">O'quvchi qaytib keldi</p>
+                    <button 
+                        onClick={() => {
+                            const pin = window.location.pathname.split('/').pop();
+                            if (pin) socket.emit('host-accept-player', { pin, playerId: player.id });
+                        }}
+                        className="w-full bg-red-500 hover:bg-red-600 text-white font-black py-2 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-red-500/20"
+                    >
+                        Qabul qilish
+                    </button>
+                </div>
+            )}
+
             {isFinished && (
                 <div className="mt-6 pt-4 border-t border-emerald-100/50 flex items-center justify-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-widest">
                     <CheckCircle2 size={16} /> Barchasi tayyor

@@ -1115,6 +1115,25 @@ export function initSocket(io: Server) {
                 console.log(`[Anti-Cheat] Player ${studentId} in pin ${pin} status updated to: ${status} (Game Status: ${game.status})`);
             }
         });
+
+        socket.on('host-accept-player', async ({ pin, playerId }: { pin: string, playerId: string }) => {
+            const game = await store.getGame(pin);
+            if (!game || game.hostId !== socket.id) return;
+
+            const player = await store.getPlayer(pin, playerId);
+            if (player) {
+                player.isCheater = false;
+                player.status = 'Online';
+                await store.setPlayer(pin, player);
+                await broadcastPlayerUpdate(io, pin, playerId);
+
+                const playerSocketId = await store.getSocket(playerId);
+                if (playerSocketId) {
+                    io.to(playerSocketId).emit('player-accepted');
+                }
+                console.log(`[Anti-Cheat] Host ${socket.id} accepted player ${playerId} in pin ${pin}`);
+            }
+        });
         
         socket.on('disconnect', () => {
             console.log('Client disconnected:', socket.id);

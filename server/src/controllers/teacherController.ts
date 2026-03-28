@@ -370,6 +370,7 @@ export const getGroupContactInfoPDF = async (req: Request, res: Response) => {
         const groupName = gRes.rows[0].name;
 
         const sRes = await query('SELECT name, phone, parent_name, parent_phone FROM students WHERE group_id = $1 ORDER BY name ASC', [groupId]);
+        console.log(`[getGroupContactInfoPDF] Group: ${groupName} (${groupId}), Students found: ${sRes.rows.length}`);
         
         const pdfBuffer = await generateGroupContactPDF(groupName, sRes.rows);
         res.setHeader('Content-Type', 'application/pdf');

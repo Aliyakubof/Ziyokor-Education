@@ -302,10 +302,11 @@ export const generateGroupContactPDF = (
             }
 
             doc.text((index + 1).toString(), col1, y);
-            doc.text(s.name, col2, y, { width: 170 });
-            doc.text(s.phone || '-', col3, y);
-            doc.text(s.parent_name || '-', col4, y, { width: 90 });
-            doc.text(s.parent_phone || '-', col5, y);
+            const studentName = String(s.name || 'Ismsiz').substring(0, 50);
+            doc.text(studentName, col2, y, { width: 170 });
+            doc.text(String(s.phone || '-'), col3, y);
+            doc.text(String(s.parent_name || '-'), col4, y, { width: 90 });
+            doc.text(String(s.parent_phone || '-'), col5, y);
 
             y += 25;
             doc.moveTo(40, y - 5).lineTo(560, y - 5).strokeColor('#eeeeee').lineWidth(0.5).stroke();
