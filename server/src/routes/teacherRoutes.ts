@@ -10,7 +10,7 @@ router.get('/:teacherId/groups', requireRole('admin', 'manager', 'teacher'), tea
 router.get('/groups/:groupId', requireRole('admin', 'manager', 'teacher'), teacherController.getGroupById);
 router.get('/groups/:groupId/results', requireRole('admin', 'manager', 'teacher'), teacherController.getGroupResults);
 router.get('/groups/:groupId/contact-logs', requireRole('admin', 'manager', 'teacher'), teacherController.getGroupContactLogs);
-router.post('/students/:id/contact', requireRole('teacher'), teacherController.updateStudentContact);
+router.post('/students/:id/contact', requireRole('admin', 'teacher', 'manager'), teacherController.updateStudentContact);
 router.get('/students/:id/contact-logs', requireRole('teacher'), teacherController.getStudentContactLogs);
 
 // Group Management
