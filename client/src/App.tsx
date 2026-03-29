@@ -102,7 +102,9 @@ function App() {
             paddingLeft: 'env(safe-area-inset-left)',
             paddingRight: 'env(safe-area-inset-right)'
           }}>
-          <Suspense fallback={
+          <StudentDataProvider>
+            <TeacherDataProvider>
+              <Suspense fallback={
             <div className="flex-1 flex items-center justify-center bg-white dark:bg-[#0a0a0a]">
               <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
@@ -117,9 +119,7 @@ function App() {
               path="/student/dashboard"
               element={
                 <ProtectedRoute requiredRole="student">
-                  <StudentDataProvider>
-                    <StudentDashboard />
-                  </StudentDataProvider>
+                  <StudentDashboard />
                 </ProtectedRoute>
               }
             />
@@ -261,9 +261,7 @@ function App() {
               path="/admin/groups"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <TeacherDataProvider>
-                    <TeacherDashboard />
-                  </TeacherDataProvider>
+                  <TeacherDashboard />
                 </ProtectedRoute>
               }
             />
@@ -287,9 +285,7 @@ function App() {
               path="/teacher"
               element={
                 <ProtectedRoute requiredRole="teacher">
-                  <TeacherDataProvider>
-                    <TeacherDashboard />
-                  </TeacherDataProvider>
+                  <TeacherDashboard />
                 </ProtectedRoute>
               }
             />
@@ -327,6 +323,8 @@ function App() {
             />
           </Routes>
           </Suspense>
+          </TeacherDataProvider>
+          </StudentDataProvider>
         </div>
       </AppMonitor>
       </ThemeEngine>

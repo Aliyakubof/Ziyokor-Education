@@ -84,7 +84,10 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }, []);
 
     const fetchData = useCallback(async () => {
-        if (!user?.id || role !== 'student') return;
+        if (!user?.id || role !== 'student') {
+            setIsLoading(false);
+            return;
+        }
 
         setIsLoading(true);
         try {
@@ -96,7 +99,7 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 if (statsData.groupId) {
                     const battleRes = await apiFetch(`/api/battles/current/${statsData.groupId}`);
                     if (battleRes.ok) setBattle(await battleRes.json());
-                    
+
                     await fetchBookingData(statsData.groupId, user.id, statsData.level || 'Beginner');
                 }
             }

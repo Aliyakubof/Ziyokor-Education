@@ -51,7 +51,10 @@ export const TeacherDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }, []);
 
     const fetchData = useCallback(async () => {
-        if (!user?.id || (role !== 'teacher' && role !== 'admin' && role !== 'manager')) return;
+        if (!user?.id || (role !== 'teacher' && role !== 'admin' && role !== 'manager')) {
+            setIsLoading(false);
+            return;
+        }
 
         setIsLoading(true);
         try {
@@ -68,11 +71,11 @@ export const TeacherDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
             }
 
             const results = await Promise.all(promises);
-            
+
             const quizzes = await results[0].json();
             const slots = await results[1].json();
             const groupsData = await results[2].json();
-            
+
             setUnitQuizzes(Array.isArray(quizzes) ? quizzes : []);
             setAvailableSlots(Array.isArray(slots) ? slots : []);
             const finalGroups = Array.isArray(groupsData) ? groupsData : [];
@@ -102,7 +105,7 @@ export const TeacherDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
             const handleGroupUpdate = () => fetchData();
             const handleBattleUpdate = () => {
-               if (groups.length > 0) fetchBattles(groups.map(g => g.id));
+                if (groups.length > 0) fetchBattles(groups.map(g => g.id));
             };
 
             socket.on('group_update', handleGroupUpdate);
@@ -116,14 +119,14 @@ export const TeacherDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }, [user?.id, role, socket, fetchData, fetchBattles, groups.length]);
 
     return (
-        <TeacherDataContext.Provider value={{ 
-            groups, 
-            unitQuizzes, 
-            battles, 
-            allTeachers, 
-            availableSlots, 
-            isLoading, 
-            refreshData: fetchData 
+        <TeacherDataContext.Provider value={{
+            groups,
+            unitQuizzes,
+            battles,
+            allTeachers,
+            availableSlots,
+            isLoading,
+            refreshData: fetchData
         }}>
             {children}
         </TeacherDataContext.Provider>
