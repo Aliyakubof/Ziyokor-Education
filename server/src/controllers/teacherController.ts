@@ -6,6 +6,7 @@ import { ADMIN_ID } from '../constants';
 import { notifyTeacher } from '../bot';
 import { generateStudentId, generateParentId } from '../store';
 import { generateWeeklyTeacherReportPDF, generateGroupContactPDF } from '../pdfGenerator';
+import { notifySubscribers } from '../socket';
 
 export const getTeacherStats = async (req: Request, res: Response) => {
     try {
@@ -164,6 +165,8 @@ export const createStudent = async (req: Request, res: Response) => {
             console.error('Error notifying teacher about new student:', e);
         }
 
+        notifySubscribers(`role_teacher`, 'group_update', {});
+        notifySubscribers(`role_admin`, 'group_update', {});
         res.json({ id, parentId, name, groupId, phone, parentName, parentPhone, status: 'Offline' });
     } catch (err) {
         res.status(500).json({ error: 'Error creating student' });
@@ -219,7 +222,9 @@ export const deleteStudent = async (req: Request, res: Response) => {
         await query('DELETE FROM student_telegram_subscriptions WHERE student_id = $1', [id]);
         await query('DELETE FROM extra_class_bookings WHERE student_id = $1', [id]);
         const result = await query('DELETE FROM students WHERE id = $1', [id]);
-        if (result.rowCount === 0) return res.status(404).json({ error: 'Student not found' });
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Student found' });
+        notifySubscribers(`role_teacher`, 'group_update', {});
+        notifySubscribers(`role_admin`, 'group_update', {});
         res.json({ success: true });
     } catch (err) {
         console.error('Error deleting student:', err);
@@ -233,6 +238,8 @@ export const moveStudent = async (req: Request, res: Response) => {
         const { newGroupId } = req.body;
         const result = await query('UPDATE students SET group_id = $1 WHERE id = $2', [newGroupId, id]);
         if (result.rowCount === 0) return res.status(404).json({ error: 'Student not found or not updated' });
+        notifySubscribers(`role_teacher`, 'group_update', {});
+        notifySubscribers(`role_admin`, 'group_update', {});
         res.json({ success: true });
     } catch (err) {
         console.error('Error moving student:', err);
@@ -262,6 +269,8 @@ export const createGroup = async (req: Request, res: Response) => {
         const { name, teacherId, level, extraClassDays, extraClassTimes } = req.body;
         const id = uuidv4();
         await query('INSERT INTO groups (id, name, teacher_id, level, extra_class_days, extra_class_times) VALUES ($1, $2, $3, $4, $5, $6)', [id, name, teacherId, level || 'Beginner', extraClassDays || [], extraClassTimes || []]);
+        notifySubscribers(`role_teacher`, 'group_update', {});
+        notifySubscribers(`role_admin`, 'group_update', {});
         res.json({ id, name, teacherId, level, extraClassDays, extraClassTimes });
     } catch (err) {
         res.status(500).json({ error: 'Error creating group' });
@@ -273,6 +282,8 @@ export const updateGroup = async (req: Request, res: Response) => {
         const { id } = req.params;
         const { name, level, teacherId, extraClassDays, extraClassTimes } = req.body;
         await query(`UPDATE groups SET name = $1, level = $2, teacher_id = COALESCE($3, teacher_id), extra_class_days = $4, extra_class_times = $5 WHERE id = $6`, [name, level, teacherId || null, extraClassDays || [], extraClassTimes || [], id]);
+        notifySubscribers(`role_teacher`, 'group_update', {});
+        notifySubscribers(`role_admin`, 'group_update', {});
         res.json({ success: true, id, name, level, teacherId, extraClassDays, extraClassTimes });
     } catch (err) {
         res.status(500).json({ error: 'Error updating group' });
@@ -285,6 +296,8 @@ export const deleteGroup = async (req: Request, res: Response) => {
         const check = await query('SELECT * FROM groups WHERE id = $1', [id]);
         if (check.rowCount === 0) return res.status(404).json({ error: 'Group not found' });
         await query('DELETE FROM groups WHERE id = $1', [id]);
+        notifySubscribers(`role_teacher`, 'group_update', {});
+        notifySubscribers(`role_admin`, 'group_update', {});
         res.json({ success: true, id });
     } catch (err) {
         res.status(500).json({ error: 'Error deleting group' });
@@ -313,6 +326,8 @@ export const getExtraClassBookings = async (req: Request, res: Response) => {
 export const completeBooking = async (req: Request, res: Response) => {
     try {
         await query('UPDATE extra_class_bookings SET is_completed = $1 WHERE id = $2', [req.body.isCompleted, req.params.id]);
+        notifySubscribers(`role_teacher`, 'booking_update', {});
+        notifySubscribers(`role_admin`, 'booking_update', {});
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Xatolik' });
@@ -323,6 +338,8 @@ export const deleteBooking = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         await query('DELETE FROM extra_class_bookings WHERE id = $1', [id]);
+        notifySubscribers(`role_teacher`, 'booking_update', {});
+        notifySubscribers(`role_admin`, 'booking_update', {});
         res.json({ success: true });
     } catch (err) {
         console.error('Error deleting booking:', err);

@@ -12,6 +12,17 @@ import { checkAnswer, countCorrectParts } from './utils';
 import { checkAnswersWithAIBatch } from './aiChecker';
 import { bulkAwardRewards } from './services/rewardService';
 
+let globalIo: Server | null = null;
+
+export const notifySubscribers = (target: string, event: string, data: any) => {
+    if (globalIo) {
+        globalIo.to(target).emit(event, data);
+        console.log(`[Socket] Notified ${target} with event ${event}`);
+    } else {
+        console.warn(`[Socket] globalIo not initialized. Cannot notify ${target}`);
+    }
+};
+
 const RESULTS_DIR = path.join(__dirname, '..', 'storage', 'results');
 
 // Throttling mechanism for unit quiz updates
@@ -458,8 +469,21 @@ async function sendQuestion(io: Server, pin: string) {
 }
 
 export function initSocket(io: Server) {
+    globalIo = io;
     io.on('connection', (socket: Socket) => {
         console.log('New client connected:', socket.id);
+
+        // Identification for Real-time Updates
+        socket.on('identify', ({ userId, role }: { userId: string, role: string }) => {
+            if (userId) {
+                socket.join(`user_${userId}`);
+                console.log(`[Socket] User ${userId} identified and joined room user_${userId}`);
+            }
+            if (role) {
+                socket.join(`role_${role}`);
+                console.log(`[Socket] User ${userId || 'unknown'} joined role room role_${role}`);
+            }
+        });
 
         // Host: Create Game (Standard Quizzes)
         socket.on('host-create-game', async (data: any) => {

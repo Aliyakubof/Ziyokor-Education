@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
+import { useTeacherData } from '../contexts/TeacherDataContext';
 import logo from '../assets/logo.jpeg';
 
 interface Group {
@@ -797,11 +798,15 @@ const StudentSearchInput = ({ navigate }: { navigate: any }) => {
 const TeacherDashboard = () => {
     const navigate = useNavigate();
     const { user, logout, role } = useAuth();
-
-    // Data State
-    const [groups, setGroups] = useState<Group[]>([]);
-    const [unitQuizzes, setUnitQuizzes] = useState<UnitQuiz[]>([]);
-    const [battles, setBattles] = useState<Record<string, Battle>>({});
+    const { 
+        groups, 
+        unitQuizzes, 
+        battles, 
+        allTeachers, 
+        availableSlots, 
+        isLoading, 
+        refreshData 
+    } = useTeacherData();
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -816,77 +821,6 @@ const TeacherDashboard = () => {
     const [editExtraClassTimes, setEditExtraClassTimes] = useState<string[]>([]);
     const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const [isTopicsModalOpen, setIsTopicsModalOpen] = useState(false);
-    const [allTeachers, setAllTeachers] = useState<any[]>([]);
-    const [availableSlots, setAvailableSlots] = useState<any[]>([]);
-
-    useEffect(() => {
-        if (role === 'admin') {
-            fetchAllGroups();
-            fetchAllTeachers();
-        } else if (user?.id) {
-            fetchGroups();
-        }
-        fetchUnitQuizzes();
-        fetchAvailableSlots();
-    }, [user, role]);
-
-    const fetchAllTeachers = async () => {
-        try {
-            const res = await apiFetch('/api/admin/teachers');
-            const data = await res.json();
-            setAllTeachers(Array.isArray(data) ? data : []);
-        } catch (err) {}
-    };
-
-    const fetchAllGroups = async () => {
-        try {
-            const res = await apiFetch('/api/admin/groups');
-            const data = await res.json();
-            setGroups(Array.isArray(data) ? data : []);
-            if (data.length > 0) fetchBattles(data.map((g: any) => g.id));
-        } catch (err) {}
-    };
-
-    const fetchBattles = async (groupIds: string[]) => {
-        try {
-            const res = await apiFetch('/api/battles/batch/current', {
-                method: 'POST',
-                body: JSON.stringify({ groupIds })
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setBattles(data || {});
-            }
-        } catch (e) {
-            console.error('Error fetching batch battles:', e);
-        }
-    };
-
-    const fetchGroups = async () => {
-        if (!user?.id) return;
-        try {
-            const res = await apiFetch(`/api/teachers/${user.id}/groups`);
-            const data = await res.json();
-            setGroups(Array.isArray(data) ? data : []);
-            if (data.length > 0) fetchBattles(data.map((g: any) => g.id));
-        } catch (err) {}
-    };
-
-    const fetchUnitQuizzes = async () => {
-        try {
-            const res = await apiFetch('/api/unit-quizzes');
-            const data = await res.json();
-            setUnitQuizzes(Array.isArray(data) ? data : []);
-        } catch (err) {}
-    };
-
-    const fetchAvailableSlots = async () => {
-        try {
-            const res = await apiFetch('/api/available-slots');
-            const data = await res.json();
-            setAvailableSlots(Array.isArray(data) ? data : []);
-        } catch (err) {}
-    };
 
     const handleCreateGroup = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -898,7 +832,7 @@ const TeacherDashboard = () => {
         if (res.ok) {
             setNewGroupName('');
             setNewGroupLevel('Beginner');
-            if (role === 'admin') fetchAllGroups(); else fetchGroups();
+            refreshData();
         }
     };
 
@@ -927,7 +861,7 @@ const TeacherDashboard = () => {
         });
         if (res.ok) {
             setIsEditModalOpen(false);
-            if (role === 'admin') fetchAllGroups(); else fetchGroups();
+            refreshData();
         } else {
             alert("Xatolik!");
         }
@@ -986,7 +920,7 @@ const TeacherDashboard = () => {
         try {
             const res = await apiFetch(`/api/groups/${groupId}`, { method: 'DELETE' });
             if (res.ok) {
-                setGroups(groups.filter(g => g.id !== groupId));
+                refreshData();
                 alert("O'chirildi!");
             }
         } catch (err) {}
@@ -1239,6 +1173,12 @@ const TeacherDashboard = () => {
                     onClose={() => setIsTopicsModalOpen(false)} 
                 />
             )}
+
+            {isLoading && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/50 backdrop-blur-sm">
+                    <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            )}
         </div>
     );
 };
@@ -1358,6 +1298,12 @@ const ManageTopicsModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                     </div>
                 </div>
             </div>
+
+            {isLoading && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/50 backdrop-blur-sm">
+                    <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            )}
         </div>
     );
 };

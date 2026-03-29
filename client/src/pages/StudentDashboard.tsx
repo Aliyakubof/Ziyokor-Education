@@ -17,120 +17,23 @@ import HistoryTab from '../components/StudentDashboard/HistoryTab';
 import ProfileTab from '../components/StudentDashboard/ProfileTab';
 import BookingModal from '../components/StudentDashboard/BookingModal';
 import MobileNav from '../components/StudentDashboard/MobileNav';
+import { useStudentData } from '../contexts/StudentDataContext';
 
 export default function StudentDashboard() {
     const { user, logout, setActiveThemeId } = useAuth();
+    const { stats, battle, history, bookings, isLoading, refreshData } = useStudentData();
     const [activeTab, setActiveTab] = useState<'home' | 'history' | 'profile'>('home');
-    const [stats, setStats] = useState<any>(() => ({
-        gamesPlayed: 0,
-        totalScore: 0,
-        rank: 0,
-        coins: 0,
-        streakCount: 0,
-        isHero: false,
-        hasTrophy: false,
-        weeklyBattleScore: 0,
-        groupId: '',
-        avatarUrl: null as string | null,
-        hasAvatarUnlock: false,
-        active_theme_color: null
-    }));
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-    const [battle, setBattle] = useState<any>(null);
-    const [history, setHistory] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    
-    // Booking State
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-    const [groupSettings, setGroupSettings] = useState<any>(null);
-    const [myBooking, setMyBooking] = useState<any>(null);
-    const [otherBookings, setOtherBookings] = useState<any[]>([]);
-    const [availableTopics, setAvailableTopics] = useState<any[]>([]);
+
+    const { myBooking, otherBookings, groupSettings, availableTopics } = bookings;
 
     useEffect(() => {
-        if (user?.id) {
-            const cachedStats = localStorage.getItem(`stats_${user.id}`);
-            if (cachedStats) {
-                setStats(JSON.parse(cachedStats));
-                setIsLoading(false);
-            }
-            const cachedBattle = localStorage.getItem(`battle_${user.id}`);
-            if (cachedBattle) {
-                setBattle(JSON.parse(cachedBattle));
-            }
-            fetchData();
+        const theme = stats && stats.active_theme_color;
+        if (theme) {
+            setActiveThemeId(theme);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id]);
-
-    useEffect(() => {
-        if (stats?.active_theme_color) {
-            setActiveThemeId(stats.active_theme_color);
-        }
-    }, [stats?.active_theme_color, setActiveThemeId]);
-
-    const fetchData = async () => {
-        try {
-            const statsRes = await apiFetch(`/api/student/${user?.id}/stats`);
-            const statsData = await statsRes.json();
-            setStats(statsData);
-            localStorage.setItem(`stats_${user?.id}`, JSON.stringify(statsData));
-
-            if (statsData.groupId) {
-                const battleRes = await apiFetch(`/api/battles/current/${statsData.groupId}`);
-                if (battleRes.ok) {
-                    const battleData = await battleRes.json();
-                    setBattle(battleData);
-                    localStorage.setItem(`battle_${user?.id}`, JSON.stringify(battleData));
-                }
-            }
-
-            const historyRes = await apiFetch(`/api/student/${user?.id}/history`);
-            if (historyRes.ok) setHistory(await historyRes.json());
-
-            // Fetch Booking Info
-            fetchBookingData(statsData.groupId);
-
-            setIsLoading(false);
-        } catch (err) {
-            console.error(err);
-            setIsLoading(false);
-        }
-    };
-
-    const fetchBookingData = async (groupId: string) => {
-        if (!groupId) return;
-        try {
-            const [groupRes, bookingsRes] = await Promise.all([
-                apiFetch(`/api/groups/${groupId}`),
-                apiFetch(`/api/groups/${groupId}/extra-class-bookings`)
-            ]);
-            
-            let currentLevel = 'Beginner';
-
-            if (groupRes.ok) {
-                const groupData = await groupRes.json();
-                setGroupSettings(groupData);
-                currentLevel = groupData.level || 'Beginner';
-            }
-            
-            if (bookingsRes.ok) {
-                const bookings = await bookingsRes.json();
-                setOtherBookings(bookings);
-                const mine = bookings.find((b: any) => b.student_id === user?.id);
-                setMyBooking(mine);
-            }
-
-            // Fetch Level Topics
-            const topicsRes = await apiFetch('/api/level-topics');
-            if (topicsRes.ok) {
-                const allTopics = await topicsRes.json();
-                setAvailableTopics(allTopics.filter((t: any) => t.level === currentLevel));
-            }
-        } catch (err) {
-            console.error('Booking data error:', err);
-        }
-    };
+    }, [stats, setActiveThemeId]);
 
     const handleBook = async (slot: string, topic: string, bookingDate: string) => {
         if (!groupSettings?.extra_class_days || groupSettings.extra_class_days.length === 0) {
@@ -143,7 +46,7 @@ export default function StudentDashboard() {
             const res = await apiFetch(`/api/students/${user?.id}/book-extra-class`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    groupId: stats.groupId,
+                    groupId: stats?.groupId || '',
                     timeSlot: slot,
                     topic: topic,
                     bookingDate: bookingDate
@@ -151,7 +54,7 @@ export default function StudentDashboard() {
             });
             if (res.ok) {
                 setIsBookingModalOpen(false);
-                fetchBookingData(stats.groupId);
+                refreshData();
             } else {
                 const err = await res.json();
                 alert(err.error || "Xatolik yuz berdi!");
@@ -199,8 +102,7 @@ export default function StudentDashboard() {
         try {
             const res = await apiFetch(`/api/extra-class-bookings/${myBooking.id}`, { method: 'DELETE' });
             if (res.ok) {
-                setMyBooking(null);
-                fetchBookingData(stats.groupId);
+                refreshData();
             }
         } catch (e) {
             alert("Xatolik!");
@@ -232,7 +134,7 @@ export default function StudentDashboard() {
                 });
 
                 if (res.ok) {
-                    setStats((prev: any) => ({ ...prev, avatarUrl: base64data as string }));
+                    refreshData();
                 } else {
                     const errInfo = await res.json();
                     alert(errInfo.error || "Rasm joylashda xatolik yuz berdi");
@@ -270,7 +172,7 @@ export default function StudentDashboard() {
                         <div className="flex justify-between items-start mb-6">
                             <div className="flex items-center gap-3">
                                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center border-2 shadow-lg overflow-hidden relative" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--primary-color)' }}>
-                                    {stats.avatarUrl ? (
+                                    {stats?.avatarUrl ? (
                                         <img 
                                             src={stats.avatarUrl.startsWith('/uploads') ? `${import.meta.env.VITE_BACKEND_URL}${stats.avatarUrl}` : stats.avatarUrl} 
                                             alt="Avatar" 
@@ -295,8 +197,8 @@ export default function StudentDashboard() {
                             </div>
                         </div>
 
-                        <XPProgress totalScore={stats.totalScore} isLoading={isLoading} />
-                        <BattleCard battle={battle} groupId={stats.groupId} isLoading={isLoading} />
+                        <XPProgress totalScore={stats?.totalScore || 0} isLoading={isLoading} />
+                        <BattleCard battle={battle} groupId={stats?.groupId || ''} isLoading={isLoading} />
                     </header>
 
                     {/* Right Column / Main Content Area */}
@@ -304,7 +206,7 @@ export default function StudentDashboard() {
                         {activeTab === 'home' && (
                             <>
                                 <JoinGameCard studentId={user?.id} />
-                                <QuickStats coins={stats.coins} />
+                                <QuickStats coins={stats?.coins || 0} />
                                 <NavGrid />
                                 <BookingCard 
                                     myBooking={myBooking} 
@@ -312,7 +214,7 @@ export default function StudentDashboard() {
                                     onCancel={cancelBooking} 
                                     onOpenModal={() => setIsBookingModalOpen(true)} 
                                 />
-                                <RankCard stats={stats} />
+                                <RankCard stats={stats || { gamesPlayed: 0, totalScore: 0, rank: 0, coins: 0, streakCount: 0, isHero: false, hasTrophy: false, weeklyBattleScore: 0, groupId: '', level: 'Beginner', avatarUrl: null, hasAvatarUnlock: false, active_theme_color: null }} />
                                 <TelegramBanner studentId={user?.id} />
                             </>
                         )}
@@ -342,6 +244,12 @@ export default function StudentDashboard() {
                     onClose={() => setIsBookingModalOpen(false)} 
                     onBook={handleBook} 
                 />
+            )}
+
+            {isLoading && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/50 backdrop-blur-sm">
+                    <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
             )}
         </div>
     );

@@ -7,6 +7,8 @@ import { ThemeEngine } from './components/ThemeEngine';
 import { App as CapacitorApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Capacitor } from '@capacitor/core';
+import { StudentDataProvider } from './contexts/StudentDataContext';
+import { TeacherDataProvider } from './contexts/TeacherDataContext';
 
 // Lazy load pages
 const Home = lazy(() => import('./pages/Home'));
@@ -115,7 +117,9 @@ function App() {
               path="/student/dashboard"
               element={
                 <ProtectedRoute requiredRole="student">
-                  <StudentDashboard />
+                  <StudentDataProvider>
+                    <StudentDashboard />
+                  </StudentDataProvider>
                 </ProtectedRoute>
               }
             />
@@ -257,7 +261,9 @@ function App() {
               path="/admin/groups"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <TeacherDashboard />
+                  <TeacherDataProvider>
+                    <TeacherDashboard />
+                  </TeacherDataProvider>
                 </ProtectedRoute>
               }
             />
@@ -281,7 +287,9 @@ function App() {
               path="/teacher"
               element={
                 <ProtectedRoute requiredRole="teacher">
-                  <TeacherDashboard />
+                  <TeacherDataProvider>
+                    <TeacherDashboard />
+                  </TeacherDataProvider>
                 </ProtectedRoute>
               }
             />

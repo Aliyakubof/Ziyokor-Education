@@ -1,5 +1,6 @@
 import { query } from '../db';
 import { notifyStudentSubscribers, sendBattleAlert } from '../bot';
+import { notifySubscribers } from '../socket';
 
 export async function awardRewards(studentId: string, score: number) {
     try {
@@ -44,6 +45,13 @@ export async function awardRewards(studentId: string, score: number) {
             [coinsToAward, newStreak, now, actualScore, studentId]
         );
 
+        // Notify Student via Socket
+        notifySubscribers(`user_${studentId}`, 'stats_update', { 
+            coins: (student.coins || 0) + coinsToAward, 
+            streakCount: newStreak,
+            weeklyBattleScore: (student.weekly_battle_score || 0) + actualScore
+        });
+
         // Update Group Battle Score
         const battleRes = await query(`
             SELECT id, group_a_id, group_b_id 
@@ -59,6 +67,10 @@ export async function awardRewards(studentId: string, score: number) {
             } else {
                 await query('UPDATE group_battles SET score_b = score_b + $1 WHERE id = $2', [actualScore, battle.id]);
             }
+            // Notify via Socket
+            notifySubscribers(`role_teacher`, 'battle_update', {});
+            notifySubscribers(`role_admin`, 'battle_update', {});
+            notifySubscribers(`role_student`, 'battle_update', {});
         }
 
         console.log(`[Rewards] Awarded ${coinsToAward} coins to student ${studentId}. New streak: ${newStreak} (Double XP: ${isDoubleXP})`);
@@ -115,6 +127,13 @@ export async function bulkAwardRewards(players: { id: string, score: number }[])
                 [coinsToAward, newStreak, now, actualScore, p.id]
             ));
 
+            // Socket Notification for each student
+            notifySubscribers(`user_${p.id}`, 'stats_update', {
+                coins: (student.coins || 0) + coinsToAward,
+                streakCount: newStreak,
+                weeklyBattleScore: (student.weekly_battle_score || 0) + actualScore
+            });
+
             battleUpdates.set(student.group_id, (battleUpdates.get(student.group_id) || 0) + actualScore);
         }
 
@@ -135,6 +154,10 @@ export async function bulkAwardRewards(players: { id: string, score: number }[])
                 if (scoreB > 0) await query('UPDATE group_battles SET score_b = score_b + $1 WHERE id = $2', [scoreB, battle.id]);
                 sendBattleAlert(battle.id).catch(() => { }); 
             }
+            // Notify via Socket
+            notifySubscribers(`role_teacher`, 'battle_update', {});
+            notifySubscribers(`role_admin`, 'battle_update', {});
+            notifySubscribers(`role_student`, 'battle_update', {});
         }
         console.log(`[Bulk Rewards] Successfully awarded ${validPlayers.length} players simultaneously.`);
     } catch (err) {

@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { query } from '../db';
 import { generateToken } from '../middleware/auth';
 import { notifyStudentSubscribers } from '../bot';
+import { notifySubscribers } from '../socket';
 
 export const getLeaderboard = async (req: Request, res: Response) => {
     try {
@@ -207,6 +208,7 @@ export const updateAvatar = async (req: Request, res: Response) => {
         const { id } = req.params;
         const { avatar_url } = req.body;
         await query('UPDATE students SET avatar_url = $1 WHERE id = $2', [avatar_url, id]);
+        notifySubscribers(`user_${id}`, 'stats_update', { avatarUrl: avatar_url });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Error updating avatar' });
@@ -254,6 +256,7 @@ export const setActiveTheme = async (req: Request, res: Response) => {
         const purchaseRes = await query('SELECT 1 FROM student_purchases WHERE student_id = $1 AND item_id = $2 LIMIT 1', [studentId, themeId]);
         if (purchaseRes.rowCount === 0) return res.status(403).json({ error: 'Siz bu mavzuni sotib olmagansiz' });
         await query('UPDATE students SET active_theme_id = $1 WHERE id = $2', [themeId, studentId]);
+        notifySubscribers(`user_${studentId}`, 'stats_update', { active_theme_id: themeId });
         res.json({ success: true, themeId });
     } catch (err: any) {
         console.error('Set active theme error:', err);
@@ -270,6 +273,7 @@ export const setActiveAvatar = async (req: Request, res: Response) => {
         const purchaseRes = await query('SELECT 1 FROM student_purchases WHERE student_id = $1 AND item_id = $2 LIMIT 1', [studentId, itemId]);
         if (purchaseRes.rowCount === 0) return res.status(403).json({ error: 'Siz bu avatarni sotib olmagansiz' });
         await query('UPDATE students SET avatar_url = $1 WHERE id = $2', [avatarUrl, studentId]);
+        notifySubscribers(`user_${studentId}`, 'stats_update', { avatarUrl });
         res.json({ success: true, avatarUrl });
     } catch (err: any) {
         console.error('Set active avatar error:', err);
@@ -385,6 +389,9 @@ export const bookExtraClass = async (req: Request, res: Response) => {
             'INSERT INTO extra_class_bookings (id, student_id, group_id, time_slot, topic, is_forced, booking_date) VALUES ($1, $2, $3, $4, $5, $6, $7)',
             [id, studentId, groupId, timeSlot, topic, !!isForced, bookingDate || null]
         );
+        notifySubscribers(`role_teacher`, 'booking_update', {});
+        notifySubscribers(`role_admin`, 'booking_update', {});
+        notifySubscribers(`user_${studentId}`, 'booking_update', {});
         res.json({ success: true, id });
     } catch (err) {
         console.error('bookExtraClass error:', err);
@@ -395,6 +402,9 @@ export const bookExtraClass = async (req: Request, res: Response) => {
 export const cancelBooking = async (req: Request, res: Response) => {
     try {
         await query('DELETE FROM extra_class_bookings WHERE id = $1', [req.params.id]);
+        notifySubscribers(`role_teacher`, 'booking_update', {});
+        notifySubscribers(`role_admin`, 'booking_update', {});
+        notifySubscribers(`role_student`, 'booking_update', {});
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Xatolik' });
