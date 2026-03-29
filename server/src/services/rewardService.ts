@@ -56,7 +56,7 @@ export async function awardRewards(studentId: string, score: number) {
         const battleRes = await query(`
             SELECT id, group_a_id, group_b_id 
             FROM group_battles 
-            WHERE (group_a_id = $1 OR group_b_id = $1) AND status = 'active'
+            WHERE (group_a_id = $1::uuid OR group_b_id = $1::uuid) AND status = 'active'
             ORDER BY created_at DESC LIMIT 1
         `, [student.group_id]);
 
@@ -89,7 +89,7 @@ export async function bulkAwardRewards(players: { id: string, score: number }[])
         const isDoubleXP = (day === 0 || day === 6);
 
         const ids = validPlayers.map(p => p.id);
-        const studentRes = await query('SELECT id, last_activity_at, streak_count, group_id FROM students WHERE id = ANY($1)', [ids]);
+        const studentRes = await query('SELECT id, last_activity_at, streak_count, group_id FROM students WHERE id = ANY($1::uuid[])', [ids]);
         const studentMap = new Map(studentRes.rows.map(r => [r.id, r]));
 
         const updates = [];
@@ -144,7 +144,7 @@ export async function bulkAwardRewards(players: { id: string, score: number }[])
             const battleRes = await query(`
                 SELECT id, group_a_id, group_b_id 
                 FROM group_battles 
-                WHERE (group_a_id = ANY($1) OR group_b_id = ANY($1)) AND status = 'active'
+                WHERE (group_a_id = ANY($1::uuid[]) OR group_b_id = ANY($1::uuid[])) AND status = 'active'
             `, [groupIds]);
 
             for (const battle of battleRes.rows) {

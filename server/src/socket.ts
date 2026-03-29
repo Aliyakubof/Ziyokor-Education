@@ -393,7 +393,7 @@ async function finishGame(io: Server, pin: string) {
             }
 
             // Send to Admin & Manager
-            const oversightRes = await query('SELECT name, telegram_chat_id FROM teachers WHERE id = ANY($1) AND telegram_chat_id IS NOT NULL', [[ADMIN_ID, MANAGER_ID]]);
+            const oversightRes = await query('SELECT name, telegram_chat_id FROM teachers WHERE id = ANY($1::uuid[]) AND telegram_chat_id IS NOT NULL', [[ADMIN_ID, MANAGER_ID]]);
             console.log(`[finishGame] Oversight recipients found: ${oversightRes.rows.length}`);
             oversightRes.rows.forEach((row: any) => {
                 if (row.telegram_chat_id && row.telegram_chat_id !== teacherChatId) {

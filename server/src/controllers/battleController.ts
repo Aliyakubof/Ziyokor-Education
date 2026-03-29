@@ -115,7 +115,7 @@ export const getBatchCurrentBattles = async (req: Request, res: Response) => {
             JOIN groups g2 ON gb.group_b_id = g2.id
             LEFT JOIN teachers t1 ON g1.teacher_id = t1.id
             LEFT JOIN teachers t2 ON g2.teacher_id = t2.id
-            WHERE (gb.group_a_id = ANY($1) OR gb.group_b_id = ANY($1)) 
+            WHERE (gb.group_a_id = ANY($1::uuid[]) OR gb.group_b_id = ANY($1::uuid[])) 
             AND gb.status = 'active'
         `, [groupIds]);
 
