@@ -89,7 +89,7 @@ export async function bulkAwardRewards(players: { id: string, score: number }[])
         const isDoubleXP = (day === 0 || day === 6);
 
         const ids = validPlayers.map(p => p.id);
-        const studentRes = await query('SELECT id, last_activity_at, streak_count, group_id FROM students WHERE id = ANY($1::uuid[])', [ids]);
+        const studentRes = await query('SELECT id, last_activity_at, streak_count, group_id FROM students WHERE id = ANY($1)', [ids]);
         const studentMap = new Map(studentRes.rows.map(r => [r.id, r]));
 
         const updates = [];

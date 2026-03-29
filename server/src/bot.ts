@@ -370,7 +370,7 @@ bot.action(/^t_g_(.+)$/, async (ctx) => {
         const students = await query('SELECT id, name FROM students WHERE group_id = $1 ORDER BY name ASC', [groupId]);
         if (students.rowCount === 0) return ctx.answerCbQuery('O\'quvchilar yo\'q.');
 
-        const subs = await query('SELECT student_id FROM student_telegram_subscriptions WHERE student_id = ANY($1::uuid[]) AND role = \'parent\'', [students.rows.map((s: any) => s.id)]);
+        const subs = await query('SELECT student_id FROM student_telegram_subscriptions WHERE student_id = ANY($1) AND role = \'parent\'', [students.rows.map((s: any) => s.id)]);
         const connectedIds = new Set(subs.rows.map((s: any) => s.student_id));
 
         let msg = `👨‍👩‍👧‍👦 <b>Ota-ona ulanish holati:</b>\n\n`;

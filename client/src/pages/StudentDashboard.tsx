@@ -174,7 +174,7 @@ export default function StudentDashboard() {
                                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center border-2 shadow-lg overflow-hidden relative" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--primary-color)' }}>
                                     {stats?.avatarUrl ? (
                                         <img 
-                                            src={stats.avatarUrl.startsWith('/uploads') ? `${import.meta.env.VITE_BACKEND_URL}${stats.avatarUrl}` : stats.avatarUrl} 
+                                            src={stats.avatarUrl?.startsWith('/uploads') ? `${import.meta.env.VITE_BACKEND_URL}${stats.avatarUrl}` : stats.avatarUrl} 
                                             alt="Avatar" 
                                             className="w-full h-full object-cover" 
                                         />

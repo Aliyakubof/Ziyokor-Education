@@ -25,7 +25,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, stats, isUploadingAvatar,
                         boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)' 
                     }}
                 >
-                    {stats.avatarUrl ? (
+                    {stats?.avatarUrl ? (
                         <img 
                             src={stats.avatarUrl.startsWith('/uploads') ? `${import.meta.env.VITE_BACKEND_URL}${stats.avatarUrl}` : stats.avatarUrl} 
                             alt="Avatar" 
@@ -39,7 +39,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, stats, isUploadingAvatar,
                     <div className={`absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer ${isUploadingAvatar ? 'opacity-100' : ''}`}>
                         {isUploadingAvatar ? (
                             <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        ) : stats.hasAvatarUnlock ? (
+                        ) : stats?.hasAvatarUnlock ? (
                             <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-white">
                                 <Camera size={24} className="mb-1" />
                                 <span className="text-[10px] font-black uppercase">O'zgartirish</span>

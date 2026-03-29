@@ -124,7 +124,7 @@ export const getStats = async (req: Request, res: Response) => {
             FROM students s 
             LEFT JOIN groups g ON s.group_id = g.id 
             LEFT JOIN shop_items si ON s.active_theme_id = si.id
-            WHERE s.id = $1::uuid
+            WHERE s.id = $1
         `, [id]);
         
         if (studentRes.rowCount === 0) return res.json(null);
@@ -149,12 +149,12 @@ export const getStats = async (req: Request, res: Response) => {
         const rankRes = await query(`
             SELECT COUNT(*) + 1 as rank
             FROM students
-            WHERE coins > (SELECT coins FROM students WHERE id = $1::uuid)
+            WHERE coins > (SELECT coins FROM students WHERE id = $1)
         `, [id]);
 
         const unlockRes = await query(`
             SELECT 1 FROM student_purchases 
-            WHERE student_id = $1::uuid AND item_id = 'avatar_unlock'
+            WHERE student_id = $1 AND item_id = 'avatar_unlock'
         `, [id]);
 
         res.json({
@@ -172,9 +172,14 @@ export const getStats = async (req: Request, res: Response) => {
             totalScore: parseInt(scoreRes.rows[0].total_score) || 0,
             rank: parseInt(rankRes.rows[0].rank) || 1
         });
-    } catch (err) {
-        console.error('Stats error:', err);
-        res.status(500).json({ error: 'Error fetching stats' });
+    } catch (err: any) {
+        console.error('Stats error for ID:', req.params.id, err);
+        res.status(500).json({ 
+            error: 'Error fetching stats', 
+            details: err.message,
+            hint: err.hint,
+            position: err.position
+        });
     }
 };
 
