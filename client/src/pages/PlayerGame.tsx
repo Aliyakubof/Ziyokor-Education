@@ -331,11 +331,16 @@ export default function PlayerGame() {
 
         // Anti-Cheat listener
         const handleVisibilityChange = () => {
+            const pin = localStorage.getItem('kahoot-pin');
+            const studentId = localStorage.getItem('student-id') || socket.id;
+            
             if (document.hidden && !isUnloading && viewRef.current === 'PLAYING') {
-                const pin = localStorage.getItem('kahoot-pin');
-                const studentId = localStorage.getItem('student-id') || socket.id;
                 if (pin && studentId) {
                     socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
+                }
+            } else if (!document.hidden && viewRef.current === 'PLAYING') {
+                if (pin && studentId) {
+                    socket.emit('student-status-update', { pin, studentId, status: 'Online' });
                 }
             }
         };

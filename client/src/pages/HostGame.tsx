@@ -50,7 +50,13 @@ const MemoizedPlayerCard = memo(({ player, totalQuestionsCount }: { player: any;
                     </div>
                 </div>
                 <div className="text-right">
-                    <div className="text-sm font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-lg">Faol</div>
+                    <div className={`text-sm font-black px-3 py-1 rounded-lg
+                        ${player.status === 'Cheating' ? 'bg-red-100 text-red-600' : 
+                          player.status === 'Offline' ? 'bg-slate-100 text-slate-400' :
+                          'bg-indigo-50 text-indigo-500'}`}>
+                        {player.status === 'Cheating' ? 'Cheating' : 
+                         player.status === 'Offline' ? 'Offline' : 'Faol'}
+                    </div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Holati</p>
                 </div>
             </div>

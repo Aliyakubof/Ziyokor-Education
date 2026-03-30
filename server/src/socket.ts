@@ -669,7 +669,8 @@ export function initSocket(io: Server) {
 
             if (existingPlayer) {
                 existingPlayer.socketId = socket.id;
-                // If they rejoined, they might have a generic name but now we resolved it
+                existingPlayer.status = 'joined'; 
+                
                 if (studentId) {
                     existingPlayer.name = name;
                     (socket as any).studentId = studentId; // Persist identity
@@ -1074,6 +1075,11 @@ export function initSocket(io: Server) {
             const player = await store.getPlayer(pin, pId);
             if (!player) return;
 
+            // Mark as Online on reconnection/sync
+            player.status = 'Online';
+            await store.setPlayer(pin, player);
+            await broadcastPlayerUpdate(io, pin, pId);
+
             // Send current game state to player
             if (game.status === 'ACTIVE') {
                 if (game.isUnitQuiz) {
@@ -1185,8 +1191,20 @@ export function initSocket(io: Server) {
             }
         });
         
-        socket.on('disconnect', () => {
+        socket.on('disconnect', async () => {
             console.log('Client disconnected:', socket.id);
+            const studentId = (socket as any).studentId;
+            if (studentId) {
+                const allGames = await store.getAllGames();
+                for (const pin in allGames) {
+                    const player = await store.getPlayer(pin, studentId);
+                    if (player && player.socketId === socket.id) {
+                        player.status = 'Offline';
+                        await store.setPlayer(pin, player);
+                        await broadcastPlayerUpdate(io, pin, studentId);
+                    }
+                }
+            }
         });
     });
 }
