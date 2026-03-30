@@ -5,9 +5,9 @@ import fs from 'fs';
 import { Worker } from 'worker_threads';
 import { store, generatePin, generateParentId } from './store';
 import { query } from './db';
-import { bot } from './bot';
+import { bot, sendIndividualUnitResultPDF } from './bot';
 import { ADMIN_ID, MANAGER_ID } from './constants';
-import { generateQuizResultPDF, generateGroupContactPDF } from './pdfGenerator';
+import { generateQuizResultPDF, generateGroupContactPDF, generateSoloQuizPDF } from './pdfGenerator';
 import { checkAnswer, countCorrectParts } from './utils';
 import { checkAnswersWithAIBatch } from './aiChecker';
 import { bulkAwardRewards } from './services/rewardService';
@@ -419,6 +419,26 @@ async function finishGame(io: Server, pin: string) {
             bulkAwardRewards(game.players);
         } catch (rewardErr) {
             console.error(`[finishGame] Failed to award rewards:`, rewardErr);
+        }
+
+        // 4. Send Individual Reports to Students (Unit Quiz only)
+        if (game.isUnitQuiz) {
+            try {
+                console.log(`[finishGame] Sending individual reports to ${game.players.length} students...`);
+                for (const player of game.players) {
+                    const percentage = totalPossibleScore > 0 ? Math.round((player.score / totalPossibleScore) * 100) : 0;
+                    const pdfBuffer = await generateSoloQuizPDF(game.quiz.title, player.name, player.score, totalPossibleScore, percentage, questions, player.answers);
+                    
+                    const sanitizedName = player.name.replace(/\s+/g, '_');
+                    const filename = `Result_${sanitizedName}_${Date.now()}.pdf`;
+                    const caption = `🎯 <b>Unit Test Natijangiz</b>\n\n📝 Test: ${game.quiz.title}\n📊 Natija: ${player.score} / ${totalPossibleScore} (${percentage}%)\n${percentage >= 70 ? "✅ Tabriklaymiz, siz o'tdingiz!" : "❌ Afsuski, o'ta olmadingiz. Yana harakat qilib ko'ring."}`;
+                    
+                    await sendIndividualUnitResultPDF(player.id, pdfBuffer, filename, caption);
+                }
+                console.log(`[finishGame] Individual reports queue processed.`);
+            } catch (studentPdfErr) {
+                console.error(`[finishGame] Individual student PDF processing failed:`, studentPdfErr);
+            }
         }
 
     } catch (err) {

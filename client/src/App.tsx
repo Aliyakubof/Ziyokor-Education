@@ -55,6 +55,8 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
   return <>{children}</>;
 };
 
+import AnimatedLayout from './components/AnimatedLayout';
+
 const RootRoute = () => {
   const { isAuthenticated, role } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -110,218 +112,220 @@ function App() {
             </div>
           }>
             <Routes>
-            <Route path="/" element={<RootRoute />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
-            <Route path="/student/" element={<Navigate to="/student/dashboard" replace />} />
-            <Route path="/student/login" element={<StudentLogin />} />
-            <Route
-              path="/student/dashboard"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <StudentDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/leaderboard"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <Leaderboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/shop"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <Shop />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/practice"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <SoloQuiz />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/duels"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <DuelLobby />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/vocab-battles"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <VocabularyBattleLevels />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/battle/:id"
-              element={
-                <ProtectedRoute>
-                  <BattleDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/vocab-battle/play/:id"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <VocabularyBattleGame />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/create"
-              element={
-                <ProtectedRoute requiredRole={['teacher', 'manager']}>
-                  <CreateQuiz />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/edit-quiz/:id"
-              element={
-                <ProtectedRoute requiredRole={['teacher', 'manager']}>
-                  <CreateQuiz />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/host/:quizId" element={<HostLobby />} />
-            <Route path="/host-game/:pin" element={<HostGame />} />
-            <Route path="/join" element={<PlayerJoin />} />
-            <Route path="/play" element={<PlayerGame />} />
+              <Route element={<AnimatedLayout />}>
+                <Route path="/" element={<RootRoute />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
+                <Route path="/student/" element={<Navigate to="/student/dashboard" replace />} />
+                <Route path="/student/login" element={<StudentLogin />} />
+                <Route
+                  path="/student/dashboard"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <StudentDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/student/leaderboard"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <Leaderboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/student/shop"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <Shop />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/student/practice"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <SoloQuiz />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/student/duels"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <DuelLobby />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/student/vocab-battles"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <VocabularyBattleLevels />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/student/battle/:id"
+                  element={
+                    <ProtectedRoute>
+                      <BattleDetails />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/student/vocab-battle/play/:id"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <VocabularyBattleGame />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/create"
+                  element={
+                    <ProtectedRoute requiredRole={['teacher', 'manager']}>
+                      <CreateQuiz />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/edit-quiz/:id"
+                  element={
+                    <ProtectedRoute requiredRole={['teacher', 'manager']}>
+                      <CreateQuiz />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/host/:quizId" element={<HostLobby />} />
+                <Route path="/host-game/:pin" element={<HostGame />} />
+                <Route path="/join" element={<PlayerJoin />} />
+                <Route path="/play" element={<PlayerGame />} />
 
-            {/* Restricted Unit Quiz Routes */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminPanel />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/slots"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminSlots />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/manager"
-              element={
-                <ProtectedRoute requiredRole="manager">
-                  <ManagerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/group/:groupId"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <GroupDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/vocab-battles"
-              element={
-                <ProtectedRoute requiredRole={['admin', 'manager', 'teacher']}>
-                  <AdminVocabBattles />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/vocab-battles/create"
-              element={
-                <ProtectedRoute requiredRole={['admin', 'teacher', 'manager']}>
-                  <CreateVocabBattle />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/vocab-battles/edit/:id"
-              element={
-                <ProtectedRoute requiredRole={['admin', 'teacher', 'manager']}>
-                  <CreateVocabBattle />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/groups"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <TeacherDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/telegram-questions"
-              element={
-                <ProtectedRoute requiredRole={['admin', 'teacher']}>
-                  <ManageTelegramQuestions />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/manage-duels"
-              element={
-                <ProtectedRoute requiredRole={['admin', 'teacher']}>
-                  <ManageDuels />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teacher"
-              element={
-                <ProtectedRoute requiredRole="teacher">
-                  <TeacherDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teacher/group/:groupId"
-              element={
-                <ProtectedRoute requiredRole="teacher">
-                  <GroupDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/manager/group/:groupId"
-              element={
-                <ProtectedRoute requiredRole="manager">
-                  <GroupDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/unit-lobby/:quizId/:groupId"
-              element={
-                <ProtectedRoute>
-                  <UnitLobby />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/unit-join/:pin"
-              element={
-                <ProtectedRoute requiredRole="student">
-                  <UnitJoin />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+                {/* Restricted Unit Quiz Routes */}
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminPanel />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/slots"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminSlots />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/manager"
+                  element={
+                    <ProtectedRoute requiredRole="manager">
+                      <ManagerDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/group/:groupId"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <GroupDetails />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/vocab-battles"
+                  element={
+                    <ProtectedRoute requiredRole={['admin', 'manager', 'teacher']}>
+                      <AdminVocabBattles />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/vocab-battles/create"
+                  element={
+                    <ProtectedRoute requiredRole={['admin', 'teacher', 'manager']}>
+                      <CreateVocabBattle />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/vocab-battles/edit/:id"
+                  element={
+                    <ProtectedRoute requiredRole={['admin', 'teacher', 'manager']}>
+                      <CreateVocabBattle />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/groups"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <TeacherDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/telegram-questions"
+                  element={
+                    <ProtectedRoute requiredRole={['admin', 'teacher']}>
+                      <ManageTelegramQuestions />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/manage-duels"
+                  element={
+                    <ProtectedRoute requiredRole={['admin', 'teacher']}>
+                      <ManageDuels />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/teacher"
+                  element={
+                    <ProtectedRoute requiredRole="teacher">
+                      <TeacherDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/teacher/group/:groupId"
+                  element={
+                    <ProtectedRoute requiredRole="teacher">
+                      <GroupDetails />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/manager/group/:groupId"
+                  element={
+                    <ProtectedRoute requiredRole="manager">
+                      <GroupDetails />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/unit-lobby/:quizId/:groupId"
+                  element={
+                    <ProtectedRoute>
+                      <UnitLobby />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/unit-join/:pin"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <UnitJoin />
+                    </ProtectedRoute>
+                  }
+                />
+              </Route>
+            </Routes>
           </Suspense>
           </TeacherDataProvider>
           </StudentDataProvider>

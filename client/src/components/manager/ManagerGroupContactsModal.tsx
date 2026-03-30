@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../api';
 import { Users, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface Group {
     id: string;
@@ -43,8 +44,17 @@ const ManagerGroupContactsModal: React.FC<ManagerGroupContactsModalProps> = ({ g
     }, [group.id]);
 
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-            <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        >
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+            >
                 <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50 relative">
                     <div>
                         <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
@@ -69,7 +79,7 @@ const ManagerGroupContactsModal: React.FC<ManagerGroupContactsModalProps> = ({ g
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {students.map((student) => (
+                            {students.map((student: StudentContact) => (
                                 <div key={student.id} className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-300 transition-colors shadow-sm relative group overflow-hidden">
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-indigo-50 to-transparent -mr-12 -mt-12 rounded-full z-0 pointer-events-none"></div>
                                     <div className="relative z-10">
@@ -105,8 +115,8 @@ const ManagerGroupContactsModal: React.FC<ManagerGroupContactsModalProps> = ({ g
                         </div>
                     )}
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 };
 

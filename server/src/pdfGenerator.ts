@@ -378,6 +378,7 @@ export const generateSoloQuizPDF = (
             const studentAns = answers[idx];
             let isCorrect = false;
             let displayAns = studentAns !== undefined ? String(studentAns) : 'Javob berilmagan';
+            let resultLabel = '';
 
             if (q.type === 'multiple-choice' || q.type === 'true-false') {
                 isCorrect = studentAns !== undefined && Number(studentAns) === q.correctIndex;
@@ -387,11 +388,18 @@ export const generateSoloQuizPDF = (
             } else {
                 const earned = countCorrectParts(studentAns, q.acceptedAnswers || []);
                 isCorrect = earned === (q.acceptedAnswers?.length || 1);
+                
+                const totalParts = q.acceptedAnswers?.length || 1;
+                if (!isCorrect && earned > 0) {
+                    resultLabel = `(${earned}/${totalParts} TO'G'RI)`;
+                } else {
+                    resultLabel = isCorrect ? '(TO\'G\'RI)' : '(NOTO\'G\'RI)';
+                }
             }
 
             doc.fontSize(11).font(fontBold).text(`${actualIdx}. ${q.text}`);
             const statusColor = isCorrect ? '#059669' : '#dc2626';
-            doc.fontSize(10).font(fontRegular).fillColor(statusColor).text(`Sizning javobingiz: ${displayAns} ${isCorrect ? '(TO\'G\'RI)' : '(NOTO\'G\'RI)'}`);
+            doc.fontSize(10).font(fontRegular).fillColor(statusColor).text(`Sizning javobingiz: ${displayAns} ${resultLabel}`);
             
             if (!isCorrect) {
                 const correct = (q.type === 'multiple-choice' || q.type === 'true-false') 

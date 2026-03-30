@@ -105,7 +105,12 @@ const BookingModal: React.FC<BookingModalProps> = ({ groupSettings, availableTop
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
+        >
             <motion.div
                 initial={{ opacity: 0, scale: 0.92, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -210,7 +215,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ groupSettings, availableTop
                     </button>
                 </div>
             </motion.div>
-        </div>
+        </motion.div>
     );
 };
 

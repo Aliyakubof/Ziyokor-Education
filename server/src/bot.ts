@@ -733,6 +733,32 @@ export async function sendSoloQuizPDF(studentId: string, pdfBuffer: Buffer, file
 }
 
 /**
+ * Sends a Unit Test individual result PDF to student/parents.
+ */
+export async function sendIndividualUnitResultPDF(studentId: string, pdfBuffer: Buffer, filename: string, caption: string) {
+    try {
+        const subs = await query('SELECT telegram_chat_id FROM student_telegram_subscriptions WHERE student_id = $1', [studentId]);
+        if (!subs.rows || subs.rows.length === 0) return;
+
+        for (const sub of subs.rows) {
+            try {
+                await bot.telegram.sendDocument(sub.telegram_chat_id, {
+                    source: pdfBuffer,
+                    filename: filename
+                }, {
+                    caption: caption,
+                    parse_mode: 'HTML'
+                });
+            } catch (e) {
+                console.error(`Error sending individual PDF to ${sub.telegram_chat_id}:`, e);
+            }
+        }
+    } catch (err) {
+        console.error('[Bot] sendIndividualUnitResultPDF error:', err);
+    }
+}
+
+/**
  * Battle Alert: Notify teacher groups about close battles or lead changes.
  */
 export async function sendBattleAlert(battleId: string) {
