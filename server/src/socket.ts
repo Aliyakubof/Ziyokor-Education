@@ -939,8 +939,14 @@ export function initSocket(io: Server) {
                     if (Number(answer) === question.correctIndex) currentScore = 1;
                 }
                 
-                (player as any).partialScoreMap[qIdx] = currentScore;
+                player.partialScoreMap[qIdx] = currentScore;
                 newScore += currentScore;
+
+                // AI Fallback for Unit Tests
+                if (textTypes.includes(question.type || '') && currentScore === 0 && answer) {
+                    enqueueAICheck(io, pin, playerId, qIdx, question.text, String(answer), question.type || 'text-input', question.acceptedAnswers)
+                        .catch(e => console.error('[AI-Queue-Error-Sync]', e));
+                }
             }
             
             player.score = newScore;
