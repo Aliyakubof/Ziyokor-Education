@@ -94,7 +94,7 @@ export default function Shop() {
         }
     };
 
-    const handleApplyTheme = async (themeId: string) => {
+    const handleApplyTheme = async (themeId: string, themeColor: string) => {
         setPurchasing(themeId);
         try {
             const res = await apiFetch('/api/student/active-theme', {
@@ -105,7 +105,7 @@ export default function Shop() {
 
             if (res.ok) {
                 setActiveThemeId(themeId);
-                setGlobalThemeId(themeId);
+                setGlobalThemeId(themeColor);
                 setMessage({ text: "Mavzu muvaffaqiyatli o'rnatildi!", type: 'success' });
             } else {
                 const data = await res.json();
@@ -227,7 +227,7 @@ export default function Shop() {
 
                                     {isPurchased && item.is_one_time ? (
                                         <button
-                                            onClick={() => item.type === 'theme' ? handleApplyTheme(item.id) : handleApplyAvatar(item.id)}
+                                            onClick={() => item.type === 'theme' ? handleApplyTheme(item.id, item.color) : handleApplyAvatar(item.id)}
                                             disabled={isActive || purchasing === item.id}
                                             className={`w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${isActive
                                                 ? 'opacity-40 cursor-not-allowed'

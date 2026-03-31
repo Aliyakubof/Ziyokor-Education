@@ -9,12 +9,31 @@ import { notifySubscribers } from '../socket';
 export const getLeaderboard = async (req: Request, res: Response) => {
     try {
         const { type = 'coins', limit = 50, view = 'global', groupId } = req.query;
-        let queryStr = `
-            SELECT s.id, s.name, s.coins, s.streak_count, s.avatar_url, g.name as group_name, g.level as group_level
-            FROM students s
-            LEFT JOIN groups g ON s.group_id = g.id
-        `;
+        let queryStr = '';
         const params: any[] = [];
+
+        if (type === 'vocab') {
+            queryStr = `
+                WITH vocab_scores AS (
+                    SELECT player->>'id' as student_id, SUM((player->>'score')::int) as vocab_score
+                    FROM game_results gr, jsonb_array_elements(
+                        CASE WHEN jsonb_typeof(gr.player_results) = 'array' THEN gr.player_results ELSE '[]'::jsonb END
+                    ) as player
+                    WHERE gr.quiz_title LIKE 'Vocab Battle: %'
+                    GROUP BY player->>'id'
+                )
+                SELECT s.id, s.name, s.coins, s.streak_count, s.avatar_url, g.name as group_name, g.level as group_level, COALESCE(v.vocab_score, 0) as stats_value
+                FROM students s
+                LEFT JOIN groups g ON s.group_id = g.id
+                LEFT JOIN vocab_scores v ON s.id = v.student_id
+            `;
+        } else {
+            queryStr = `
+                SELECT s.id, s.name, s.coins, s.streak_count, s.avatar_url, g.name as group_name, g.level as group_level, ${type === 'streaks' ? 's.streak_count' : 's.coins'} as stats_value
+                FROM students s
+                LEFT JOIN groups g ON s.group_id = g.id
+            `;
+        }
 
         if (view === 'group' && groupId && groupId !== 'undefined' && groupId !== 'null') {
             queryStr += ` WHERE s.group_id = $1`;
@@ -26,6 +45,8 @@ export const getLeaderboard = async (req: Request, res: Response) => {
 
         if (type === 'streaks') {
             queryStr += ` ORDER BY s.streak_count DESC, s.coins DESC`;
+        } else if (type === 'vocab') {
+            queryStr += ` ORDER BY stats_value DESC, s.coins DESC`;
         } else {
             queryStr += ` ORDER BY s.coins DESC, s.streak_count DESC`;
         }

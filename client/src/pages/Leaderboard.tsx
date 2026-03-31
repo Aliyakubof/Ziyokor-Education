@@ -9,7 +9,7 @@ export default function Leaderboard() {
     const { user, role } = useAuth();
     const navigate = useNavigate();
     const [view, setView] = useState<'global' | 'group' | 'battles'>('global');
-    const [type, setType] = useState<'coins' | 'streaks'>('coins');
+    const [type, setType] = useState<'coins' | 'streaks' | 'vocab'>('coins');
     const [data, setData] = useState<any[]>([]);
     const [battleData, setBattleData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -164,7 +164,7 @@ export default function Leaderboard() {
 
                 {/* Type Filter (only for non-battle views) */}
                 {view !== 'battles' && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <button
                             onClick={() => setType('coins')}
                             className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 border-2 transition-all ${type === 'coins' ? 'bg-yellow-400/10 border-yellow-400 text-yellow-700' : 'bg-white border-slate-100 text-slate-400'}`}
@@ -176,6 +176,12 @@ export default function Leaderboard() {
                             className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 border-2 transition-all ${type === 'streaks' ? 'bg-orange-500/10 border-orange-500 text-orange-700' : 'bg-white border-slate-100 text-slate-400'}`}
                         >
                             <Flame size={14} /> Streak
+                        </button>
+                        <button
+                            onClick={() => setType('vocab')}
+                            className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-1.5 border-2 transition-all ${type === 'vocab' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-700' : 'bg-white border-slate-100 text-slate-400'}`}
+                        >
+                            <Trophy size={14} /> Vocab Battle
                         </button>
                     </div>
                 )}
@@ -289,15 +295,29 @@ export default function Leaderboard() {
                                     )}
 
                                     <div className="text-right">
-                                        {type === 'coins' ? (
-                                            <div className="flex items-center gap-1 font-black" style={{ color: 'var(--text-color)' }}>
-                                                {player.coins.toLocaleString()}
-                                                <Coins size={14} className="text-yellow-500" />
+                                        {type === 'vocab' ? (
+                                            <div className="flex flex-col items-end">
+                                                <div className="flex items-center gap-1 font-black text-emerald-600">
+                                                    {player.stats_value?.toLocaleString() || 0}
+                                                    <Trophy size={14} className="text-emerald-500" />
+                                                </div>
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Vocab XP</span>
+                                            </div>
+                                        ) : type === 'coins' ? (
+                                            <div className="flex flex-col items-end">
+                                                <div className="flex items-center gap-1 font-black" style={{ color: 'var(--text-color)' }}>
+                                                    {player.stats_value?.toLocaleString() || player.coins?.toLocaleString() || 0}
+                                                    <Coins size={14} className="text-yellow-500" />
+                                                </div>
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Coins</span>
                                             </div>
                                         ) : (
-                                            <div className="flex items-center gap-1 font-black text-orange-600">
-                                                {player.streak_count}
-                                                <Flame size={14} className="fill-orange-500" />
+                                            <div className="flex flex-col items-end">
+                                                <div className="flex items-center gap-1 font-black text-orange-600">
+                                                    {player.stats_value || player.streak_count || 0}
+                                                    <Flame size={14} className="fill-orange-500" />
+                                                </div>
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Streak</span>
                                             </div>
                                         )}
                                     </div>

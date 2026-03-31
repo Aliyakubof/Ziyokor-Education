@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api';
 import { useAuth } from '../AuthContext';
-import { ArrowLeft, Star, Sparkles, Swords } from 'lucide-react';
+import { ArrowLeft, Star, Sparkles, Swords, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 // Atmospheric Particle (Fireflies/Stars)
@@ -72,36 +72,59 @@ export default function VocabularyBattleLevels() {
 
     return (
         <div className="min-h-screen flex flex-col font-sans selection:text-white relative overflow-hidden transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
-            {/* Immersive Background System */}
-            <div className="fixed inset-0 z-0">
+            {/* Immersive Background System - Map Style */}
+            <div className="fixed inset-0 z-0 bg-[var(--bg-color)]">
+                {/* Grid Overlay for Map feel */}
+                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(var(--text-color) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                
+                {/* Organic Map Blobs (Islands/Lands) */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
+                        <path d="M-10,-10 Q40,30 -10,80 Z" fill="var(--primary-color)" opacity="0.15" />
+                        <path d="M110,10 Q60,60 110,110 Z" fill="var(--secondary-color)" opacity="0.1" />
+                        <path d="M20,110 Q50,70 80,110 Z" fill="var(--primary-color)" opacity="0.2" />
+                        <path d="M30,-10 Q50,30 80,-10 Z" fill="var(--secondary-color)" opacity="0.15" />
+                        
+                        {/* Topographic Lines */}
+                        <path d="M-10,10 Q40,50 -10,100" fill="none" stroke="var(--primary-color)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.3" />
+                        <path d="M110,30 Q60,80 110,130" fill="none" stroke="var(--secondary-color)" strokeWidth="0.5" strokeDasharray="1 3" opacity="0.3" />
+                        
+                        <circle cx="30" cy="40" r="15" fill="none" stroke="var(--primary-color)" strokeWidth="0.5" opacity="0.2" />
+                        <circle cx="30" cy="40" r="10" fill="none" stroke="var(--primary-color)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.2" />
+                        
+                        <circle cx="70" cy="70" r="25" fill="none" stroke="var(--secondary-color)" strokeWidth="0.5" opacity="0.1" />
+                        <circle cx="70" cy="70" r="15" fill="none" stroke="var(--secondary-color)" strokeWidth="0.5" opacity="0.2" />
+                    </svg>
+                </div>
+                
                 {/* Deep Radial Gradient */}
-                <div className="absolute inset-0 transition-opacity duration-500" style={{ background: `radial-gradient(circle at 50% -20%, var(--primary-color) 0%, var(--bg-color) 70%)`, opacity: 0.2 }} />
+                <div className="absolute inset-0 transition-opacity duration-500" style={{ background: `radial-gradient(circle at 50% 0%, var(--primary-color) 0%, transparent 60%)`, opacity: 0.15 }} />
                 
                 {/* Nebula Glows */}
-                <div className="absolute top-[30%] -left-[10%] w-[60%] h-[60%] blur-[150px] rounded-full mix-blend-screen opacity-10" style={{ backgroundColor: 'var(--primary-color)' }} />
-                <div className="absolute bottom-[20%] -right-[10%] w-[50%] h-[50%] blur-[120px] rounded-full mix-blend-screen opacity-10" style={{ backgroundColor: 'var(--secondary-color)' }} />
+                <div className="absolute top-[30%] -left-[10%] w-[60%] h-[60%] blur-[120px] rounded-full mix-blend-screen opacity-20" style={{ backgroundColor: 'var(--primary-color)' }} />
+                <div className="absolute bottom-[20%] -right-[10%] w-[50%] h-[50%] blur-[100px] rounded-full mix-blend-screen opacity-10" style={{ backgroundColor: 'var(--secondary-color)' }} />
                 
                 {/* Dynamic Particles */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    {Array.from({ length: 40 }).map((_, i) => (
+                    {Array.from({ length: 30 }).map((_, i) => (
                         <Particle key={i} delay={i * 0.8} />
                     ))}
                 </div>
             </div>
 
-            {/* Simple Premium Header */}
-                        <header className="sticky top-0 z-40 backdrop-blur-xl border-b transition-colors" style={{ backgroundColor: 'rgba(0,0,0,0.1)', borderColor: 'var(--border-color)' }}>
+            {/* Header */}
+            <header className="sticky top-0 z-40 backdrop-blur-xl border-b transition-colors shadow-sm" style={{ backgroundColor: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-color)' }}>
                 <div className="px-5 h-16 flex items-center justify-between mx-auto w-full max-w-lg">
                     <button
                         onClick={() => navigate('/student/dashboard')}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl border transition-all active:scale-90"
+                        className="w-10 h-10 flex items-center justify-center rounded-2xl border transition-all active:scale-90 hover:scale-105"
                         style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--primary-color)' }}
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div className="flex-1 text-center">
-                        <h2 className="text-xl font-black uppercase tracking-[0.2em] font-serif italic drop-shadow-2xl" style={{ color: 'var(--text-color)' }}>
-                            Vocabulary battle
+                        <h2 className="text-xl font-black uppercase tracking-[0.2em] font-serif italic drop-shadow-lg" style={{ color: 'var(--text-color)' }}>
+                            Xarita
                         </h2>
                     </div>
                     <div className="w-10"></div>
@@ -112,36 +135,26 @@ export default function VocabularyBattleLevels() {
                 {!isActive ? (
                     <div className="flex flex-col items-center justify-center py-40 text-center animate-in fade-in zoom-in duration-700">
                          <div className="relative group">
-                            <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-150 group-hover:bg-emerald-500/30 transition-all duration-500" />
-                            <div className="relative bg-black/40 backdrop-blur-3xl p-14 rounded-[4rem] border border-white/10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]">
-                                <Sparkles className="text-emerald-400 w-16 h-16 mx-auto mb-8 animate-pulse" />
-                                <h3 className="text-4xl font-black text-white mb-4 italic tracking-tighter uppercase">TEZ ORADA...</h3>
-                                <p className="text-emerald-100/40 font-medium max-w-[240px] mx-auto text-base leading-relaxed">
-                                    Xarita yangi darajalar bilan to'ldirilmoqda. O'z bilimingizni boyitib turing!
+                            <div className="absolute inset-0 blur-3xl rounded-full scale-150 transition-all duration-500 opacity-30" style={{ backgroundColor: 'var(--primary-color)' }} />
+                            <div className="relative p-10 rounded-[3rem] border shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)] backdrop-blur-md" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                                <Sparkles className="w-16 h-16 mx-auto mb-6 animate-[spin_4s_linear_infinite]" style={{ color: 'var(--primary-color)' }} />
+                                <h3 className="text-3xl font-black mb-3 italic tracking-tighter uppercase" style={{ color: 'var(--text-color)' }}>Tez orada...</h3>
+                                <p className="font-medium max-w-[240px] mx-auto text-sm leading-relaxed opacity-60" style={{ color: 'var(--text-color)' }}>
+                                    Yangi sarguzasht xaritasi o'rganilmoqda. Qaytib keling!
                                 </p>
                             </div>
                          </div>
                     </div>
                 ) : loading ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-emerald-500/20">
-                        <div className="w-10 h-10 border-2 border-current border-t-transparent rounded-full animate-spin mb-4" />
-                        <span className="font-black uppercase tracking-[0.3em] text-[10px]">Loading Galaxy...</span>
+                    <div className="flex flex-col items-center justify-center py-40">
+                        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mb-4" style={{ borderColor: 'var(--primary-color)', borderTopColor: 'transparent' }} />
+                        <span className="font-black uppercase tracking-[0.3em] text-[10px] opacity-50" style={{ color: 'var(--text-color)' }}>Xarita yuklanmoqda...</span>
                     </div>
                 ) : (
-                    <div className="relative pt-4 pb-48">
-                        {/* Winding Neon Energy Path */}
-                        <div className="absolute inset-0 pointer-events-none opacity-40">
+                    <div className="relative pt-8 pb-48">
+                        {/* Winding Adventure Path */}
+                        <div className="absolute inset-0 pointer-events-none opacity-60" style={{ marginLeft: 'auto', marginRight: 'auto', width: '100%' }}>
                             <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                <defs>
-                                    <linearGradient id="neonPath" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="var(--primary-color)" />
-                                        <stop offset="100%" stopColor="var(--secondary-color)" />
-                                    </linearGradient>
-                                    <filter id="neonGlow">
-                                        <feGaussianBlur stdDeviation="1.5" result="blur" />
-                                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                    </filter>
-                                </defs>
                                 <path
                                     d={`M 50 0 ${mapNodes.map((_, i) => {
                                         const side = i % 2 === 0 ? 1 : -1;
@@ -149,27 +162,47 @@ export default function VocabularyBattleLevels() {
                                         const y = (i * 100) / mapNodes.length;
                                         const prevY = ((i - 1) * 100) / mapNodes.length;
                                         const midY = (y + prevY) / 2;
-                                        return `Q ${x} ${midY}, 50 ${y}`;
+                                        return `C 50 ${prevY + 5}, ${x} ${midY - 5}, ${x} ${midY} C ${x} ${midY + 5}, 50 ${y - 5}, 50 ${y}`;
                                     }).join(' ')}`}
                                     fill="none"
-                                    stroke="url(#neonPath)"
-                                    strokeWidth="3"
-                                    filter="url(#neonGlow)"
-                                    strokeDasharray="0.5 12"
+                                    stroke="var(--text-color)"
+                                    strokeWidth="2"
                                     strokeLinecap="round"
+                                    strokeDasharray="4 8"
+                                    opacity="0.3"
+                                    style={{ vectorEffect: 'non-scaling-stroke' }}
+                                />
+                                {/* Overlay gradient line for active path */}
+                                <path
+                                    d={`M 50 0 ${mapNodes.map((_, i) => {
+                                        const side = i % 2 === 0 ? 1 : -1;
+                                        const x = 50 + side * 28;
+                                        const y = (i * 100) / mapNodes.length;
+                                        const prevY = ((i - 1) * 100) / mapNodes.length;
+                                        const midY = (y + prevY) / 2;
+                                        return `C 50 ${prevY + 5}, ${x} ${midY - 5}, ${x} ${midY} C ${x} ${midY + 5}, 50 ${y - 5}, 50 ${y}`;
+                                    }).filter((_, i) => !mapNodes[i].isLocked).join(' ')}`}
+                                    fill="none"
+                                    stroke="var(--primary-color)"
+                                    strokeWidth="3"
+                                    strokeLinecap="round"
+                                    strokeDasharray="4 8"
+                                    opacity="0.8"
                                     style={{ vectorEffect: 'non-scaling-stroke' }}
                                 />
                             </svg>
                         </div>
 
-                        {/* Interactive Galaxy Level Nodes */}
-                        <div className="relative z-10 flex flex-col items-center space-y-14">
+                        {/* Interactive Map Nodes */}
+                        <div className="relative z-10 flex flex-col items-center space-y-16">
                             {mapNodes.map((node, i) => {
                                 const isEven = i % 2 === 0;
+                                const isCurrent = !node.isLocked && node.stars === 0;
+                                
                                 return (
                                     <motion.div
                                         key={node.levelNumber}
-                                        initial={{ opacity: 0, scale: 0.8, x: isEven ? 60 : -60 }}
+                                        initial={{ opacity: 0, scale: 0.8, x: isEven ? 40 : -40 }}
                                         whileInView={{ opacity: 1, scale: 1, x: 0 }}
                                         viewport={{ once: true, margin: "-100px" }}
                                         className={`relative w-full flex ${isEven ? 'justify-end pr-10' : 'justify-start pl-10'}`}
@@ -178,64 +211,66 @@ export default function VocabularyBattleLevels() {
                                             disabled={node.isLocked}
                                             onClick={() => node.battle && navigate(`/student/vocab-battle/play/${node.battle.id}`)}
                                             className={`
-                                                relative w-24 h-24 sm:w-28 sm:h-28 rounded-[2.5rem] flex flex-col items-center justify-center transition-all duration-500 group
-                                                shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)] border transition-colors
+                                                relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl flex flex-col items-center justify-center transition-all duration-500 group
+                                                shadow-[0_15px_35px_-10px_rgba(0,0,0,0.4)] border-2 transition-transform
                                                 ${node.isLocked 
-                                                    ? 'opacity-20 cursor-not-allowed grayscale' 
+                                                    ? 'opacity-40 cursor-not-allowed grayscale border-dashed border-opacity-20' 
                                                     : 'hover:scale-110 active:scale-95'
                                                 }
                                             `}
-                                            style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
+                                            style={{ 
+                                                backgroundColor: 'var(--card-bg)', 
+                                                borderColor: node.isLocked ? 'var(--text-color)' : 'var(--primary-color)',
+                                                color: 'var(--text-color)'
+                                            }}
                                         >
+                                            {/* Top Pin Label */}
                                             <div className={`
-                                                absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[9px] font-black tracking-widest border transition-all duration-500
-                                                ${node.isLocked 
-                                                    ? 'opacity-50' 
-                                                    : 'text-white shadow-lg'
-                                                }
-                                            `} style={{ backgroundColor: node.isLocked ? 'var(--bg-color)' : 'var(--primary-color)', borderColor: 'var(--border-color)' }}>
-                                                LVL {node.levelNumber}
+                                                absolute -top-4 shadow-lg px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-black tracking-widest border transition-all duration-500
+                                                ${node.isLocked ? 'opacity-0' : 'flex items-center gap-1'}
+                                            `} style={{ backgroundColor: 'var(--primary-color)', borderColor: 'var(--border-color)', color: '#fff' }}>
+                                                {node.stars === 3 && <Trophy size={10} />} LVL {node.levelNumber}
                                             </div>
                                             
-                                            <div className={`text-5xl font-black italic tracking-tighter ${node.isLocked ? 'blur-[1px]' : 'drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]'}`}>
+                                            {/* Level Number */}
+                                            <div className={`text-5xl font-black italic tracking-tighter transition-all ${node.isLocked ? 'opacity-30' : 'drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]'}`} style={{ color: node.isLocked ? 'var(--text-color)' : 'var(--primary-color)' }}>
                                                 {node.levelNumber}
                                             </div>
 
+                                            {/* Stars Status */}
                                             {!node.isLocked && (
-                                                <div className="flex gap-1 mt-1">
+                                                <div className="absolute -bottom-3 bg-[var(--card-bg)] border px-3 py-1 rounded-full flex gap-1 shadow-sm" style={{ borderColor: 'var(--border-color)' }}>
                                                     {[1, 2, 3].map(s => (
                                                         <Star 
                                                             key={s} 
                                                             size={12} 
-                                                            className={s <= node.stars ? "drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" : "opacity-10 fill-transparent"} 
-                                                            style={{ color: s <= node.stars ? 'var(--primary-color)' : 'var(--text-color)', fill: s <= node.stars ? 'var(--primary-color)' : 'transparent' }}
+                                                            className={`transition-colors ${s <= node.stars ? "filter drop-shadow-md" : "opacity-20"}`}
+                                                            style={{ 
+                                                                color: s <= node.stars ? '#f59e0b' : 'var(--text-color)', 
+                                                                fill: s <= node.stars ? '#f59e0b' : 'transparent' 
+                                                            }}
                                                         />
                                                     ))}
                                                 </div>
                                             )}
 
-                                            {/* Particle Inner Glow for Active Nodes */}
-                                            {!node.isLocked && (
-                                                <div className="absolute inset-0 rounded-[2.5rem] bg-emerald-500/5 blur-xl group-hover:bg-emerald-500/10 transition-all duration-500" />
-                                            )}
-
-                                            {/* Pulsing Outer Core for Current Level */}
-                                            {!node.isLocked && node.stars === 0 && (
-                                                <div className="absolute -inset-1 rounded-[2.7rem] border border-emerald-400/30 animate-[ping_3s_infinite] pointer-events-none" />
+                                            {/* Current Level Pulsing Halo */}
+                                            {isCurrent && (
+                                                <div className="absolute -inset-2 rounded-[2rem] border-2 animate-[ping_2s_infinite] pointer-events-none" style={{ borderColor: 'var(--primary-color)', opacity: 0.6 }} />
                                             )}
 
                                             {/* Desktop Battle Tooltip */}
                                             {!node.isLocked && (
                                                 <div className={`
-                                                    absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 hidden sm:flex pointer-events-none
-                                                    ${isEven ? 'right-[115%] pr-6' : 'left-[115%] pl-6'}
+                                                    absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 hidden sm:flex pointer-events-none z-20
+                                                    ${isEven ? 'right-[120%] pr-4' : 'left-[120%] pl-4'}
                                                 `}>
-                                                    <div className="bg-black/80 backdrop-blur-3xl border border-white/10 p-4 rounded-3xl shadow-2xl flex flex-col items-start min-w-[140px]">
-                                                        <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mb-1">Mavzu:</span>
-                                                        <span className="text-sm text-white font-bold leading-tight">{node.battle?.title || "Jang Maydoni"}</span>
-                                                        <div className="flex items-center gap-2 mt-3 text-[9px] text-white/40 font-black uppercase tracking-widest">
-                                                            <Swords size={12} />
-                                                            <span>Boshlaymizmi?</span>
+                                                    <div className="p-4 rounded-3xl shadow-2xl border flex flex-col min-w-[150px] whitespace-nowrap" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--primary-color)' }}>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest mb-1 opacity-60" style={{ color: 'var(--text-color)' }}>Sarguzasht:</span>
+                                                        <span className="text-sm font-bold leading-tight truncate" style={{ color: 'var(--text-color)' }}>{node.battle?.title || "Jang Maydoni"}</span>
+                                                        <div className="flex items-center gap-1.5 mt-3 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--primary-color)' }}>
+                                                            <Swords size={14} />
+                                                            <span>Jangga kirish</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -250,7 +285,7 @@ export default function VocabularyBattleLevels() {
             </main>
 
             {/* Bottom Ambient Fade */}
-            <div className="fixed bottom-0 left-0 right-0 h-40 pointer-events-none z-30 transition-all duration-500" style={{ background: `linear-gradient(to top, var(--bg-color), transparent)` }} />
+            <div className="fixed bottom-0 left-0 right-0 h-32 pointer-events-none z-30 transition-all duration-500" style={{ background: `linear-gradient(to top, var(--bg-color), transparent)` }} />
         </div>
     );
 }
