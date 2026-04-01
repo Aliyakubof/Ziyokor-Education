@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
 import imageCompression from 'browser-image-compression';
@@ -20,20 +20,13 @@ import MobileNav from '../components/StudentDashboard/MobileNav';
 import { useStudentData } from '../contexts/StudentDataContext';
 
 export default function StudentDashboard() {
-    const { user, logout, setActiveThemeId } = useAuth();
+    const { user, logout } = useAuth();
     const { stats, battle, history, bookings, isLoading, refreshData } = useStudentData();
     const [activeTab, setActiveTab] = useState<'home' | 'history' | 'profile'>('home');
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
     const { myBooking, otherBookings, groupSettings, availableTopics } = bookings;
-
-    useEffect(() => {
-        const theme = stats && stats.active_theme_color;
-        if (theme) {
-            setActiveThemeId(theme);
-        }
-    }, [stats, setActiveThemeId]);
 
     const handleBook = async (slot: string, topic: string, bookingDate: string) => {
         if (!groupSettings?.extra_class_days || groupSettings.extra_class_days.length === 0) {

@@ -100,22 +100,21 @@ export default function VocabularyBattleLevels() {
             </div>
 
             {/* Scrollable Main Area */}
-            <main className="flex-1 w-full overflow-y-auto overflow-x-hidden custom-scrollbar bg-slate-900 pt-16 pb-10">
+            <main className="flex-1 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pt-16 pb-10" style={{ backgroundColor: 'var(--bg-color)' }}>
                 
                 {/* Full Height Inner Wrapper for Background to scroll relative to */}
                 <div className="min-h-full flex flex-col relative w-full">
                     
-                    {/* Scrolling Tiled Map Background */}
+                    {/* Single Long Map Background */}
                     <div className="absolute inset-0 pointer-events-none" style={{
                         backgroundImage: 'url(/fairytale_bg.png)',
-                        backgroundSize: '100% auto', // Responsive width matching, auto height vertically repeats
-                        backgroundRepeat: 'repeat-y',
+                        backgroundSize: '100% 100%', // Stretch to full container height
                         backgroundPosition: 'top center',
                         filter: 'contrast(1.1) brightness(0.9) saturate(1.2)'
                     }}>
                         {/* Sunlight overlay scales with the whole document */}
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/10 to-emerald-950/80 mix-blend-multiply opacity-60" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-transparent opacity-80" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
                     </div>
 
                     {/* Centered Content Container for Nodes */}
@@ -140,46 +139,6 @@ export default function VocabularyBattleLevels() {
                     </div>
                 ) : (
                     <div className="relative pt-8 pb-48">
-                        {/* Winding Adventure Path */}
-                        <div className="absolute inset-0 pointer-events-none opacity-60" style={{ marginLeft: 'auto', marginRight: 'auto', width: '100%' }}>
-                            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                <path
-                                    d={`M 50 0 ${mapNodes.map((_, i) => {
-                                        const side = i % 2 === 0 ? 1 : -1;
-                                        const x = 50 + side * 28;
-                                        const y = (i * 100) / mapNodes.length;
-                                        const prevY = ((i - 1) * 100) / mapNodes.length;
-                                        const midY = (y + prevY) / 2;
-                                        return `C 50 ${prevY + 5}, ${x} ${midY - 5}, ${x} ${midY} C ${x} ${midY + 5}, 50 ${y - 5}, 50 ${y}`;
-                                    }).join(' ')}`}
-                                    fill="none"
-                                    stroke="var(--text-color)"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeDasharray="4 8"
-                                    opacity="0.3"
-                                    style={{ vectorEffect: 'non-scaling-stroke' }}
-                                />
-                                {/* Overlay gradient line for active path */}
-                                <path
-                                    d={`M 50 0 ${mapNodes.map((_, i) => {
-                                        const side = i % 2 === 0 ? 1 : -1;
-                                        const x = 50 + side * 28;
-                                        const y = (i * 100) / mapNodes.length;
-                                        const prevY = ((i - 1) * 100) / mapNodes.length;
-                                        const midY = (y + prevY) / 2;
-                                        return `C 50 ${prevY + 5}, ${x} ${midY - 5}, ${x} ${midY} C ${x} ${midY + 5}, 50 ${y - 5}, 50 ${y}`;
-                                    }).filter((_, i) => !mapNodes[i].isLocked).join(' ')}`}
-                                    fill="none"
-                                    stroke="var(--primary-color)"
-                                    strokeWidth="3"
-                                    strokeLinecap="round"
-                                    strokeDasharray="4 8"
-                                    opacity="0.8"
-                                    style={{ vectorEffect: 'non-scaling-stroke' }}
-                                />
-                            </svg>
-                        </div>
 
                         {/* Interactive Map Nodes */}
                         <div className="relative z-10 flex flex-col items-center space-y-16">
