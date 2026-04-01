@@ -252,12 +252,12 @@ export default function SoloQuiz() {
             <div className="min-h-screen font-sans p-6 flex flex-col items-center justify-center transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
                 <div className="max-w-md w-full space-y-6">
                     <div className="rounded-[3rem] p-8 text-center shadow-xl border relative overflow-hidden transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
-                        <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-lg ${results.percentage > 59 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                            {results.percentage > 59 ? <CheckCircle2 size={40} /> : <AlertCircle size={40} />}
+                        <div className={`w-20 h-20 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-lg ${results.percentage >= 70 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                            {results.percentage >= 70 ? <CheckCircle2 size={40} /> : <AlertCircle size={40} />}
                         </div>
                         
                         <h2 className="text-2xl font-black mb-1" style={{ color: 'var(--text-color)' }}>Natijangiz</h2>
-                        <div className="text-6xl font-black mb-4" style={{ color: results.percentage > 59 ? '#10b981' : '#f43f5e' }}>
+                        <div className="text-6xl font-black mb-4" style={{ color: results.percentage >= 70 ? '#10b981' : '#f43f5e' }}>
                             {results.percentage}%
                         </div>
                         

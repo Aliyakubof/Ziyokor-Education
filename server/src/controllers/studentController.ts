@@ -328,6 +328,8 @@ export const getVocabBattleLevels = async (req: Request, res: Response) => {
         `, [daraja]);
 
         const levelScores: Record<number, number> = {};
+        const levelPasses: Record<number, boolean> = {};
+
         historyRes.rows.forEach(row => {
             const levelMatch = row.quiz_title.match(/Level (\d+)/);
             if (levelMatch) {
@@ -338,8 +340,16 @@ export const getVocabBattleLevels = async (req: Request, res: Response) => {
                     const studentResult = playerResults.find((p: any) => String(p.id) === String(studentId));
                     if (studentResult) score = studentResult.score;
                 }
+                const mistakes = row.total_questions > 0 ? (row.total_questions - score) : 0;
                 const perc = row.total_questions > 0 ? (score / row.total_questions) * 100 : 0;
-                if (!levelScores[levelNum] || perc > levelScores[levelNum]) levelScores[levelNum] = perc;
+                
+                if (!levelScores[levelNum] || perc > levelScores[levelNum]) {
+                    levelScores[levelNum] = perc;
+                }
+                
+                if (mistakes <= 1 && row.total_questions > 0) {
+                    levelPasses[levelNum] = true;
+                }
             }
         });
 
@@ -347,12 +357,17 @@ export const getVocabBattleLevels = async (req: Request, res: Response) => {
         const enrichedLevels = result.rows.map(battle => {
             const levelNum = battle.level;
             const perc = levelScores[levelNum] || 0;
+            const passed = levelPasses[levelNum] || false;
+            
             let stars = 0;
-            if (perc >= 95) stars = 3;
-            else if (perc >= 85) stars = 2;
-            else if (perc >= 75) stars = 1;
+            if (passed) {
+                if (perc >= 100) stars = 3;
+                else stars = 2; // 1 mistake allowed passing gives 2 stars
+            }
+            
             const isLocked = !previousUnlockedComplete && levelNum > 1;
-            previousUnlockedComplete = perc >= 75;
+            previousUnlockedComplete = passed;
+            
             return { id: battle.id, daraja: battle.daraja, level: battle.level, title: battle.title, isLocked, stars, isActive: true };
         });
         res.json({ isActive: true, levels: enrichedLevels });

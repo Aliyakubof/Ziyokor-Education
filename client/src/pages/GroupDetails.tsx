@@ -766,7 +766,7 @@ const GroupDetails = () => {
                                                     const correctCount = score;
                                                     const total = result.total_questions || 0;
                                                     const percentage = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-                                                    const isPassed = percentage > 59;
+                                                    const isPassed = percentage >= 70;
 
                                                     return (
                                                         <tr key={player.id} className="hover:bg-slate-50">
@@ -806,7 +806,7 @@ const GroupDetails = () => {
                                             const correctCount = score;
                                             const total = result.total_questions || 0;
                                             const percentage = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-                                            const isPassed = percentage > 59;
+                                            const isPassed = percentage >= 70;
 
                                             return (
                                                 <div key={player.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">

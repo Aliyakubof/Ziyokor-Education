@@ -72,48 +72,9 @@ export default function VocabularyBattleLevels() {
 
     return (
         <div className="min-h-screen flex flex-col font-sans selection:text-white relative overflow-hidden transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
-            {/* Immersive Background System - Map Style */}
-            <div className="fixed inset-0 z-0 bg-[var(--bg-color)]">
-                {/* Grid Overlay for Map feel */}
-                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(var(--text-color) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-                
-                {/* Organic Map Blobs (Islands/Lands) */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-                        <path d="M-10,-10 Q40,30 -10,80 Z" fill="var(--primary-color)" opacity="0.15" />
-                        <path d="M110,10 Q60,60 110,110 Z" fill="var(--secondary-color)" opacity="0.1" />
-                        <path d="M20,110 Q50,70 80,110 Z" fill="var(--primary-color)" opacity="0.2" />
-                        <path d="M30,-10 Q50,30 80,-10 Z" fill="var(--secondary-color)" opacity="0.15" />
-                        
-                        {/* Topographic Lines */}
-                        <path d="M-10,10 Q40,50 -10,100" fill="none" stroke="var(--primary-color)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.3" />
-                        <path d="M110,30 Q60,80 110,130" fill="none" stroke="var(--secondary-color)" strokeWidth="0.5" strokeDasharray="1 3" opacity="0.3" />
-                        
-                        <circle cx="30" cy="40" r="15" fill="none" stroke="var(--primary-color)" strokeWidth="0.5" opacity="0.2" />
-                        <circle cx="30" cy="40" r="10" fill="none" stroke="var(--primary-color)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.2" />
-                        
-                        <circle cx="70" cy="70" r="25" fill="none" stroke="var(--secondary-color)" strokeWidth="0.5" opacity="0.1" />
-                        <circle cx="70" cy="70" r="15" fill="none" stroke="var(--secondary-color)" strokeWidth="0.5" opacity="0.2" />
-                    </svg>
-                </div>
-                
-                {/* Deep Radial Gradient */}
-                <div className="absolute inset-0 transition-opacity duration-500" style={{ background: `radial-gradient(circle at 50% 0%, var(--primary-color) 0%, transparent 60%)`, opacity: 0.15 }} />
-                
-                {/* Nebula Glows */}
-                <div className="absolute top-[30%] -left-[10%] w-[60%] h-[60%] blur-[120px] rounded-full mix-blend-screen opacity-20" style={{ backgroundColor: 'var(--primary-color)' }} />
-                <div className="absolute bottom-[20%] -right-[10%] w-[50%] h-[50%] blur-[100px] rounded-full mix-blend-screen opacity-10" style={{ backgroundColor: 'var(--secondary-color)' }} />
-                
-                {/* Dynamic Particles */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    {Array.from({ length: 30 }).map((_, i) => (
-                        <Particle key={i} delay={i * 0.8} />
-                    ))}
-                </div>
-            </div>
-
-            {/* Header */}
-            <header className="sticky top-0 z-40 backdrop-blur-xl border-b transition-colors shadow-sm" style={{ backgroundColor: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-color)' }}>
+            
+            {/* Header - Fixed to top */}
+            <header className="absolute top-0 left-0 right-0 z-50 backdrop-blur-xl border-b transition-colors shadow-sm" style={{ backgroundColor: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-color)' }}>
                 <div className="px-5 h-16 flex items-center justify-between mx-auto w-full max-w-lg">
                     <button
                         onClick={() => navigate('/student/dashboard')}
@@ -131,21 +92,48 @@ export default function VocabularyBattleLevels() {
                 </div>
             </header>
 
-            <main className="flex-1 relative z-10 px-4 py-12 w-full max-w-lg mx-auto overflow-x-hidden overflow-y-auto custom-scrollbar">
-                {!isActive ? (
-                    <div className="flex flex-col items-center justify-center py-40 text-center animate-in fade-in zoom-in duration-700">
-                         <div className="relative group">
-                            <div className="absolute inset-0 blur-3xl rounded-full scale-150 transition-all duration-500 opacity-30" style={{ backgroundColor: 'var(--primary-color)' }} />
-                            <div className="relative p-10 rounded-[3rem] border shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)] backdrop-blur-md" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
-                                <Sparkles className="w-16 h-16 mx-auto mb-6 animate-[spin_4s_linear_infinite]" style={{ color: 'var(--primary-color)' }} />
-                                <h3 className="text-3xl font-black mb-3 italic tracking-tighter uppercase" style={{ color: 'var(--text-color)' }}>Tez orada...</h3>
-                                <p className="font-medium max-w-[240px] mx-auto text-sm leading-relaxed opacity-60" style={{ color: 'var(--text-color)' }}>
-                                    Yangi sarguzasht xaritasi o'rganilmoqda. Qaytib keling!
-                                </p>
-                            </div>
-                         </div>
+            {/* Viewport Fixed Magical Particles */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none mix-blend-screen opacity-70 z-10">
+                {Array.from({ length: 40 }).map((_, i) => (
+                    <Particle key={i} delay={i * 0.8} />
+                ))}
+            </div>
+
+            {/* Scrollable Main Area */}
+            <main className="flex-1 w-full overflow-y-auto overflow-x-hidden custom-scrollbar bg-slate-900 pt-16 pb-10">
+                
+                {/* Full Height Inner Wrapper for Background to scroll relative to */}
+                <div className="min-h-full flex flex-col relative w-full">
+                    
+                    {/* Scrolling Tiled Map Background */}
+                    <div className="absolute inset-0 pointer-events-none" style={{
+                        backgroundImage: 'url(/fairytale_bg.png)',
+                        backgroundSize: '100% auto', // Responsive width matching, auto height vertically repeats
+                        backgroundRepeat: 'repeat-y',
+                        backgroundPosition: 'top center',
+                        filter: 'contrast(1.1) brightness(0.9) saturate(1.2)'
+                    }}>
+                        {/* Sunlight overlay scales with the whole document */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/10 to-emerald-950/80 mix-blend-multiply opacity-60" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-transparent opacity-80" />
                     </div>
-                ) : loading ? (
+
+                    {/* Centered Content Container for Nodes */}
+                    <div className="relative z-20 w-full max-w-lg mx-auto flex-1 px-4 py-12 flex flex-col">
+                        {!isActive ? (
+                            <div className="flex flex-col items-center justify-center py-40 text-center animate-in fade-in zoom-in duration-700">
+                                 <div className="relative group">
+                                    <div className="absolute inset-0 blur-3xl rounded-full scale-150 transition-all duration-500 opacity-30" style={{ backgroundColor: 'var(--primary-color)' }} />
+                                    <div className="relative p-10 rounded-[3rem] border shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)] backdrop-blur-md" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                                        <Sparkles className="w-16 h-16 mx-auto mb-6 animate-[spin_4s_linear_infinite]" style={{ color: 'var(--primary-color)' }} />
+                                        <h3 className="text-3xl font-black mb-3 italic tracking-tighter uppercase" style={{ color: 'var(--text-color)' }}>Tez orada...</h3>
+                                        <p className="font-medium max-w-[240px] mx-auto text-sm leading-relaxed opacity-60" style={{ color: 'var(--text-color)' }}>
+                                            Yangi sarguzasht xaritasi o'rganilmoqda. Qaytib keling!
+                                        </p>
+                                    </div>
+                                 </div>
+                            </div>
+                        ) : loading ? (
                     <div className="flex flex-col items-center justify-center py-40">
                         <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mb-4" style={{ borderColor: 'var(--primary-color)', borderTopColor: 'transparent' }} />
                         <span className="font-black uppercase tracking-[0.3em] text-[10px] opacity-50" style={{ color: 'var(--text-color)' }}>Xarita yuklanmoqda...</span>
@@ -282,6 +270,8 @@ export default function VocabularyBattleLevels() {
                         </div>
                     </div>
                 )}
+                    </div>
+                </div>
             </main>
 
             {/* Bottom Ambient Fade */}

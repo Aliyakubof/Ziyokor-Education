@@ -330,23 +330,51 @@ export default function PlayerGame() {
         }
 
         // Anti-Cheat listener
+        let cheatTimeout: any = null;
+        let wakeLock: any = null;
+
+        const requestWakeLock = async () => {
+            try {
+                if ('wakeLock' in navigator && (navigator as any).wakeLock) {
+                    wakeLock = await (navigator as any).wakeLock.request('screen');
+                }
+            } catch (err) {
+                console.error('WakeLock API failed:', err);
+            }
+        };
+
+        if (viewRef.current === 'PLAYING' || viewRef.current === 'WAITING') {
+            requestWakeLock();
+        }
+
         const handleVisibilityChange = () => {
             const pin = localStorage.getItem('kahoot-pin');
             const studentId = localStorage.getItem('student-id') || socket.id;
             
             if (document.hidden && !isUnloading && viewRef.current === 'PLAYING') {
                 if (pin && studentId) {
-                    socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
+                    // Grace period 15 seconds for screen sleep or accidental backgrounding
+                    cheatTimeout = setTimeout(() => {
+                        socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
+                    }, 15000);
                 }
             } else if (!document.hidden && viewRef.current === 'PLAYING') {
+                if (cheatTimeout) {
+                    clearTimeout(cheatTimeout);
+                    cheatTimeout = null;
+                }
                 if (pin && studentId) {
                     socket.emit('student-status-update', { pin, studentId, status: 'Online' });
                 }
+                requestWakeLock();
             }
         };
 
         const handleBeforeUnload = () => {
             setIsUnloading(true);
+            if (wakeLock && typeof wakeLock.release === 'function') {
+                wakeLock.release().catch(console.error);
+            }
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);

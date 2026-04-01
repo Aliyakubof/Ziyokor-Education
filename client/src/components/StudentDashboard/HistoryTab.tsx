@@ -31,7 +31,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history }) => {
                         <div className="text-right">
                             <div className="text-sm font-black" style={{ color: 'var(--primary-color)' }}>+{game.score} XP</div>
                             <div className="flex flex-col items-end gap-1 mt-1">
-                                <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${game.percentage > 59 ? 'bg-emerald-100 text-emerald-700' :
+                                <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${game.percentage >= 70 ? 'bg-emerald-100 text-emerald-700' :
                                     'bg-rose-100 text-rose-700'
                                     }`}>
                                     {Math.round(game.percentage)}%
