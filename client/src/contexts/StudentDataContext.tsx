@@ -36,7 +36,7 @@ interface StudentDataContextType {
 const StudentDataContext = createContext<StudentDataContextType | undefined>(undefined);
 
 export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user, role, setActiveThemeId } = useAuth();
+    const { user, role, activeThemeId, setActiveThemeId } = useAuth();
     const [stats, setStats] = useState<StudentStats | null>(null);
     const [battle, setBattle] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
@@ -116,10 +116,11 @@ export const StudentDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     useEffect(() => {
         const theme = stats?.active_theme_color;
-        if (theme) {
+        // Only update global theme if it's different from what we already have
+        if (theme && theme !== activeThemeId) {
             setActiveThemeId(theme);
         }
-    }, [stats?.active_theme_color, setActiveThemeId]);
+    }, [stats?.active_theme_color, activeThemeId, setActiveThemeId]);
 
     useEffect(() => {
         fetchData();

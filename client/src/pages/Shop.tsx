@@ -4,9 +4,11 @@ import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
 import { ShoppingBag, ChevronLeft, Coins, CheckCircle2, AlertCircle, ShoppingCart } from 'lucide-react';
 import { themes } from '../themeConfig';
+import { useStudentData } from '../contexts/StudentDataContext';
 
 export default function Shop() {
     const { user, setActiveThemeId: setGlobalThemeId } = useAuth();
+    const { refreshData } = useStudentData();
     const navigate = useNavigate();
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -106,6 +108,7 @@ export default function Shop() {
             if (res.ok) {
                 setActiveThemeId(themeId);
                 setGlobalThemeId(themeColor);
+                refreshData(); // Sync with context
                 setMessage({ text: "Mavzu muvaffaqiyatli o'rnatildi!", type: 'success' });
             } else {
                 const data = await res.json();

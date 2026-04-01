@@ -5,28 +5,35 @@ import { useAuth } from '../AuthContext';
 import { ArrowLeft, Star, Sparkles, Swords, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-// Atmospheric Particle (Fireflies/Stars)
-const Particle = ({ delay }: { delay: number }) => {
+// Atmospheric Magical Particles
+const MagicalOrb = ({ delay, color }: { delay: number, color: string }) => {
+    const size = Math.random() * 6 + 2;
     return (
         <motion.div
             initial={{ 
                 x: `${Math.random() * 100}%`, 
                 y: '110%', 
                 opacity: 0,
-                scale: Math.random() * 0.5 + 0.5
+                scale: 0.5
             }}
             animate={{ 
                 y: '-10%',
-                opacity: [0, 0.4, 0.4, 0],
-                x: [`${Math.random() * 100}%`, `${Math.random() * 100}%`]
+                opacity: [0, 0.6, 0.6, 0],
+                x: [`${Math.random() * 10}%`, `${Math.random() * 90}%`]
             }}
             transition={{ 
-                duration: 15 + Math.random() * 10,
+                duration: 20 + Math.random() * 15,
                 repeat: Infinity,
                 delay,
                 ease: "linear"
             }}
-            className="absolute w-1 h-1 bg-emerald-300 rounded-full blur-[1px] pointer-events-none z-0"
+            className="absolute rounded-full blur-[2px] pointer-events-none z-0"
+            style={{ 
+                width: size, 
+                height: size, 
+                backgroundColor: color,
+                boxShadow: `0 0 10px ${color}`
+            }}
         />
     );
 };
@@ -92,10 +99,19 @@ export default function VocabularyBattleLevels() {
                 </div>
             </header>
 
-            {/* Viewport Fixed Magical Particles */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none mix-blend-screen opacity-70 z-10">
-                {Array.from({ length: 40 }).map((_, i) => (
-                    <Particle key={i} delay={i * 0.8} />
+            {/* Programmatic Magical Sky */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" style={{ background: 'var(--bg-color)' }}>
+                {/* Deep Nebula Gradients */}
+                <div className="absolute inset-0 opacity-40 mix-blend-screen"
+                    style={{ background: `radial-gradient(circle at 20% 30%, var(--primary-color) 0%, transparent 40%), radial-gradient(circle at 80% 70%, var(--secondary-color) 0%, transparent 40%)` }} 
+                />
+                <div className="absolute inset-0 opacity-20"
+                    style={{ background: `radial-gradient(circle at 50% 50%, var(--accent-color) 0%, transparent 60%)` }} 
+                />
+                
+                {/* Visual Viewport Fixed Particles */}
+                {Array.from({ length: 30 }).map((_, i) => (
+                    <MagicalOrb key={i} delay={i * 0.7} color={i % 2 === 0 ? 'var(--primary-color)' : 'var(--accent-color)'} />
                 ))}
             </div>
 
@@ -105,16 +121,54 @@ export default function VocabularyBattleLevels() {
                 {/* Full Height Inner Wrapper for Background to scroll relative to */}
                 <div className="min-h-full flex flex-col relative w-full">
                     
-                    {/* Single Long Map Background */}
-                    <div className="absolute inset-0 pointer-events-none" style={{
-                        backgroundImage: 'url(/fairytale_bg.png)',
-                        backgroundSize: '100% 100%', // Stretch to full container height
-                        backgroundPosition: 'top center',
-                        filter: 'contrast(1.1) brightness(0.9) saturate(1.2)'
-                    }}>
-                        {/* Sunlight overlay scales with the whole document */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/10 to-emerald-950/80 mix-blend-multiply opacity-60" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
+                    {/* Glowing Magical Leyline Trail (SVG) */}
+                    <div className="absolute inset-0 pointer-events-none z-10 opacity-40 overflow-visible">
+                        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="lineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="var(--primary-color)" />
+                                    <stop offset="50%" stopColor="var(--accent-color)" />
+                                    <stop offset="100%" stopColor="var(--secondary-color)" />
+                                </linearGradient>
+                            </defs>
+                            <path
+                                d={`M 50 0 ${mapNodes.map((_, i) => {
+                                    const side = i % 2 === 0 ? 1 : -1;
+                                    const x = 50 + side * 28;
+                                    const y = (i * 100) / (mapNodes.length || 1);
+                                    const prevY = ((i - 1) * 100) / (mapNodes.length || 1);
+                                    const midY = (y + prevY) / 2;
+                                    return `C 50 ${prevY + 5}, ${x} ${midY - 5}, ${x} ${midY} C ${x} ${midY + 5}, 50 ${y - 5}, 50 ${y}`;
+                                }).join(' ')}`}
+                                fill="none"
+                                stroke="url(#lineGrad)"
+                                strokeWidth="4"
+                                strokeLinecap="round"
+                                strokeDasharray="10 15"
+                                className="animate-[dash_60s_linear_infinite]"
+                                style={{ 
+                                    filter: 'blur(4px)',
+                                    //@ts-ignore (for styling in react)
+                                    '--dash-offset': '1000'
+                                }}
+                            />
+                            {/* Inner sharper glowing path */}
+                            <path
+                                d={`M 50 0 ${mapNodes.map((_, i) => {
+                                    const side = i % 2 === 0 ? 1 : -1;
+                                    const x = 50 + side * 28;
+                                    const y = (i * 100) / (mapNodes.length || 1);
+                                    const prevY = ((i - 1) * 100) / (mapNodes.length || 1);
+                                    const midY = (y + prevY) / 2;
+                                    return `C 50 ${prevY + 5}, ${x} ${midY - 5}, ${x} ${midY} C ${x} ${midY + 5}, 50 ${y - 5}, 50 ${y}`;
+                                }).join(' ')}`}
+                                fill="none"
+                                stroke="white"
+                                strokeWidth="1"
+                                opacity="0.3"
+                                strokeDasharray="5 10"
+                            />
+                        </svg>
                     </div>
 
                     {/* Centered Content Container for Nodes */}
@@ -159,16 +213,17 @@ export default function VocabularyBattleLevels() {
                                             onClick={() => node.battle && navigate(`/student/vocab-battle/play/${node.battle.id}`)}
                                             className={`
                                                 relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl flex flex-col items-center justify-center transition-all duration-500 group
-                                                shadow-[0_15px_35px_-10px_rgba(0,0,0,0.4)] border-2 transition-transform
+                                                shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)] border-b-4 border-r-2 transition-transform floating-platform
                                                 ${node.isLocked 
-                                                    ? 'opacity-40 cursor-not-allowed grayscale border-dashed border-opacity-20' 
+                                                    ? 'opacity-40 cursor-not-allowed grayscale' 
                                                     : 'hover:scale-110 active:scale-95'
                                                 }
                                             `}
                                             style={{ 
                                                 backgroundColor: 'var(--card-bg)', 
-                                                borderColor: node.isLocked ? 'var(--text-color)' : 'var(--primary-color)',
-                                                color: 'var(--text-color)'
+                                                borderColor: node.isLocked ? 'var(--border-color)' : 'var(--primary-color)',
+                                                color: 'var(--text-color)',
+                                                animationDelay: `${i * 0.3}s`
                                             }}
                                         >
                                             {/* Top Pin Label */}
@@ -234,7 +289,22 @@ export default function VocabularyBattleLevels() {
             </main>
 
             {/* Bottom Ambient Fade */}
-            <div className="fixed bottom-0 left-0 right-0 h-32 pointer-events-none z-30 transition-all duration-500" style={{ background: `linear-gradient(to top, var(--bg-color), transparent)` }} />
+            <div className="fixed bottom-0 left-0 right-0 h-48 pointer-events-none z-30 transition-all duration-500" style={{ background: `linear-gradient(to top, var(--bg-color), transparent)` }} />
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes dash {
+                    to {
+                        stroke-dashoffset: -1000;
+                    }
+                }
+                .floating-platform {
+                    animation: platform-float 5s ease-in-out infinite;
+                }
+                @keyframes platform-float {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-10px); }
+                }
+            `}} />
         </div>
     );
 }
