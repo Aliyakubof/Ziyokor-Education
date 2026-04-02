@@ -610,7 +610,7 @@ const GroupDetails = () => {
                                                                             <Send size={16} />
                                                                         </button>
                                                                     )}
-                                                                    {role === 'admin' && (
+                                                                    {['admin', 'teacher', 'manager'].includes(role || '') && (
                                                                         <button
                                                                             onClick={() => handleDeleteStudent(student.id)}
                                                                             className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
@@ -650,20 +650,20 @@ const GroupDetails = () => {
                                                                 <FileText size={16} />
                                                             </button>
                                                             {role === 'admin' && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => openMoveModal(student)}
-                                                                        className="p-2 text-blue-500 bg-white border border-blue-100 rounded-lg shadow-sm"
-                                                                    >
-                                                                        <Send size={16} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDeleteStudent(student.id)}
-                                                                        className="p-2 text-red-500 bg-white border border-red-100 rounded-lg shadow-sm"
-                                                                    >
-                                                                        <Trash2 size={16} />
-                                                                    </button>
-                                                                </>
+                                                                <button
+                                                                    onClick={() => openMoveModal(student)}
+                                                                    className="p-2 text-blue-500 bg-white border border-blue-100 rounded-lg shadow-sm"
+                                                                >
+                                                                    <Send size={16} />
+                                                                </button>
+                                                            )}
+                                                            {['admin', 'teacher', 'manager'].includes(role || '') && (
+                                                                <button
+                                                                    onClick={() => handleDeleteStudent(student.id)}
+                                                                    className="p-2 text-red-500 bg-white border border-red-100 rounded-lg shadow-sm"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
                                                             )}
                                                         </div>
                                                     </div>

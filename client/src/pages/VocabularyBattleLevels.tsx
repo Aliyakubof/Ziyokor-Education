@@ -99,17 +99,49 @@ export default function VocabularyBattleLevels() {
                 </div>
             </header>
 
-            {/* Programmatic Magical Sky */}
+            {/* Programmatic Magical Sky & Coded Landscape */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" style={{ background: 'var(--bg-color)' }}>
-                {/* Deep Nebula Gradients */}
-                <div className="absolute inset-0 opacity-40 mix-blend-screen"
+                {/* 3D Geometric Map Grid */}
+                <div className="absolute inset-0 opacity-[0.04]" style={{
+                    backgroundImage: `linear-gradient(var(--text-color) 2px, transparent 2px), linear-gradient(90deg, var(--text-color) 2px, transparent 2px)`,
+                    backgroundSize: '40px 40px', // Smaller grid size for better mobile feel
+                    transform: 'perspective(1000px) rotateX(60deg) scale(4) translateY(-10%)',
+                    transformOrigin: 'top center'
+                }} />
+
+                {/* Low-poly Mountains (Pure SVG) */}
+                <div className="absolute bottom-0 w-full h-[50vh] md:h-[60vh] opacity-[0.15] mix-blend-screen overflow-hidden">
+                    {/* xMidYMax slice makes sure it scales relative to width/height without stretching */}
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax slice" className="w-full h-full absolute bottom-0 object-bottom">
+                        <defs>
+                            <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="var(--primary-color)" />
+                                <stop offset="100%" stopColor="transparent" />
+                            </linearGradient>
+                            <linearGradient id="grad2" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="var(--secondary-color)" />
+                                <stop offset="100%" stopColor="transparent" />
+                            </linearGradient>
+                            <linearGradient id="grad3" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="var(--accent-color)" />
+                                <stop offset="100%" stopColor="transparent" />
+                            </linearGradient>
+                        </defs>
+                        <polygon points="-20,100 -20,50 15,30 30,60 45,20 60,70 80,35 120,55 120,100" fill="url(#grad1)" />
+                        <polygon points="-20,100 -20,65 20,40 40,80 65,30 85,65 120,45 120,100" fill="url(#grad2)" />
+                        <polygon points="-20,100 -20,80 25,60 50,75 75,50 120,70 120,100" fill="url(#grad3)" />
+                    </svg>
+                </div>
+
+                {/* Ambient Colored Orbs */}
+                <div className="absolute inset-0 opacity-30 mix-blend-screen"
                     style={{ background: `radial-gradient(circle at 20% 30%, var(--primary-color) 0%, transparent 40%), radial-gradient(circle at 80% 70%, var(--secondary-color) 0%, transparent 40%)` }} 
                 />
                 <div className="absolute inset-0 opacity-20"
                     style={{ background: `radial-gradient(circle at 50% 50%, var(--accent-color) 0%, transparent 60%)` }} 
                 />
                 
-                {/* Visual Viewport Fixed Particles */}
+                {/* Floating Magical Particles */}
                 {Array.from({ length: 30 }).map((_, i) => (
                     <MagicalOrb key={i} delay={i * 0.7} color={i % 2 === 0 ? 'var(--primary-color)' : 'var(--accent-color)'} />
                 ))}

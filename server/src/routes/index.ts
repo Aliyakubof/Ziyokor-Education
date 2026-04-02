@@ -56,7 +56,7 @@ router.get('/students', requireRole('admin', 'manager'), adminController.getStud
 router.get('/students/search', requireRole('admin', 'teacher', 'student', 'manager'), teacherController.searchStudents);
 router.get('/students/:studentId/available-duel-quizzes', requireRole('admin', 'teacher', 'student', 'manager'), quizController.getAvailableDuelQuizzes);
 router.put('/students/:id', requireRole('admin', 'teacher', 'manager'), teacherController.updateStudent);
-router.delete('/students/:id', requireRole('admin', 'manager'), teacherController.deleteStudent);
+router.delete('/students/:id', requireRole('admin', 'manager', 'teacher'), teacherController.deleteStudent);
 router.put('/students/:id/move', requireRole('admin', 'manager'), teacherController.moveStudent);
 router.get('/leaderboard', requireRole('admin', 'teacher', 'manager', 'student'), studentController.getLeaderboard);
 router.get('/shop-items', requireRole('admin', 'teacher', 'student', 'manager'), shopController.getItems);
