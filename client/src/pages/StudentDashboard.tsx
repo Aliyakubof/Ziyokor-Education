@@ -162,9 +162,9 @@ export default function StudentDashboard() {
 
                     {/* Left Column / Header Section (Mobile: Top, Laptop: Aside) */}
                     <header className="lg:col-span-4 px-6 pt-8 pb-6 h-fit lg:sticky lg:top-8 transition-colors" style={{ color: 'var(--text-color)' }}>
-                        <div className="flex justify-between items-start mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="w-14 h-14 rounded-2xl flex items-center justify-center border-2 shadow-lg overflow-hidden relative" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--primary-color)' }}>
+                        <div className="flex justify-between items-start mb-6 font-sans">
+                            <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
+                                <div className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center border-2 shadow-lg overflow-hidden relative" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', color: 'var(--primary-color)' }}>
                                     {stats?.avatarUrl ? (
                                         <img 
                                             src={stats.avatarUrl?.startsWith('/uploads') ? `${import.meta.env.VITE_BACKEND_URL}${stats.avatarUrl}` : stats.avatarUrl} 
@@ -177,15 +177,15 @@ export default function StudentDashboard() {
                                         </span>
                                     )}
                                 </div>
-                                <div>
-                                    <h1 className="text-xl font-bold leading-none mb-1">{user?.name}</h1>
+                                <div className="flex-1 min-w-0">
+                                    <h1 className="text-xl font-bold leading-none mb-1 truncate">{user?.name}</h1>
                                     <div className="flex items-center gap-2 text-sm font-medium opacity-60">
-                                        <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--border-color)' }}>ID: {user?.id}</span>
-                                        <span>{user?.groupName}</span>
+                                        <span className="px-2 py-0.5 rounded text-xs flex-shrink-0" style={{ backgroundColor: 'var(--border-color)' }}>ID: {user?.id}</span>
+                                        <span className="truncate">{user?.groupName}</span>
                                     </div>
                                 </div>
                             </div>
-                            <div className="p-1.5 rounded-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                            <div className="p-1.5 rounded-xl border flex-shrink-0" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                                 <img src={logo} alt="Logo" className="w-8 h-8 rounded-lg" />
                             </div>
                         </div>

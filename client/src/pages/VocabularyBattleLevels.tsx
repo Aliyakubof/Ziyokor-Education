@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
 
 export default function VocabularyBattleLevels() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, activeThemeId } = useAuth();
     const [levels, setLevels] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isActive, setIsActive] = useState(true);
@@ -68,38 +68,160 @@ export default function VocabularyBattleLevels() {
                 </div>
             </header>
 
-            {/* Clean Map Background */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" style={{ background: 'var(--bg-color)' }}>
-                {/* Subtle Map Grid */}
-                <div className="absolute inset-0 opacity-[0.03]" style={{
-                    backgroundImage: `linear-gradient(var(--text-color) 2px, transparent 2px), linear-gradient(90deg, var(--text-color) 2px, transparent 2px)`,
-                    backgroundSize: '80px 80px',
-                    transform: 'perspective(1000px) rotateX(45deg) scale(2) translateY(-20%)',
-                    transformOrigin: 'top center'
-                }} />
+            {/* Fully Enriched & Mobile Responsive Theme Maps */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-[var(--bg-color)]">
+                {activeThemeId === 'theme-emerald' ? (
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                        {/* Deep Forest Gradient Base */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[var(--primary-color)]/20 to-transparent" />
+                        
+                        {/* Huge Full-screen Topo Forest Hills */}
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax slice" className="absolute bottom-0 w-full h-[80vh] opacity-[0.25] mix-blend-screen">
+                             <path d="M-20,60 Q15,10 50,45 T120,25 L120,100 L-20,100 Z" fill="var(--secondary-color)"/>
+                             <path d="M-20,75 Q25,35 60,65 T120,45 L120,100 L-20,100 Z" fill="var(--primary-color)"/>
+                             <path d="M-20,95 Q40,55 80,85 T130,55 L130,100 L-20,100 Z" fill="var(--accent-color)"/>
+                        </svg>
 
-                {/* Soft landscape gradient mountains */}
-                <div className="absolute bottom-0 w-full h-[40vh] md:h-[50vh] opacity-20 mix-blend-screen overflow-hidden">
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax slice" className="w-full h-full absolute bottom-0 object-bottom">
-                        <defs>
-                            <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="var(--primary-color)" />
-                                <stop offset="100%" stopColor="transparent" />
-                            </linearGradient>
-                            <linearGradient id="grad2" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="var(--secondary-color)" />
-                                <stop offset="100%" stopColor="transparent" />
-                            </linearGradient>
-                            <linearGradient id="grad3" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="var(--accent-color)" />
-                                <stop offset="100%" stopColor="transparent" />
-                            </linearGradient>
-                        </defs>
-                        <polygon points="-20,100 -20,50 15,30 30,60 45,20 60,70 80,35 120,55 120,100" fill="url(#grad1)" />
-                        <polygon points="-20,100 -20,65 20,40 40,80 65,30 85,65 120,45 120,100" fill="url(#grad2)" />
-                        <polygon points="-20,100 -20,80 25,60 50,75 75,50 120,70 120,100" fill="url(#grad3)" />
-                    </svg>
-                </div>
+                        {/* Magical Fireflies */}
+                        {Array.from({ length: 30 }).map((_, i) => (
+                            <div key={i} className="absolute rounded-full bg-green-200 shadow-[0_0_12px_4px_rgba(7ade80,0.4)] animate-[float-up_10s_ease-in-out_infinite]" 
+                                style={{
+                                    width: Math.random() * 4 + 2 + 'px', 
+                                    height: Math.random() * 4 + 2 + 'px',
+                                    left: `${Math.random() * 100}%`, 
+                                    animationDuration: `${Math.random() * 5 + 8}s`,
+                                    animationDelay: `-${Math.random() * 10}s`
+                                }} 
+                            />
+                        ))}
+                    </div>
+                ) : activeThemeId === 'theme-sunset' ? (
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden bg-gradient-to-t from-[var(--primary-color)]/10 to-transparent">
+                        {/* Giant Sun */}
+                        <div className="absolute top-[-10%] right-[-10%] w-[80vw] h-[80vw] max-w-[600px] max-h-[600px] rounded-full blur-3xl opacity-40 bg-[var(--accent-color)]" />
+                        <div className="absolute top-[5%] right-[5%] w-[40vw] h-[40vw] max-w-[200px] max-h-[200px] rounded-full blur-xl opacity-80 bg-gradient-to-br from-yellow-300 to-[var(--primary-color)]" />
+                        
+                        {/* Infinite Pyramids/Dunes */}
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax slice" className="absolute bottom-0 w-full h-[70vh] opacity-[0.25] mix-blend-multiply">
+                             <polygon points="-10,120 15,35 45,75 75,25 110,90 110,120" fill="var(--secondary-color)"/>
+                             <polygon points="-10,120 0,55 30,85 65,35 95,75 120,45 120,120" fill="var(--primary-color)"/>
+                             <polygon points="-10,120 25,75 55,100 85,55 120,90 120,120" fill="var(--accent-color)"/>
+                        </svg>
+
+                        {/* Mirage floating light specks */}
+                        {Array.from({ length: 15 }).map((_, i) => (
+                            <div key={i} className="absolute rounded-full bg-orange-200 blur-[2px] animate-[platform-float_8s_ease-in-out_infinite]" style={{ width: Math.random()*8+4+'px', height: Math.random()*8+4+'px', left: Math.random()*100+'%', top: Math.random()*40+60+'%', animationDelay: `-${Math.random()*10}s` }} />
+                        ))}
+                    </div>
+                ) : activeThemeId === 'theme-cyber' ? (
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden bg-slate-950">
+                        {/* Deep Space Radial */}
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--primary-color)_200%)] opacity-30" />
+                        
+                        {/* Huge HUD Grid Perspective */}
+                        <div className="absolute inset-0 opacity-[0.25]" style={{
+                            backgroundImage: `linear-gradient(var(--accent-color) 2px, transparent 2px), linear-gradient(90deg, var(--accent-color) 2px, transparent 2px)`,
+                            backgroundSize: '50px 50px',
+                            transform: 'perspective(800px) rotateX(60deg) scale(2.5) translateY(-50%)',
+                            transformOrigin: 'top center'
+                        }} />
+                        
+                        {/* Scanning HUD Vertical Wave */}
+                        <div className="absolute top-0 w-full h-[15vh] bg-gradient-to-b from-transparent to-[var(--primary-color)] opacity-40 animate-[scanline_4s_linear_infinite]" />
+                        
+                        {/* Floating Digital Data Squares */}
+                        {Array.from({ length: 20 }).map((_, i) => (
+                            <div key={i} className="absolute border flex items-center justify-center opacity-30 mix-blend-screen animate-pulse" 
+                                style={{ 
+                                    left: Math.random()*100+'%', top: Math.random()*100+'%', 
+                                    width: Math.random()*80+20+'px', height: Math.random()*80+20+'px', 
+                                    borderRadius: Math.random() > 0.6 ? '50%' : '15%',
+                                    borderColor: 'var(--primary-color)'
+                                }}>
+                                {Math.random() > 0.7 && <div className="w-[10%] h-[10%] rounded-full bg-[var(--accent-color)] opacity-50" />}
+                            </div>
+                        ))}
+                    </div>
+                ) : activeThemeId === 'theme-sakura' ? (
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden bg-gradient-to-b from-transparent to-[var(--primary-color)]/10">
+                        {/* Deep Sun / Giant Sakura Base */}
+                        <div className="absolute bottom-[-20%] left-[-20%] w-[100vw] h-[100vw] rounded-full blur-3xl opacity-30 bg-gradient-to-tr from-[var(--secondary-color)] to-[var(--primary-color)]" />
+                        
+                        {/* Soft Japanese Cloud Vectors */}
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax slice" className="absolute bottom-0 w-full h-[60vh] opacity-30 mix-blend-multiply">
+                             <circle cx="-10" cy="90" r="35" fill="var(--primary-color)"/>
+                             <circle cx="30" cy="85" r="45" fill="var(--secondary-color)"/>
+                             <circle cx="70" cy="95" r="40" fill="var(--accent-color)"/>
+                             <circle cx="120" cy="80" r="50" fill="var(--primary-color)"/>
+                        </svg>
+
+                        {/* Sakura Petals continuously falling */}
+                        {Array.from({ length: 40 }).map((_, i) => (
+                            <div key={i} className="absolute bg-[var(--accent-color)] opacity-50 rounded-tl-full rounded-br-full rounded-tr-md rounded-bl-md animate-[float-up_12s_linear_infinite]" 
+                                style={{ 
+                                    width: Math.random()*8+6+'px', height: Math.random()*8+6+'px', 
+                                    left: `${Math.random()*120 - 10}%`, 
+                                    animationDuration: `${Math.random()*10+8}s`,
+                                    animationDelay: `-${Math.random()*15}s`,
+                                    transform: `rotate(${Math.random()*360}deg)`
+                                }} />
+                        ))}
+                    </div>
+                ) : activeThemeId === 'theme-ocean' ? (
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden bg-gradient-to-b from-[var(--bg-color)] to-[var(--primary-color)]/30">
+                        {/* Water Surface Waves */}
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMin slice" className="absolute top-0 w-full h-[25vh] opacity-[0.25] mix-blend-multiply">
+                             <path d="M-10,0 L120,0 L120,20 Q80,35 50,20 T-10,15 Z" fill="var(--secondary-color)"/>
+                             <path d="M-10,0 L120,0 L120,30 Q80,10 50,30 T-10,25 Z" fill="var(--accent-color)" opacity="0.6"/>
+                        </svg>
+
+                        {/* Light rays penetrating deep ocean */}
+                        <div className="absolute inset-0 opacity-20 mix-blend-screen" style={{ background: 'repeating-linear-gradient(160deg, transparent, transparent 15vh, var(--accent-color) 16vh, transparent 17vh)' }} />
+                        
+                        {/* Deep Sea Trenches */}
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax slice" className="absolute bottom-0 w-full h-[60vh] opacity-30 mix-blend-multiply">
+                             <path d="M-20,100 L-20,55 Q15,75 50,45 T130,65 L130,100 Z" fill="var(--primary-color)"/>
+                             <path d="M-20,100 L-20,75 Q25,95 60,70 T130,85 L130,100 Z" fill="var(--secondary-color)"/>
+                        </svg>
+
+                        {/* Rising Bubbles */}
+                        {Array.from({ length: 30 }).map((_, i) => (
+                            <div key={i} className="absolute rounded-full border-[2px] border-[var(--accent-color)] opacity-50 animate-[float-up_8s_ease-in_infinite]" 
+                                style={{ 
+                                    width: Math.random()*12+4+'px', height: Math.random()*12+4+'px', 
+                                    left: `${Math.random() * 100}%`, 
+                                    animationDuration: `${Math.random()*8+6}s`,
+                                    animationDelay: `-${Math.random()*10}s` 
+                                }} />
+                        ))}
+                    </div>
+                ) : (
+                    // Default Classic Cartographic Explorer Map
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden bg-[var(--bg-color)]">
+                        {/* Beautiful Cartographic Grid Pattern */}
+                        <div className="absolute inset-0 opacity-[0.06]" style={{
+                            backgroundImage: `linear-gradient(var(--text-color) 1px, transparent 1px), linear-gradient(90deg, var(--text-color) 1px, transparent 1px)`,
+                            backgroundSize: '100px 100px',
+                            backgroundPosition: 'center center'
+                        }} />
+                        <div className="absolute inset-0 opacity-[0.02]" style={{
+                            backgroundImage: `linear-gradient(var(--text-color) 1px, transparent 1px), linear-gradient(90deg, var(--text-color) 1px, transparent 1px)`,
+                            backgroundSize: '20px 20px',
+                            backgroundPosition: 'center center'
+                        }} />
+                        
+                        {/* Huge Compass & Geography Data Rings */}
+                        <div className="absolute top-[-5%] right-[-15%] w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] border-[1px] border-dashed rounded-full opacity-10 animate-[spin_120s_linear_infinite]" style={{ borderColor: 'var(--primary-color)' }} />
+                        <div className="absolute bottom-[-10%] left-[-20%] w-[100vw] h-[100vw] max-w-[1000px] max-h-[1000px] border-[2px] border-dotted rounded-full opacity-[0.05] animate-[spin_90s_reverse_linear_infinite]" style={{ borderColor: 'var(--text-color)' }} />
+                        
+                        {/* Structured Low-Poly Modern Path Vectors */}
+                        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax slice" className="absolute bottom-0 w-full h-[60vh] opacity-[0.25] mix-blend-multiply">
+                            <polygon points="-20,100 -20,40 10,25 35,55 55,20 75,65 95,30 120,50 120,100" fill="var(--primary-color)" />
+                            <polygon points="-20,100 -20,60 15,35 45,75 70,25 90,60 120,45 120,100" fill="var(--secondary-color)" opacity="0.6"/>
+                            <polygon points="-20,100 -20,80 20,55 55,85 85,45 120,65 120,100" fill="var(--accent-color)" opacity="0.4"/>
+                        </svg>
+                    </div>
+                )}
             </div>
 
             {/* Scrollable Main Area */}
@@ -242,8 +364,19 @@ export default function VocabularyBattleLevels() {
                     animation: platform-float 5s ease-in-out infinite;
                 }
                 @keyframes platform-float {
-                    0%, 100% { transform: translateY(0px); }
-                    50% { transform: translateY(-10px); }
+                    0%, 100% { transform: translateY(0px) rotate(0deg); }
+                    50% { transform: translateY(-15px) rotate(1deg); }
+                }
+                @keyframes scanline {
+                    0% { transform: translateY(-100%); opacity: 0; }
+                    20% { opacity: 0.5; }
+                    100% { transform: translateY(110vh); opacity: 0; }
+                }
+                @keyframes float-up {
+                    0% { transform: translateY(110vh) scale(0.6); opacity: 0; }
+                    20% { opacity: 0.8; }
+                    80% { opacity: 0.8; }
+                    100% { transform: translateY(-20vh) scale(1.4); opacity: 0; }
                 }
             `}} />
         </div>

@@ -276,23 +276,7 @@ export default function Leaderboard() {
                                         </h3>
                                     </div>
                                     
-                                    {/* Challenge Button */}
-                                    {role === 'student' && player.id !== user?.id && (
-                                        <button
-                                            onClick={() => handleChallengeClick(player.id, player.name)}
-                                            disabled={challengingId === player.id}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all active:scale-95 ${challengingId === player.id ? 'bg-emerald-500 text-white' : 'bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white'}`}
-                                        >
-                                            {challengingId === player.id ? (
-                                                <>Taklif etildi</>
-                                            ) : (
-                                                <>
-                                                    <Swords size={12} />
-                                                    Duel
-                                                </>
-                                            )}
-                                        </button>
-                                    )}
+                                    {/* Duel features temporarily removed */}
 
                                     <div className="text-right">
                                         {type === 'vocab' ? (
