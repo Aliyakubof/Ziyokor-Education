@@ -5,38 +5,7 @@ import { useAuth } from '../AuthContext';
 import { ArrowLeft, Star, Sparkles, Swords, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-// Atmospheric Magical Particles
-const MagicalOrb = ({ delay, color }: { delay: number, color: string }) => {
-    const size = Math.random() * 6 + 2;
-    return (
-        <motion.div
-            initial={{ 
-                x: `${Math.random() * 100}%`, 
-                y: '110%', 
-                opacity: 0,
-                scale: 0.5
-            }}
-            animate={{ 
-                y: '-10%',
-                opacity: [0, 0.6, 0.6, 0],
-                x: [`${Math.random() * 10}%`, `${Math.random() * 90}%`]
-            }}
-            transition={{ 
-                duration: 20 + Math.random() * 15,
-                repeat: Infinity,
-                delay,
-                ease: "linear"
-            }}
-            className="absolute rounded-full blur-[2px] pointer-events-none z-0"
-            style={{ 
-                width: size, 
-                height: size, 
-                backgroundColor: color,
-                boxShadow: `0 0 10px ${color}`
-            }}
-        />
-    );
-};
+// Ambient magical particles removed in favor of holographic map elements
 
 export default function VocabularyBattleLevels() {
     const navigate = useNavigate();
@@ -99,52 +68,56 @@ export default function VocabularyBattleLevels() {
                 </div>
             </header>
 
-            {/* Programmatic Magical Sky & Coded Landscape */}
+            {/* Programmatic Magical Sky & Coded Landscape -> HOLOGRAPHIC TOPO MAP */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" style={{ background: 'var(--bg-color)' }}>
-                {/* 3D Geometric Map Grid */}
-                <div className="absolute inset-0 opacity-[0.04]" style={{
-                    backgroundImage: `linear-gradient(var(--text-color) 2px, transparent 2px), linear-gradient(90deg, var(--text-color) 2px, transparent 2px)`,
-                    backgroundSize: '40px 40px', // Smaller grid size for better mobile feel
-                    transform: 'perspective(1000px) rotateX(60deg) scale(4) translateY(-10%)',
+                {/* Dotted Coordinate Grid (Map look) */}
+                <div className="absolute inset-0 opacity-[0.1]" style={{
+                    backgroundImage: `radial-gradient(var(--text-color) 1px, transparent 1px)`,
+                    backgroundSize: '40px 40px',
+                    transform: 'perspective(1000px) rotateX(40deg) scale(2.5) translateY(-20%)',
                     transformOrigin: 'top center'
                 }} />
 
-                {/* Low-poly Mountains (Pure SVG) */}
-                <div className="absolute bottom-0 w-full h-[50vh] md:h-[60vh] opacity-[0.15] mix-blend-screen overflow-hidden">
-                    {/* xMidYMax slice makes sure it scales relative to width/height without stretching */}
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax slice" className="w-full h-full absolute bottom-0 object-bottom">
-                        <defs>
-                            <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="var(--primary-color)" />
-                                <stop offset="100%" stopColor="transparent" />
-                            </linearGradient>
-                            <linearGradient id="grad2" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="var(--secondary-color)" />
-                                <stop offset="100%" stopColor="transparent" />
-                            </linearGradient>
-                            <linearGradient id="grad3" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="var(--accent-color)" />
-                                <stop offset="100%" stopColor="transparent" />
-                            </linearGradient>
-                        </defs>
-                        <polygon points="-20,100 -20,50 15,30 30,60 45,20 60,70 80,35 120,55 120,100" fill="url(#grad1)" />
-                        <polygon points="-20,100 -20,65 20,40 40,80 65,30 85,65 120,45 120,100" fill="url(#grad2)" />
-                        <polygon points="-20,100 -20,80 25,60 50,75 75,50 120,70 120,100" fill="url(#grad3)" />
-                    </svg>
+                {/* Topographic Contour Lines (Repeated Radial Gradients) */}
+                <div className="absolute -inset-[50%] mix-blend-screen opacity-20 pointer-events-none animate-[pulse_10s_ease-in-out_infinite]" style={{
+                    backgroundImage: `
+                        repeating-radial-gradient(circle at 30% 70%, transparent 0, transparent 30px, var(--primary-color) 31px, transparent 32px),
+                        repeating-radial-gradient(circle at 70% 30%, transparent 0, transparent 40px, var(--secondary-color) 41px, transparent 42px)
+                    `,
+                    backgroundSize: '100% 100%',
+                    filter: 'drop-shadow(0 0 10px var(--primary-color))',
+                    transform: 'perspective(500px) rotateX(30deg) scale(1.5)',
+                }} />
+
+                {/* Radar Sweep Effect */}
+                <div className="absolute left-[30%] top-[70%] w-[150vw] h-[150vw] -translate-x-1/2 -translate-y-1/2 opacity-10 pointer-events-none overflow-hidden rounded-full">
+                    <div className="absolute inset-0 origin-center animate-[spin_8s_linear_infinite]" style={{
+                        background: `conic-gradient(from 0deg, transparent 70%, var(--accent-color) 100%)`
+                    }} />
                 </div>
 
-                {/* Ambient Colored Orbs */}
+                {/* Glowing Map Coordinate overlay rings */}
+                <div className="absolute top-0 right-0 w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] border border-dashed rounded-full opacity-10 animate-[spin_60s_linear_infinite]" style={{ borderColor: 'var(--text-color)', transform: 'translate(30%, -30%)' }} />
+                <div className="absolute bottom-0 left-0 w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] border-2 rounded-full opacity-5 animate-[spin_40s_linear_infinite]" style={{ borderColor: 'var(--primary-color)', transform: 'translate(-20%, 20%)', borderStyle: 'dotted' }} />
+
+                {/* Ambient Colored Orbs for Depth */}
                 <div className="absolute inset-0 opacity-30 mix-blend-screen"
                     style={{ background: `radial-gradient(circle at 20% 30%, var(--primary-color) 0%, transparent 40%), radial-gradient(circle at 80% 70%, var(--secondary-color) 0%, transparent 40%)` }} 
                 />
-                <div className="absolute inset-0 opacity-20"
-                    style={{ background: `radial-gradient(circle at 50% 50%, var(--accent-color) 0%, transparent 60%)` }} 
-                />
                 
-                {/* Floating Magical Particles */}
-                {Array.from({ length: 30 }).map((_, i) => (
-                    <MagicalOrb key={i} delay={i * 0.7} color={i % 2 === 0 ? 'var(--primary-color)' : 'var(--accent-color)'} />
-                ))}
+                {/* Floating Map Data Nodes */}
+                {Array.from({ length: 15 }).map((_, i) => {
+                    const size = Math.random() * 4 + 2;
+                    return (
+                        <div key={i} className="absolute rounded-sm opacity-30 animate-pulse" style={{
+                            width: size, height: size,
+                            backgroundColor: 'var(--text-color)',
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            animationDelay: `${Math.random() * 2}s`
+                        }} />
+                    )
+                })}
             </div>
 
             {/* Scrollable Main Area */}
