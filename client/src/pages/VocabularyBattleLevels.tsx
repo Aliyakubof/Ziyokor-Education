@@ -68,56 +68,38 @@ export default function VocabularyBattleLevels() {
                 </div>
             </header>
 
-            {/* Programmatic Magical Sky & Coded Landscape -> HOLOGRAPHIC TOPO MAP */}
+            {/* Clean Map Background */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" style={{ background: 'var(--bg-color)' }}>
-                {/* Dotted Coordinate Grid (Map look) */}
-                <div className="absolute inset-0 opacity-[0.1]" style={{
-                    backgroundImage: `radial-gradient(var(--text-color) 1px, transparent 1px)`,
-                    backgroundSize: '40px 40px',
-                    transform: 'perspective(1000px) rotateX(40deg) scale(2.5) translateY(-20%)',
+                {/* Subtle Map Grid */}
+                <div className="absolute inset-0 opacity-[0.03]" style={{
+                    backgroundImage: `linear-gradient(var(--text-color) 2px, transparent 2px), linear-gradient(90deg, var(--text-color) 2px, transparent 2px)`,
+                    backgroundSize: '80px 80px',
+                    transform: 'perspective(1000px) rotateX(45deg) scale(2) translateY(-20%)',
                     transformOrigin: 'top center'
                 }} />
 
-                {/* Topographic Contour Lines (Repeated Radial Gradients) */}
-                <div className="absolute -inset-[50%] mix-blend-screen opacity-20 pointer-events-none animate-[pulse_10s_ease-in-out_infinite]" style={{
-                    backgroundImage: `
-                        repeating-radial-gradient(circle at 30% 70%, transparent 0, transparent 30px, var(--primary-color) 31px, transparent 32px),
-                        repeating-radial-gradient(circle at 70% 30%, transparent 0, transparent 40px, var(--secondary-color) 41px, transparent 42px)
-                    `,
-                    backgroundSize: '100% 100%',
-                    filter: 'drop-shadow(0 0 10px var(--primary-color))',
-                    transform: 'perspective(500px) rotateX(30deg) scale(1.5)',
-                }} />
-
-                {/* Radar Sweep Effect */}
-                <div className="absolute left-[30%] top-[70%] w-[150vw] h-[150vw] -translate-x-1/2 -translate-y-1/2 opacity-10 pointer-events-none overflow-hidden rounded-full">
-                    <div className="absolute inset-0 origin-center animate-[spin_8s_linear_infinite]" style={{
-                        background: `conic-gradient(from 0deg, transparent 70%, var(--accent-color) 100%)`
-                    }} />
+                {/* Soft landscape gradient mountains */}
+                <div className="absolute bottom-0 w-full h-[40vh] md:h-[50vh] opacity-20 mix-blend-screen overflow-hidden">
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMax slice" className="w-full h-full absolute bottom-0 object-bottom">
+                        <defs>
+                            <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="var(--primary-color)" />
+                                <stop offset="100%" stopColor="transparent" />
+                            </linearGradient>
+                            <linearGradient id="grad2" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="var(--secondary-color)" />
+                                <stop offset="100%" stopColor="transparent" />
+                            </linearGradient>
+                            <linearGradient id="grad3" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="var(--accent-color)" />
+                                <stop offset="100%" stopColor="transparent" />
+                            </linearGradient>
+                        </defs>
+                        <polygon points="-20,100 -20,50 15,30 30,60 45,20 60,70 80,35 120,55 120,100" fill="url(#grad1)" />
+                        <polygon points="-20,100 -20,65 20,40 40,80 65,30 85,65 120,45 120,100" fill="url(#grad2)" />
+                        <polygon points="-20,100 -20,80 25,60 50,75 75,50 120,70 120,100" fill="url(#grad3)" />
+                    </svg>
                 </div>
-
-                {/* Glowing Map Coordinate overlay rings */}
-                <div className="absolute top-0 right-0 w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] border border-dashed rounded-full opacity-10 animate-[spin_60s_linear_infinite]" style={{ borderColor: 'var(--text-color)', transform: 'translate(30%, -30%)' }} />
-                <div className="absolute bottom-0 left-0 w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] border-2 rounded-full opacity-5 animate-[spin_40s_linear_infinite]" style={{ borderColor: 'var(--primary-color)', transform: 'translate(-20%, 20%)', borderStyle: 'dotted' }} />
-
-                {/* Ambient Colored Orbs for Depth */}
-                <div className="absolute inset-0 opacity-30 mix-blend-screen"
-                    style={{ background: `radial-gradient(circle at 20% 30%, var(--primary-color) 0%, transparent 40%), radial-gradient(circle at 80% 70%, var(--secondary-color) 0%, transparent 40%)` }} 
-                />
-                
-                {/* Floating Map Data Nodes */}
-                {Array.from({ length: 15 }).map((_, i) => {
-                    const size = Math.random() * 4 + 2;
-                    return (
-                        <div key={i} className="absolute rounded-sm opacity-30 animate-pulse" style={{
-                            width: size, height: size,
-                            backgroundColor: 'var(--text-color)',
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            animationDelay: `${Math.random() * 2}s`
-                        }} />
-                    )
-                })}
             </div>
 
             {/* Scrollable Main Area */}
@@ -126,55 +108,8 @@ export default function VocabularyBattleLevels() {
                 {/* Full Height Inner Wrapper for Background to scroll relative to */}
                 <div className="min-h-full flex flex-col relative w-full">
                     
-                    {/* Glowing Magical Leyline Trail (SVG) */}
-                    <div className="absolute inset-0 pointer-events-none z-10 opacity-40 overflow-visible">
-                        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <defs>
-                                <linearGradient id="lineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stopColor="var(--primary-color)" />
-                                    <stop offset="50%" stopColor="var(--accent-color)" />
-                                    <stop offset="100%" stopColor="var(--secondary-color)" />
-                                </linearGradient>
-                            </defs>
-                            <path
-                                d={`M 50 0 ${mapNodes.map((_, i) => {
-                                    const side = i % 2 === 0 ? 1 : -1;
-                                    const x = 50 + side * 28;
-                                    const y = (i * 100) / (mapNodes.length || 1);
-                                    const prevY = ((i - 1) * 100) / (mapNodes.length || 1);
-                                    const midY = (y + prevY) / 2;
-                                    return `C 50 ${prevY + 5}, ${x} ${midY - 5}, ${x} ${midY} C ${x} ${midY + 5}, 50 ${y - 5}, 50 ${y}`;
-                                }).join(' ')}`}
-                                fill="none"
-                                stroke="url(#lineGrad)"
-                                strokeWidth="4"
-                                strokeLinecap="round"
-                                strokeDasharray="10 15"
-                                className="animate-[dash_60s_linear_infinite]"
-                                style={{ 
-                                    filter: 'blur(4px)',
-                                    //@ts-ignore (for styling in react)
-                                    '--dash-offset': '1000'
-                                }}
-                            />
-                            {/* Inner sharper glowing path */}
-                            <path
-                                d={`M 50 0 ${mapNodes.map((_, i) => {
-                                    const side = i % 2 === 0 ? 1 : -1;
-                                    const x = 50 + side * 28;
-                                    const y = (i * 100) / (mapNodes.length || 1);
-                                    const prevY = ((i - 1) * 100) / (mapNodes.length || 1);
-                                    const midY = (y + prevY) / 2;
-                                    return `C 50 ${prevY + 5}, ${x} ${midY - 5}, ${x} ${midY} C ${x} ${midY + 5}, 50 ${y - 5}, 50 ${y}`;
-                                }).join(' ')}`}
-                                fill="none"
-                                stroke="white"
-                                strokeWidth="1"
-                                opacity="0.3"
-                                strokeDasharray="5 10"
-                            />
-                        </svg>
-                    </div>
+                    {/* Connected Road (Replaces the downward stretched paper trail) */}
+                    {/* The original full-height SVG trail caused stretched lines on mobile, we removed it for a cleaner approach */}
 
                     {/* Centered Content Container for Nodes */}
                     <div className="relative z-20 w-full max-w-lg mx-auto flex-1 px-4 py-12 flex flex-col">
@@ -220,13 +155,13 @@ export default function VocabularyBattleLevels() {
                                                 relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl flex flex-col items-center justify-center transition-all duration-500 group
                                                 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)] border-b-4 border-r-2 transition-transform floating-platform
                                                 ${node.isLocked 
-                                                    ? 'opacity-40 cursor-not-allowed grayscale' 
-                                                    : 'hover:scale-110 active:scale-95'
+                                                    ? 'opacity-75 grayscale-[50%] shadow-none scale-95 border-dashed cursor-not-allowed' 
+                                                    : 'hover:scale-110 active:scale-95 z-20'
                                                 }
                                             `}
                                             style={{ 
-                                                backgroundColor: 'var(--card-bg)', 
-                                                borderColor: node.isLocked ? 'var(--border-color)' : 'var(--primary-color)',
+                                                backgroundColor: node.isLocked ? 'var(--bg-color)' : 'var(--card-bg)', 
+                                                borderColor: node.isLocked ? 'var(--text-color)' : 'var(--primary-color)',
                                                 color: 'var(--text-color)',
                                                 animationDelay: `${i * 0.3}s`
                                             }}
