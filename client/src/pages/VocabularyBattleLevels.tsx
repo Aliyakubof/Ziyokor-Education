@@ -48,7 +48,7 @@ export default function VocabularyBattleLevels() {
 
     return (
         <div className="min-h-screen flex flex-col font-sans selection:text-white relative overflow-hidden transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
-            
+
             {/* Header - Fixed to top */}
             <header className="absolute top-0 left-0 right-0 z-50 backdrop-blur-xl border-b transition-colors shadow-sm" style={{ backgroundColor: 'rgba(0,0,0,0.15)', borderColor: 'var(--border-color)' }}>
                 <div className="px-5 h-16 flex items-center justify-between mx-auto w-full max-w-lg">
@@ -104,10 +104,10 @@ export default function VocabularyBattleLevels() {
 
             {/* Scrollable Main Area */}
             <main className="flex-1 w-full overflow-y-auto overflow-x-hidden custom-scrollbar pt-16 pb-10" style={{ backgroundColor: 'var(--bg-color)' }}>
-                
+
                 {/* Full Height Inner Wrapper for Background to scroll relative to */}
                 <div className="min-h-full flex flex-col relative w-full">
-                    
+
                     {/* Connected Road (Replaces the downward stretched paper trail) */}
                     {/* The original full-height SVG trail caused stretched lines on mobile, we removed it for a cleaner approach */}
 
@@ -115,7 +115,7 @@ export default function VocabularyBattleLevels() {
                     <div className="relative z-20 w-full max-w-lg mx-auto flex-1 px-4 py-12 flex flex-col">
                         {!isActive ? (
                             <div className="flex flex-col items-center justify-center py-40 text-center animate-in fade-in zoom-in duration-700">
-                                 <div className="relative group">
+                                <div className="relative group">
                                     <div className="absolute inset-0 blur-3xl rounded-full scale-150 transition-all duration-500 opacity-30" style={{ backgroundColor: 'var(--primary-color)' }} />
                                     <div className="relative p-10 rounded-[3rem] border shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)] backdrop-blur-md" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                                         <Sparkles className="w-16 h-16 mx-auto mb-6 animate-[spin_4s_linear_infinite]" style={{ color: 'var(--primary-color)' }} />
@@ -124,106 +124,106 @@ export default function VocabularyBattleLevels() {
                                             Yangi sarguzasht xaritasi o'rganilmoqda. Qaytib keling!
                                         </p>
                                     </div>
-                                 </div>
+                                </div>
                             </div>
                         ) : loading ? (
-                    <div className="flex flex-col items-center justify-center py-40">
-                        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mb-4" style={{ borderColor: 'var(--primary-color)', borderTopColor: 'transparent' }} />
-                        <span className="font-black uppercase tracking-[0.3em] text-[10px] opacity-50" style={{ color: 'var(--text-color)' }}>Xarita yuklanmoqda...</span>
-                    </div>
-                ) : (
-                    <div className="relative pt-8 pb-48">
+                            <div className="flex flex-col items-center justify-center py-40">
+                                <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mb-4" style={{ borderColor: 'var(--primary-color)', borderTopColor: 'transparent' }} />
+                                <span className="font-black uppercase tracking-[0.3em] text-[10px] opacity-50" style={{ color: 'var(--text-color)' }}>Xarita yuklanmoqda...</span>
+                            </div>
+                        ) : (
+                            <div className="relative pt-8 pb-48">
 
-                        {/* Interactive Map Nodes */}
-                        <div className="relative z-10 flex flex-col items-center space-y-16">
-                            {mapNodes.map((node, i) => {
-                                const isEven = i % 2 === 0;
-                                const isCurrent = !node.isLocked && node.stars === 0;
-                                
-                                return (
-                                    <motion.div
-                                        key={node.levelNumber}
-                                        initial={{ opacity: 0, scale: 0.8, x: isEven ? 40 : -40 }}
-                                        whileInView={{ opacity: 1, scale: 1, x: 0 }}
-                                        viewport={{ once: true, margin: "-100px" }}
-                                        className={`relative w-full flex ${isEven ? 'justify-end pr-10' : 'justify-start pl-10'}`}
-                                    >
-                                        <button
-                                            disabled={node.isLocked}
-                                            onClick={() => node.battle && navigate(`/student/vocab-battle/play/${node.battle.id}`)}
-                                            className={`
+                                {/* Interactive Map Nodes */}
+                                <div className="relative z-10 flex flex-col items-center space-y-16">
+                                    {mapNodes.map((node, i) => {
+                                        const isEven = i % 2 === 0;
+                                        const isCurrent = !node.isLocked && node.stars === 0;
+
+                                        return (
+                                            <motion.div
+                                                key={node.levelNumber}
+                                                initial={{ opacity: 0, scale: 0.8, x: isEven ? 40 : -40 }}
+                                                whileInView={{ opacity: 1, scale: 1, x: 0 }}
+                                                viewport={{ once: true, margin: "-100px" }}
+                                                className={`relative w-full flex ${isEven ? 'justify-end pr-10' : 'justify-start pl-10'}`}
+                                            >
+                                                <button
+                                                    disabled={node.isLocked}
+                                                    onClick={() => node.battle && navigate(`/student/vocab-battle/play/${node.battle.id}`)}
+                                                    className={`
                                                 relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl flex flex-col items-center justify-center transition-all duration-500 group
                                                 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)] border-b-4 border-r-2 transition-transform floating-platform
-                                                ${node.isLocked 
-                                                    ? 'opacity-75 grayscale-[50%] shadow-none scale-95 border-dashed cursor-not-allowed' 
-                                                    : 'hover:scale-110 active:scale-95 z-20'
-                                                }
+                                                ${node.isLocked
+                                                            ? 'opacity-75 grayscale-[50%] shadow-none scale-95 border-dashed cursor-not-allowed'
+                                                            : 'hover:scale-110 active:scale-95 z-20'
+                                                        }
                                             `}
-                                            style={{ 
-                                                backgroundColor: node.isLocked ? 'var(--bg-color)' : 'var(--card-bg)', 
-                                                borderColor: node.isLocked ? 'var(--text-color)' : 'var(--primary-color)',
-                                                color: 'var(--text-color)',
-                                                animationDelay: `${i * 0.3}s`
-                                            }}
-                                        >
-                                            {/* Top Pin Label */}
-                                            <div className={`
+                                                    style={{
+                                                        backgroundColor: node.isLocked ? 'var(--bg-color)' : 'var(--card-bg)',
+                                                        borderColor: node.isLocked ? 'var(--text-color)' : 'var(--primary-color)',
+                                                        color: 'var(--text-color)',
+                                                        animationDelay: `${i * 0.3}s`
+                                                    }}
+                                                >
+                                                    {/* Top Pin Label */}
+                                                    <div className={`
                                                 absolute -top-4 shadow-lg px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-black tracking-widest border transition-all duration-500
                                                 ${node.isLocked ? 'opacity-0' : 'flex items-center gap-1'}
                                             `} style={{ backgroundColor: 'var(--primary-color)', borderColor: 'var(--border-color)', color: '#fff' }}>
-                                                {node.stars === 3 && <Trophy size={10} />} LVL {node.levelNumber}
-                                            </div>
-                                            
-                                            {/* Level Number */}
-                                            <div className={`text-5xl font-black italic tracking-tighter transition-all ${node.isLocked ? 'opacity-30' : 'drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]'}`} style={{ color: node.isLocked ? 'var(--text-color)' : 'var(--primary-color)' }}>
-                                                {node.levelNumber}
-                                            </div>
+                                                        {node.stars === 3 && <Trophy size={10} />} LVL {node.levelNumber}
+                                                    </div>
 
-                                            {/* Stars Status */}
-                                            {!node.isLocked && (
-                                                <div className="absolute -bottom-3 bg-[var(--card-bg)] border px-3 py-1 rounded-full flex gap-1 shadow-sm" style={{ borderColor: 'var(--border-color)' }}>
-                                                    {[1, 2, 3].map(s => (
-                                                        <Star 
-                                                            key={s} 
-                                                            size={12} 
-                                                            className={`transition-colors ${s <= node.stars ? "filter drop-shadow-md" : "opacity-20"}`}
-                                                            style={{ 
-                                                                color: s <= node.stars ? '#f59e0b' : 'var(--text-color)', 
-                                                                fill: s <= node.stars ? '#f59e0b' : 'transparent' 
-                                                            }}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
+                                                    {/* Level Number */}
+                                                    <div className={`text-5xl font-black italic tracking-tighter transition-all ${node.isLocked ? 'opacity-30' : 'drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]'}`} style={{ color: node.isLocked ? 'var(--text-color)' : 'var(--primary-color)' }}>
+                                                        {node.levelNumber}
+                                                    </div>
 
-                                            {/* Current Level Pulsing Halo */}
-                                            {isCurrent && (
-                                                <div className="absolute -inset-2 rounded-[2rem] border-2 animate-[ping_2s_infinite] pointer-events-none" style={{ borderColor: 'var(--primary-color)', opacity: 0.6 }} />
-                                            )}
+                                                    {/* Stars Status */}
+                                                    {!node.isLocked && (
+                                                        <div className="absolute -bottom-3 bg-[var(--card-bg)] border px-3 py-1 rounded-full flex gap-1 shadow-sm" style={{ borderColor: 'var(--border-color)' }}>
+                                                            {[1, 2, 3].map(s => (
+                                                                <Star
+                                                                    key={s}
+                                                                    size={12}
+                                                                    className={`transition-colors ${s <= node.stars ? "filter drop-shadow-md" : "opacity-20"}`}
+                                                                    style={{
+                                                                        color: s <= node.stars ? '#f59e0b' : 'var(--text-color)',
+                                                                        fill: s <= node.stars ? '#f59e0b' : 'transparent'
+                                                                    }}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    )}
 
-                                            {/* Desktop Battle Tooltip */}
-                                            {!node.isLocked && (
-                                                <div className={`
+                                                    {/* Current Level Pulsing Halo */}
+                                                    {isCurrent && (
+                                                        <div className="absolute -inset-2 rounded-[2rem] border-2 animate-[ping_2s_infinite] pointer-events-none" style={{ borderColor: 'var(--primary-color)', opacity: 0.6 }} />
+                                                    )}
+
+                                                    {/* Desktop Battle Tooltip */}
+                                                    {!node.isLocked && (
+                                                        <div className={`
                                                     absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 hidden sm:flex pointer-events-none z-20
                                                     ${isEven ? 'right-[120%] pr-4' : 'left-[120%] pl-4'}
                                                 `}>
-                                                    <div className="p-4 rounded-3xl shadow-2xl border flex flex-col min-w-[150px] whitespace-nowrap" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--primary-color)' }}>
-                                                        <span className="text-[9px] font-black uppercase tracking-widest mb-1 opacity-60" style={{ color: 'var(--text-color)' }}>Sarguzasht:</span>
-                                                        <span className="text-sm font-bold leading-tight truncate" style={{ color: 'var(--text-color)' }}>{node.battle?.title || "Jang Maydoni"}</span>
-                                                        <div className="flex items-center gap-1.5 mt-3 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--primary-color)' }}>
-                                                            <Swords size={14} />
-                                                            <span>Jangga kirish</span>
+                                                            <div className="p-4 rounded-3xl shadow-2xl border flex flex-col min-w-[150px] whitespace-nowrap" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--primary-color)' }}>
+                                                                <span className="text-[9px] font-black uppercase tracking-widest mb-1 opacity-60" style={{ color: 'var(--text-color)' }}>Sarguzasht:</span>
+                                                                <span className="text-sm font-bold leading-tight truncate" style={{ color: 'var(--text-color)' }}>{node.battle?.title || "Jang Maydoni"}</span>
+                                                                <div className="flex items-center gap-1.5 mt-3 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--primary-color)' }}>
+                                                                    <Swords size={14} />
+                                                                    <span>Jangga kirish</span>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </button>
-                                    </motion.div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
+                                                    )}
+                                                </button>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </main>
@@ -231,7 +231,8 @@ export default function VocabularyBattleLevels() {
             {/* Bottom Ambient Fade */}
             <div className="fixed bottom-0 left-0 right-0 h-48 pointer-events-none z-30 transition-all duration-500" style={{ background: `linear-gradient(to top, var(--bg-color), transparent)` }} />
 
-            <style dangerouslySetInnerHTML={{ __html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @keyframes dash {
                     to {
                         stroke-dashoffset: -1000;
