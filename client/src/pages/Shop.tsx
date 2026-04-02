@@ -134,6 +134,7 @@ export default function Shop() {
             if (res.ok) {
                 const data = await res.json();
                 setActiveAvatarUrl(data.avatarUrl);
+                refreshData();
                 setMessage({ text: "Avatar muvaffaqiyatli o'rnatildi!", type: 'success' });
             } else {
                 const data = await res.json();

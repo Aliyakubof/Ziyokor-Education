@@ -427,7 +427,7 @@ async function finishGame(io: Server, pin: string) {
                 console.log(`[finishGame] Sending individual reports to ${game.players.length} students...`);
                 for (const player of game.players) {
                     const percentage = totalPossibleScore > 0 ? Math.round((player.score / totalPossibleScore) * 100) : 0;
-                    const pdfBuffer = await generateSoloQuizPDF(game.quiz.title, player.name, player.score, totalPossibleScore, percentage, questions, player.answers);
+                    const pdfBuffer = await generateSoloQuizPDF(game.quiz.title, player.name, player.score, totalPossibleScore, percentage, questions, player.answers, player.partialScoreMap || {});
                     
                     const sanitizedName = player.name.replace(/\s+/g, '_');
                     const filename = `Result_${sanitizedName}_${Date.now()}.pdf`;

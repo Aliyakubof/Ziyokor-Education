@@ -61,7 +61,7 @@ export default function VocabularyBattleLevels() {
                     </button>
                     <div className="flex-1 text-center">
                         <h2 className="text-xl font-black uppercase tracking-[0.2em] font-serif italic drop-shadow-lg" style={{ color: 'var(--text-color)' }}>
-                            Xarita
+                            Vocab Battle
                         </h2>
                     </div>
                     <div className="w-10"></div>

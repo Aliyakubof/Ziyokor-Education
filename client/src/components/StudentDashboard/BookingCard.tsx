@@ -13,13 +13,16 @@ const DAY_UZ = ['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma
 
 function formatDate(dateStr: string): string {
     if (!dateStr) return '';
-    const d = new Date(dateStr + 'T00:00:00');
+    const cleanDate = dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00';
+    const d = new Date(cleanDate);
+    if (isNaN(d.getTime())) return dateStr;
     return `${DAY_UZ[d.getDay()]}, ${d.getDate()}-${MONTH_UZ[d.getMonth()]}`;
 }
 
 function isDatePast(dateStr: string | null | undefined): boolean {
     if (!dateStr) return false;
-    const d = new Date(dateStr + 'T23:59:59');
+    const cleanDate = dateStr.split('T')[0];
+    const d = new Date(cleanDate + 'T23:59:59');
     return d < new Date();
 }
 

@@ -64,8 +64,8 @@ const BattleCard: React.FC<BattleCardProps> = ({ battle, groupId, isLoading }) =
 
                     <div className="flex items-center justify-between gap-4 mb-5 relative z-10">
                         {/* Our Group */}
-                        <div className="flex-1 text-center">
-                            <h4 className="text-xs font-black text-white/90 uppercase tracking-tight truncate leading-tight mb-0.5">
+                        <div className="flex-1 text-center min-w-0 px-1">
+                            <h4 className="text-xs font-black text-white/90 uppercase tracking-tight truncate leading-tight mb-0.5" title={battle.group_a_id === groupId ? battle.group_a_name : battle.group_b_name}>
                                 {battle.group_a_id === groupId ? battle.group_a_name : battle.group_b_name}
                             </h4>
                             <p className="text-[8px] font-bold text-indigo-300/60 uppercase truncate">Sizning Guruhingiz</p>
@@ -75,18 +75,18 @@ const BattleCard: React.FC<BattleCardProps> = ({ battle, groupId, isLoading }) =
                         </div>
 
                         {/* VS Icon */}
-                        <div className="flex flex-col items-center">
+                        <div className="flex flex-col items-center flex-shrink-0 px-2">
                             <div className="w-10 h-10 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center shadow-xl">
                                 <span className="text-xs font-black italic text-transparent bg-clip-text bg-gradient-to-tr from-indigo-400 to-rose-400">VS</span>
                             </div>
                         </div>
 
                         {/* Opponent Group */}
-                        <div className="flex-1 text-center">
-                            <h4 className="text-xs font-black text-white/90 uppercase tracking-tight truncate leading-tight mb-0.5">
+                        <div className="flex-1 text-center min-w-0 px-1">
+                            <h4 className="text-xs font-black text-white/90 uppercase tracking-tight truncate leading-tight mb-0.5" title={battle.group_a_id === groupId ? battle.group_b_name : battle.group_a_name}>
                                 {battle.group_a_id === groupId ? battle.group_b_name : battle.group_a_name}
                             </h4>
-                            <p className="text-[8px] font-bold text-rose-300/60 uppercase truncate">
+                            <p className="text-[8px] font-bold text-rose-300/60 uppercase truncate" title={battle.group_a_id === groupId ? battle.teacher_b_name : battle.teacher_a_name}>
                                 Ustoz: {battle.group_a_id === groupId ? battle.teacher_b_name : battle.teacher_a_name}
                             </p>
                             <div className="mt-2 text-xl font-black text-rose-400 tabular-nums">

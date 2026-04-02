@@ -324,7 +324,8 @@ export const generateSoloQuizPDF = (
     maxScore: number,
     percentage: number,
     questions: any[],
-    answers: Record<number, any>
+    answers: Record<number, any>,
+    partialScoreMap: Record<number, number> = {}
 ): Promise<Buffer> => {
     return new Promise((resolve, reject) => {
         const doc = new PDFDocument({ margin: 50 });
@@ -380,7 +381,20 @@ export const generateSoloQuizPDF = (
             let displayAns = studentAns !== undefined ? String(studentAns) : 'Javob berilmagan';
             let resultLabel = '';
 
-            if (q.type === 'multiple-choice' || q.type === 'true-false') {
+            if (partialScoreMap && partialScoreMap[idx] !== undefined) {
+                const earned = partialScoreMap[idx];
+                const totalParts = (q.type === 'matching' || q.type === 'word-box') ? (q.acceptedAnswers?.length || 1) : 1;
+                isCorrect = earned === totalParts;
+                if (!isCorrect && earned > 0) {
+                    resultLabel = `(${earned}/${totalParts} TO'G'RI QISMAN)`;
+                } else {
+                    resultLabel = isCorrect ? '(TO\'G\'RI)' : '(NOTO\'G\'RI)';
+                }
+                
+                if (q.type === 'multiple-choice' || q.type === 'true-false') {
+                    if (studentAns !== undefined && q.options) displayAns = q.options[Number(studentAns)] || displayAns;
+                }
+            } else if (q.type === 'multiple-choice' || q.type === 'true-false') {
                 isCorrect = studentAns !== undefined && Number(studentAns) === q.correctIndex;
                 if (studentAns !== undefined && q.options) {
                     displayAns = q.options[Number(studentAns)] || displayAns;
