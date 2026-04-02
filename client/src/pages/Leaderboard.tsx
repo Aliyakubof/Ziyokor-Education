@@ -13,10 +13,6 @@ export default function Leaderboard() {
     const [data, setData] = useState<any[]>([]);
     const [battleData, setBattleData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [challengingId, setChallengingId] = useState<string | null>(null);
-    const [selectingQuizForTarget, setSelectingQuizForTarget] = useState<{id: string, name: string} | null>(null);
-    const [availableQuizzes, setAvailableQuizzes] = useState<any[]>([]);
-    const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false);
 
     useEffect(() => {
         if (role === 'student' && !socket.connected) {
@@ -75,35 +71,6 @@ export default function Leaderboard() {
         if (rank === 1) return <Medal className="text-slate-300" size={24} />;
         if (rank === 2) return <Medal className="text-amber-600" size={24} />;
         return <span className="text-slate-400 font-bold">{rank + 1}</span>;
-    };
-
-    const handleChallengeClick = async (targetId: string, targetName: string) => {
-        if (!user?.id) return;
-        setSelectingQuizForTarget({ id: targetId, name: targetName });
-        setIsLoadingQuizzes(true);
-        try {
-            const res = await apiFetch(`/api/students/${user.id}/available-duel-quizzes`);
-            if (res.ok) setAvailableQuizzes(await res.json());
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsLoadingQuizzes(false);
-        }
-    };
-
-    const confirmChallenge = (quizId: string, quizTitle: string) => {
-        if (!user?.id || !selectingQuizForTarget) return;
-        setChallengingId(selectingQuizForTarget.id);
-        
-        socket.emit('duel-invite', {
-            targetStudentId: selectingQuizForTarget.id,
-            studentName: user.name,
-            quizId,
-            quizTitle
-        });
-
-        setSelectingQuizForTarget(null);
-        setTimeout(() => setChallengingId(null), 3000);
     };
 
     return (
@@ -316,58 +283,6 @@ export default function Leaderboard() {
                     )}
                 </div>
             </div>
-
-            {/* Quiz Selection Modal */}
-            {selectingQuizForTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="glass-premium rounded-3xl p-6 w-full max-w-md shadow-2xl transition-all" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
-                        <h3 className="text-xl font-black mb-2 flex items-center gap-2" style={{ color: 'var(--text-color)' }}>
-                            <Swords className="text-rose-500" size={24} /> 
-                            {selectingQuizForTarget.name} bilan duel
-                        </h3>
-                        <p className="text-sm font-bold opacity-60 mb-4" style={{ color: 'var(--text-color)' }}>Duel o'ynash uchun test tanlang:</p>
-                        
-                        {isLoadingQuizzes ? (
-                            <div className="py-10 text-center flex flex-col items-center">
-                                <div className="w-8 h-8 border-4 border-t-transparent border-rose-500 rounded-full animate-spin mb-2" />
-                                <p className="text-xs font-bold opacity-60" style={{ color: 'var(--text-color)' }}>Testlar yuklanmoqda...</p>
-                            </div>
-                        ) : availableQuizzes.length === 0 ? (
-                            <div className="py-10 text-center bg-rose-500/10 rounded-2xl border border-rose-500/20">
-                                <ShieldAlert className="mx-auto text-rose-500 mb-2" size={32} />
-                                <p className="text-sm font-bold text-rose-600">Sizning darajangizda faol duel testlari mavjud emas.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                                {availableQuizzes.map(q => (
-                                    <button
-                                        key={q.id}
-                                        onClick={() => confirmChallenge(q.id, q.title)}
-                                        className="w-full relative overflow-hidden group p-4 rounded-2xl border transition-all hover:scale-[1.02] active:scale-95 text-left flex items-center justify-between"
-                                        style={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--border-color)' }}
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-rose-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                        <span className="font-bold relative z-10" style={{ color: 'var(--text-color)' }}>{q.title}</span>
-                                        <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500 relative z-10 group-hover:bg-rose-500 group-hover:text-white transition-colors">
-                                            <Swords size={16} />
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                        
-                        <div className="mt-6 flex justify-end">
-                            <button 
-                                onClick={() => setSelectingQuizForTarget(null)} 
-                                className="px-5 py-2.5 font-bold rounded-xl transition-colors opacity-70 hover:opacity-100"
-                                style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}
-                            >
-                                Bekor qilish
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
