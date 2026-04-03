@@ -318,18 +318,19 @@ export const getExtraClassBookings = async (req: Request, res: Response) => {
     try {
         const { groupId } = req.params;
 
-        // 1. Broad Cleanup: Delete bookings from previous days
-        await query(`DELETE FROM extra_class_bookings WHERE booking_date < CURRENT_DATE`);
+        // 1. Broad Cleanup: Delete bookings from previous days (Tashkent-aware)
+        await query(`DELETE FROM extra_class_bookings WHERE booking_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tashkent')::date`);
 
         // 2. 17:30 Cutoff: Mark today's bookings as completed after 17:30
         const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const tashkentTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (5 * 60 * 60 * 1000));
+        const currentMinutes = tashkentTime.getHours() * 60 + tashkentTime.getMinutes();
         const cutoffMinutes = 17 * 60 + 30; // 17:30
 
         if (currentMinutes >= cutoffMinutes) {
             await query(
                 `UPDATE extra_class_bookings SET is_completed = TRUE 
-                 WHERE booking_date = CURRENT_DATE AND is_completed = FALSE AND group_id = $1`,
+                 WHERE booking_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tashkent')::date AND is_completed = FALSE AND group_id = $1`,
                 [groupId]
             );
         }

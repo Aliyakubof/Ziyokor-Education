@@ -395,16 +395,18 @@ export const bookExtraClass = async (req: Request, res: Response) => {
         const { studentId } = req.params;
         const { groupId, timeSlot, isForced, topic, bookingDate } = req.body;
 
-        // Broad Clean up stale/completed bookings (past date or is_completed)
-        // This ensures the booking data is "daily updated"
-        await query(
-            `DELETE FROM extra_class_bookings WHERE (booking_date < CURRENT_DATE) OR (is_completed = TRUE)`
-        );
-
+        // Tashkent Timezone normalization (+5:00)
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const tashkentTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (5 * 60 * 60 * 1000));
+        const todayStr = tashkentTime.toISOString().split('T')[0];
+        const currentMinutes = tashkentTime.getHours() * 60 + tashkentTime.getMinutes();
         const cutoffMinutes = 17 * 60 + 30; // 17:30
+
+        // 1. Broad Clean up stale/completed bookings (past date or is_completed)
+        // This ensures the booking data is "daily updated" in the Tashkent context
+        await query(
+            `DELETE FROM extra_class_bookings WHERE (booking_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tashkent')::date) OR (is_completed = TRUE)`
+        );
 
         if (bookingDate === todayStr && currentMinutes >= cutoffMinutes) {
             return res.status(400).json({ error: "Bugun uchun bron qilish vaqti (17:30) tugadi!" });
