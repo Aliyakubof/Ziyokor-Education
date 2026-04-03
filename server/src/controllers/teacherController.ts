@@ -318,8 +318,8 @@ export const getExtraClassBookings = async (req: Request, res: Response) => {
     try {
         const { groupId } = req.params;
 
-        // 1. Broad Cleanup: Delete bookings from previous days (Tashkent-aware)
-        await query(`DELETE FROM extra_class_bookings WHERE booking_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tashkent')::date`);
+        // 1. Broad Cleanup: Delete bookings from previous days (Tashkent-aware) or NULL dates
+        await query(`DELETE FROM extra_class_bookings WHERE (booking_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tashkent')::date) OR (booking_date IS NULL)`);
 
         // 2. 17:30 Cutoff: Mark today's bookings as completed after 17:30
         const now = new Date();

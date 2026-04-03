@@ -402,10 +402,10 @@ export const bookExtraClass = async (req: Request, res: Response) => {
         const currentMinutes = tashkentTime.getHours() * 60 + tashkentTime.getMinutes();
         const cutoffMinutes = 17 * 60 + 30; // 17:30
 
-        // 1. Broad Clean up stale/completed bookings (past date or is_completed)
+        // 1. Broad Clean up stale/completed bookings (past date, NULL date, or is_completed)
         // This ensures the booking data is "daily updated" in the Tashkent context
         await query(
-            `DELETE FROM extra_class_bookings WHERE (booking_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tashkent')::date) OR (is_completed = TRUE)`
+            `DELETE FROM extra_class_bookings WHERE (booking_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tashkent')::date) OR (booking_date IS NULL) OR (is_completed = TRUE)`
         );
 
         if (bookingDate === todayStr && currentMinutes >= cutoffMinutes) {
