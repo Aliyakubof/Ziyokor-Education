@@ -316,9 +316,36 @@ export const getGroupStudentsShort = async (req: Request, res: Response) => {
 // Extra Class Bookings
 export const getExtraClassBookings = async (req: Request, res: Response) => {
     try {
-        const result = await query(`SELECT b.*, s.name as student_name FROM extra_class_bookings b JOIN students s ON b.student_id = s.id WHERE b.group_id = $1 ORDER BY b.created_at ASC`, [req.params.groupId]);
+        const { groupId } = req.params;
+
+        // 1. Broad Cleanup: Delete bookings from previous days
+        await query(`DELETE FROM extra_class_bookings WHERE booking_date < CURRENT_DATE`);
+
+        // 2. 17:30 Cutoff: Mark today's bookings as completed after 17:30
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const cutoffMinutes = 17 * 60 + 30; // 17:30
+
+        if (currentMinutes >= cutoffMinutes) {
+            await query(
+                `UPDATE extra_class_bookings SET is_completed = TRUE 
+                 WHERE booking_date = CURRENT_DATE AND is_completed = FALSE AND group_id = $1`,
+                [groupId]
+            );
+        }
+
+        // 3. Return only active (non-completed) bookings for the dashboard
+        const result = await query(
+            `SELECT b.*, s.name as student_name 
+             FROM extra_class_bookings b 
+             JOIN students s ON b.student_id = s.id 
+             WHERE b.group_id = $1 AND b.is_completed = FALSE
+             ORDER BY b.created_at ASC`,
+            [groupId]
+        );
         res.json(result.rows);
     } catch (err) {
+        console.error('getExtraClassBookings error:', err);
         res.status(500).json({ error: 'Xatolik' });
     }
 };

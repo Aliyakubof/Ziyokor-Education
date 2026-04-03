@@ -94,8 +94,10 @@ export default function BattleDetails() {
         </div>
     );
 
-    const scoreTotal = battle.score_a + battle.score_b || 1;
-    let percentA = Number(((battle.score_a / scoreTotal) * 100).toFixed(1));
+    const scoreA = battle.score_a ?? 0;
+    const scoreB = battle.score_b ?? 0;
+    const scoreTotal = scoreA + scoreB || 1;
+    let percentA = Number(((scoreA / scoreTotal) * 100).toFixed(1));
     let percentB = Number((100 - percentA).toFixed(1));
 
     if (battle.score_a === 0 && battle.score_b === 0) {
@@ -213,7 +215,7 @@ export default function BattleDetails() {
                                     </div>
                                 )}
                                 <div className="text-3xl md:text-6xl font-black tabular-nums drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ color: 'var(--primary-color)' }}>
-                                    {battle.score_a.toLocaleString()}
+                                    {(battle.score_a ?? 0).toLocaleString()}
                                 </div>
                             </motion.div>
 
@@ -257,7 +259,7 @@ export default function BattleDetails() {
                                     </div>
                                 )}
                                 <div className="text-3xl md:text-6xl font-black tabular-nums drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]" style={{ color: 'var(--rose-400)' }}>
-                                    {battle.score_b.toLocaleString()}
+                                    {(battle.score_b ?? 0).toLocaleString()}
                                 </div>
                             </motion.div>
                         </div>

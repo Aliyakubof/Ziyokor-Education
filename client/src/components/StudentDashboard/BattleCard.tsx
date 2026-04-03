@@ -70,7 +70,7 @@ const BattleCard: React.FC<BattleCardProps> = ({ battle, groupId, isLoading }) =
                             </h4>
                             <p className="text-[8px] font-bold text-indigo-300/60 uppercase truncate">Sizning Guruhingiz</p>
                             <div className="mt-2 text-xl font-black text-indigo-400 tabular-nums">
-                                {battle.group_a_id === groupId ? battle.score_a.toLocaleString() : battle.score_b.toLocaleString()}
+                                {battle.group_a_id === groupId ? (battle.score_a ?? 0).toLocaleString() : (battle.score_b ?? 0).toLocaleString()}
                             </div>
                         </div>
 
@@ -90,7 +90,7 @@ const BattleCard: React.FC<BattleCardProps> = ({ battle, groupId, isLoading }) =
                                 Ustoz: {battle.group_a_id === groupId ? battle.teacher_b_name : battle.teacher_a_name}
                             </p>
                             <div className="mt-2 text-xl font-black text-rose-400 tabular-nums">
-                                {battle.group_a_id === groupId ? battle.score_b.toLocaleString() : battle.score_a.toLocaleString()}
+                                {battle.group_a_id === groupId ? (battle.score_b ?? 0).toLocaleString() : (battle.score_a ?? 0).toLocaleString()}
                             </div>
                         </div>
                     </div>

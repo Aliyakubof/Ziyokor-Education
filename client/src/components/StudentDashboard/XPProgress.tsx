@@ -38,7 +38,7 @@ const XPProgress: React.FC<XPProgressProps> = ({ totalScore, isLoading }) => {
                             </div>
                         </div>
                         <div className="text-right">
-                            <span className="text-3xl font-black" style={{ color: 'var(--primary-color)' }}>{totalScore.toLocaleString()}</span>
+                            <span className="text-3xl font-black" style={{ color: 'var(--primary-color)' }}>{(totalScore ?? 0).toLocaleString()}</span>
                             <span className="text-[10px] font-black opacity-40 block uppercase tracking-wider">Total XP</span>
                         </div>
                     </div>

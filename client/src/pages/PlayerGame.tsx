@@ -353,10 +353,8 @@ export default function PlayerGame() {
             
             if (document.hidden && !isUnloading && viewRef.current === 'PLAYING') {
                 if (pin && studentId) {
-                    // Grace period 15 seconds for screen sleep or accidental backgrounding
-                    cheatTimeout = setTimeout(() => {
-                        socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
-                    }, 15000);
+                    // Trigger immediately as requested
+                    socket.emit('student-status-update', { pin, studentId, status: 'Cheating' });
                 }
             } else if (!document.hidden && viewRef.current === 'PLAYING') {
                 if (cheatTimeout) {

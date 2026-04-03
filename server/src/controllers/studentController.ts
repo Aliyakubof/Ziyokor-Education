@@ -395,24 +395,28 @@ export const bookExtraClass = async (req: Request, res: Response) => {
         const { studentId } = req.params;
         const { groupId, timeSlot, isForced, topic, bookingDate } = req.body;
 
-        // Clean up stale/completed bookings (past date or is_completed)
-        const existingRes = await query(
-            `SELECT id, booking_date, is_completed FROM extra_class_bookings WHERE student_id = $1`,
-            [studentId]
+        // Broad Clean up stale/completed bookings (past date or is_completed)
+        // This ensures the booking data is "daily updated"
+        await query(
+            `DELETE FROM extra_class_bookings WHERE (booking_date < CURRENT_DATE) OR (is_completed = TRUE)`
         );
-        if (existingRes && existingRes.rowCount && existingRes.rowCount > 0) {
-            for (const existing of existingRes.rows) {
-                const bookDate = existing.booking_date;
-                const isCompleted = existing.is_completed;
-                const isPast = bookDate ? new Date(bookDate + 'T23:59:59') < new Date() : false;
-                if (isPast || isCompleted) {
-                    // Stale — auto-clean it
-                    await query('DELETE FROM extra_class_bookings WHERE id = $1', [existing.id]);
-                } else if (bookDate && bookingDate && bookDate === bookingDate) {
-                    // Student already has an active booking on the SAME date
-                    return res.status(400).json({ error: "Siz bu kunga allaqachon bron qilgansiz! Bir kunda faqat 1 ta bron mumkin." });
-                }
-            }
+
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const cutoffMinutes = 17 * 60 + 30; // 17:30
+
+        if (bookingDate === todayStr && currentMinutes >= cutoffMinutes) {
+            return res.status(400).json({ error: "Bugun uchun bron qilish vaqti (17:30) tugadi!" });
+        }
+
+        // Check if this specific student already has a booking for this date
+        const existingRes = await query(
+            `SELECT id FROM extra_class_bookings WHERE student_id = $1 AND booking_date = $2`,
+            [studentId, bookingDate]
+        );
+        if (existingRes.rowCount && existingRes.rowCount > 0) {
+            return res.status(400).json({ error: "Siz bu kunga allaqachon bron qilgansiz!" });
         }
 
         // Check slot capacity for this specific date + time

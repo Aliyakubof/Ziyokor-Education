@@ -21,7 +21,7 @@ const QuickStats: React.FC<QuickStatsProps> = ({ coins }) => {
                 >
                     <Coins size={20} />
                 </div>
-                <span className="text-2xl font-black" style={{ color: 'var(--text-color)' }}>{coins.toLocaleString()}</span>
+                <span className="text-2xl font-black" style={{ color: 'var(--text-color)' }}>{(coins ?? 0).toLocaleString()}</span>
                 <span className="text-xs font-bold opacity-60" style={{ color: 'var(--text-color)' }}>Tangalar</span>
             </div>
             <button

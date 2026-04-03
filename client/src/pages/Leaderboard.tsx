@@ -200,9 +200,9 @@ export default function Leaderboard() {
                                             </div>
                                             {/* Scores */}
                                             <div className="flex justify-between text-xs font-black">
-                                                <span className="text-indigo-600">{battle.score_a.toLocaleString()} XP</span>
+                                                <span className="text-indigo-600">{(battle.score_a ?? 0).toLocaleString()} XP</span>
                                                 <span className="text-[10px] text-slate-400 font-semibold">{battle.level}</span>
-                                                <span className="text-rose-600">{battle.score_b.toLocaleString()} XP</span>
+                                                <span className="text-rose-600">{(battle.score_b ?? 0).toLocaleString()} XP</span>
                                             </div>
                                         </div>
                                     );
