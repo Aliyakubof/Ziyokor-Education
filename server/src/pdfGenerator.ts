@@ -1,6 +1,31 @@
 import PDFDocument from 'pdfkit';
 import { Player, Quiz, UnitQuiz } from './types';
 import { checkAnswer, countCorrectParts } from './utils';
+const path = require('path');
+const fs = require('fs');
+
+function getFonts() {
+    const regularPaths = [
+        path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf'),
+        path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Regular.ttf'),
+        path.join(process.cwd(), 'server', 'src', 'assets', 'LiberationSans-Regular.ttf'),
+        path.join(process.cwd(), 'src', 'assets', 'LiberationSans-Regular.ttf'),
+        path.join(process.cwd(), 'assets', 'LiberationSans-Regular.ttf'),
+    ];
+
+    const boldPaths = [
+        path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf'),
+        path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Bold.ttf'),
+        path.join(process.cwd(), 'server', 'src', 'assets', 'LiberationSans-Bold.ttf'),
+        path.join(process.cwd(), 'src', 'assets', 'LiberationSans-Bold.ttf'),
+        path.join(process.cwd(), 'assets', 'LiberationSans-Bold.ttf'),
+    ];
+
+    const regular = regularPaths.find(p => fs.existsSync(p));
+    const bold = boldPaths.find(p => fs.existsSync(p));
+
+    return { regular, bold };
+}
 
 export const generateQuizResultPDF = (
     quiz: Quiz | UnitQuiz,
@@ -13,33 +38,16 @@ export const generateQuizResultPDF = (
         const buffers: Buffer[] = [];
 
         doc.on('data', buffers.push.bind(buffers));
-        doc.on('end', () => {
-            const pdfData = Buffer.concat(buffers);
-            resolve(pdfData);
-        });
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+        doc.on('error', reject);
 
-        doc.on('error', (err: Error) => {
-            reject(err);
-        });
+        const { regular: regularFontPath, bold: boldFontPath } = getFonts();
 
-        const path = require('path');
-        const fs = require('fs');
-        const regularFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf'))
-            ? path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf')
-            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Regular.ttf');
+        if (regularFontPath) doc.registerFont('CustomRegular', regularFontPath);
+        if (boldFontPath) doc.registerFont('CustomBold', boldFontPath);
 
-        const boldFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf'))
-            ? path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf')
-            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Bold.ttf');
-
-        const hasRegular = fs.existsSync(regularFontPath);
-        const hasBold = fs.existsSync(boldFontPath);
-
-        if (hasRegular) doc.registerFont('CustomRegular', regularFontPath);
-        if (hasBold) doc.registerFont('CustomBold', boldFontPath);
-
-        const fontRegular = hasRegular ? 'CustomRegular' : 'Helvetica';
-        const fontBold = hasBold ? 'CustomBold' : 'Helvetica-Bold';
+        const fontRegular = regularFontPath ? 'CustomRegular' : 'Helvetica';
+        const fontBold = boldFontPath ? 'CustomBold' : 'Helvetica-Bold';
 
         doc.fontSize(24).font(fontBold).text('Ziyokor Education', { align: 'center' });
         doc.fontSize(16).font(fontRegular).text('Quiz natijalari', { align: 'center' });
@@ -335,24 +343,13 @@ export const generateSoloQuizPDF = (
         doc.on('end', () => resolve(Buffer.concat(buffers)));
         doc.on('error', reject);
 
-        const path = require('path');
-        const fs = require('fs');
-        const regularFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf'))
-            ? path.join(__dirname, 'assets', 'LiberationSans-Regular.ttf')
-            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Regular.ttf');
+        const { regular: regularFontPath, bold: boldFontPath } = getFonts();
 
-        const boldFontPath = fs.existsSync(path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf'))
-            ? path.join(__dirname, 'assets', 'LiberationSans-Bold.ttf')
-            : path.join(__dirname, '..', 'src', 'assets', 'LiberationSans-Bold.ttf');
+        if (regularFontPath) doc.registerFont('CustomRegular', regularFontPath);
+        if (boldFontPath) doc.registerFont('CustomBold', boldFontPath);
 
-        const hasRegular = fs.existsSync(regularFontPath);
-        const hasBold = fs.existsSync(boldFontPath);
-
-        if (hasRegular) doc.registerFont('CustomRegular', regularFontPath);
-        if (hasBold) doc.registerFont('CustomBold', boldFontPath);
-
-        const fontRegular = hasRegular ? 'CustomRegular' : 'Helvetica';
-        const fontBold = hasBold ? 'CustomBold' : 'Helvetica-Bold';
+        const fontRegular = regularFontPath ? 'CustomRegular' : 'Helvetica';
+        const fontBold = boldFontPath ? 'CustomBold' : 'Helvetica-Bold';
 
         doc.fontSize(24).font(fontBold).text('Ziyokor Education', { align: 'center' });
         doc.fontSize(16).font(fontRegular).text('Solo Quiz Natijasi', { align: 'center' });

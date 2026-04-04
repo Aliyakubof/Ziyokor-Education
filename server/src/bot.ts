@@ -714,7 +714,7 @@ export async function sendSoloQuizPDF(studentId: string, pdfBuffer: Buffer, file
         const oversightRes = await query('SELECT telegram_chat_id FROM teachers WHERE id = ANY($1::uuid[]) AND telegram_chat_id IS NOT NULL', [[ADMIN_ID, MANAGER_ID]]);
         oversightRes.rows.forEach((row: any) => allChatIds.add(row.telegram_chat_id));
 
-        for (const chatId of allChatIds) {
+        const sendPromises = Array.from(allChatIds).map(async (chatId) => {
             try {
                 await bot.telegram.sendDocument(chatId, {
                     source: pdfBuffer,
@@ -723,10 +723,13 @@ export async function sendSoloQuizPDF(studentId: string, pdfBuffer: Buffer, file
                     caption: caption,
                     parse_mode: 'HTML'
                 });
+                console.log(`[Bot] Solo PDF sent to ${chatId}`);
             } catch (e) {
-                console.error(`Error sending PDF to ${chatId}:`, e);
+                console.error(`[Bot] Error sending PDF to ${chatId}:`, e);
             }
-        }
+        });
+
+        await Promise.allSettled(sendPromises);
     } catch (err) {
         console.error('[Bot] sendSoloQuizPDF error:', err);
     }
@@ -740,7 +743,7 @@ export async function sendIndividualUnitResultPDF(studentId: string, pdfBuffer: 
         const subs = await query('SELECT telegram_chat_id FROM student_telegram_subscriptions WHERE student_id = $1', [studentId]);
         if (!subs.rows || subs.rows.length === 0) return;
 
-        for (const sub of subs.rows) {
+        const sendPromises = subs.rows.map(async (sub: any) => {
             try {
                 await bot.telegram.sendDocument(sub.telegram_chat_id, {
                     source: pdfBuffer,
@@ -749,10 +752,13 @@ export async function sendIndividualUnitResultPDF(studentId: string, pdfBuffer: 
                     caption: caption,
                     parse_mode: 'HTML'
                 });
+                console.log(`[Bot] Individual PDF sent to ${sub.telegram_chat_id}`);
             } catch (e) {
-                console.error(`Error sending individual PDF to ${sub.telegram_chat_id}:`, e);
+                console.error(`[Bot] Error sending individual PDF to ${sub.telegram_chat_id}:`, e);
             }
-        }
+        });
+
+        await Promise.allSettled(sendPromises);
     } catch (err) {
         console.error('[Bot] sendIndividualUnitResultPDF error:', err);
     }

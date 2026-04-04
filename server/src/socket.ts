@@ -321,12 +321,13 @@ async function finishGame(io: Server, pin: string) {
         let totalPossibleScore = 0;
         questions.forEach((q: any) => {
             if (q.type === 'info-slide') return;
-            if (q.type === 'matching' || q.type === 'word-box') {
+            if (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || '')) {
                 totalPossibleScore += q.acceptedAnswers?.length || 0;
             } else {
                 totalPossibleScore += 1;
             }
         });
+        console.log(`[finishGame] Total Possible Score: ${totalPossibleScore}`);
 
         // 1. Save results to DB
         try {
@@ -424,17 +425,27 @@ async function finishGame(io: Server, pin: string) {
         // 4. Send Individual Reports to Students (Unit Quiz only)
         if (game.isUnitQuiz) {
             try {
-                console.log(`[finishGame] Sending individual reports to ${game.players.length} students...`);
-                for (const player of game.players) {
-                    const percentage = totalPossibleScore > 0 ? Math.round((player.score / totalPossibleScore) * 100) : 0;
-                    const pdfBuffer = await generateSoloQuizPDF(game.quiz.title, player.name, player.score, totalPossibleScore, percentage, questions, player.answers, player.partialScoreMap || {});
-                    
-                    const sanitizedName = player.name.replace(/\s+/g, '_');
-                    const filename = `Result_${sanitizedName}_${Date.now()}.pdf`;
-                    const caption = `🎯 <b>Unit Test Natijangiz</b>\n\n📝 Test: ${game.quiz.title}\n📊 Natija: ${player.score} / ${totalPossibleScore} (${percentage}%)\n${percentage >= 70 ? "✅ Tabriklaymiz, siz o'tdingiz!" : "❌ Afsuski, o'ta olmadingiz. Yana harakat qilib ko'ring."}`;
-                    
-                    await sendIndividualUnitResultPDF(player.id, pdfBuffer, filename, caption);
-                }
+                console.log(`[finishGame] Starting Individual PDF generation for ${game.players.length} players...`);
+                const individualSends = game.players.map(async (player) => {
+                    try {
+                        const percentage = totalPossibleScore > 0 ? Math.round((player.score / totalPossibleScore) * 100) : 0;
+                        const pdfBuffer = await generateSoloQuizPDF(game.quiz.title, player.name, player.score, totalPossibleScore, percentage, questions, player.answers, player.partialScoreMap || {});
+                        
+                        const sanitizedName = player.name.replace(/\s+/g, '_');
+                        const filename = `Result_${sanitizedName}_${Date.now()}.pdf`;
+                        const caption = `🎯 <b>Unit Test Natijangiz</b>\n\n📝 Test: ${game.quiz.title}\n📊 Natija: ${player.score} / ${totalPossibleScore} (${percentage}%)\n${percentage >= 70 ? "✅ Tabriklaymiz, siz o'tdingiz!" : "❌ Afsuski, o'ta olmadingiz. Yana harakat qilib ko'ring."}`;
+                        
+                        await sendIndividualUnitResultPDF(player.id, pdfBuffer, filename, caption);
+                        console.log(`[finishGame] Individual PDF sent for: ${player.name} (${player.id})`);
+                    } catch (pErr) {
+                        console.error(`[finishGame] Failed individual PDF for ${player.name}:`, pErr);
+                    }
+                });
+                
+                // Fire and forget or await briefly to ensure they are at least queued
+                Promise.allSettled(individualSends).then(() => {
+                    console.log(`[finishGame] All individual PDF tasks completed.`);
+                });
                 console.log(`[finishGame] Individual reports queue processed.`);
             } catch (studentPdfErr) {
                 console.error(`[finishGame] Individual student PDF processing failed:`, studentPdfErr);
