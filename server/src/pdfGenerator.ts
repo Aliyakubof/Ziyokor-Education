@@ -219,7 +219,7 @@ export const generateQuizResultPDF = (
                     .text(`Sizning javobingiz: ${studentDisplayAnswer}${statusText}`);
 
                 if (!isCorrect) {
-                    const correctAnswer = (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || ''))
+                    const correctAnswer = (q.type === 'matching' || q.type === 'word-box' || q.type === 'inline-blank' || q.type === 'inline-choice')
                         ? (q.acceptedAnswers?.join(' | ') || 'N/A')
                         : (textTypes.includes(q.type || '')
                             ? (q.acceptedAnswers?.[0] || 'N/A')
@@ -386,7 +386,7 @@ export const generateSoloQuizPDF = (
                 const totalParts = (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || '')) ? (q.acceptedAnswers?.length || 1) : 1;
                 isCorrect = earned === totalParts;
                 if (!isCorrect && earned > 0) {
-                    resultLabel = `(${earned}/${totalParts} TO'G'RI QISMAN)`;
+                    resultLabel = `(${earned}/${totalParts} TO'G'RI)`;
                 } else {
                     resultLabel = isCorrect ? '(TO\'G\'RI)' : '(NOTO\'G\'RI)';
                 }
@@ -415,9 +415,9 @@ export const generateSoloQuizPDF = (
             doc.fontSize(10).font(fontRegular).fillColor(statusColor).text(`Sizning javobingiz: ${displayAns} ${resultLabel}`);
             
             if (!isCorrect) {
-                const correct = (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || '')) 
-                    ? (q.acceptedAnswers?.join(' | ') || 'N/A')
-                    : (q.options ? q.options[q.correctIndex] : 'N/A');
+                const correct = (q.type === 'multiple-choice' || q.type === 'true-false') 
+                    ? (q.options ? q.options[q.correctIndex] : 'N/A')
+                    : (q.acceptedAnswers?.join(' | ') || 'N/A');
                 doc.fillColor('#4b5563').text(`To'g'ri javob: ${correct}`);
             }
 
