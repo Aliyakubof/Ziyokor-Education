@@ -90,7 +90,7 @@ export const generateQuizResultPDF = (
         let total = 0;
         questions.forEach(q => {
             if (q.type === 'info-slide') return;
-            if (q.type === 'matching' || q.type === 'word-box') {
+            if (q.type === 'matching' || q.type === 'word-box' || q.type === 'inline-blank' || q.type === 'inline-choice') {
                 total += q.acceptedAnswers?.length || 0;
             } else {
                 total += 1;
@@ -114,7 +114,7 @@ export const generateQuizResultPDF = (
                 } else {
                     const answer = player.answers[qIdx];
                     if (answer !== undefined) {
-                        if (q.type === 'matching' || q.type === 'word-box') {
+                        if (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || '')) {
                             correctCount += countCorrectParts(answer, q.acceptedAnswers || []);
                         } else if (['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'vocabulary'].includes(q.type || '')) {
                             if (checkAnswer(answer, q.acceptedAnswers || [])) {
@@ -157,10 +157,10 @@ export const generateQuizResultPDF = (
                 let isCorrect = false;
                 let studentDisplayAnswer = 'Javob berilmagan';
 
-                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'vocabulary', 'matching'];
+                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'vocabulary', 'matching', 'inline-blank', 'inline-choice'];
 
                 // 1. Determine the display answer based on question type
-                if (q.type === 'matching' || q.type === 'word-box') {
+                if (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || '')) {
                     studentDisplayAnswer = answer !== undefined ? String(answer).split('+').join(' | ') : 'Javob berilmagan';
                 } else if (textTypes.includes(q.type || '')) {
                     studentDisplayAnswer = answer !== undefined ? String(answer) : 'Javob berilmagan';
@@ -180,12 +180,12 @@ export const generateQuizResultPDF = (
 
                 if (player.partialScoreMap && player.partialScoreMap[qIdx] !== undefined) {
                     earnedScore = player.partialScoreMap[qIdx];
-                    if (q.type === 'matching' || q.type === 'word-box') {
+                    if (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || '')) {
                         maxPossibleQScore = q.acceptedAnswers?.length || 1;
                     }
                     isCorrect = earnedScore === maxPossibleQScore;
                 } else if (textTypes.includes(q.type || '')) {
-                    if (q.type === 'matching' || q.type === 'word-box') {
+                    if (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || '')) {
                         maxPossibleQScore = q.acceptedAnswers?.length || 1;
                         earnedScore = countCorrectParts(answer, q.acceptedAnswers || []);
                         isCorrect = earnedScore === maxPossibleQScore;
@@ -219,7 +219,7 @@ export const generateQuizResultPDF = (
                     .text(`Sizning javobingiz: ${studentDisplayAnswer}${statusText}`);
 
                 if (!isCorrect) {
-                    const correctAnswer = (q.type === 'matching' || q.type === 'word-box')
+                    const correctAnswer = (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || ''))
                         ? (q.acceptedAnswers?.join(' | ') || 'N/A')
                         : (textTypes.includes(q.type || '')
                             ? (q.acceptedAnswers?.[0] || 'N/A')
@@ -383,7 +383,7 @@ export const generateSoloQuizPDF = (
 
             if (partialScoreMap && partialScoreMap[idx] !== undefined) {
                 const earned = partialScoreMap[idx];
-                const totalParts = (q.type === 'matching' || q.type === 'word-box') ? (q.acceptedAnswers?.length || 1) : 1;
+                const totalParts = (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || '')) ? (q.acceptedAnswers?.length || 1) : 1;
                 isCorrect = earned === totalParts;
                 if (!isCorrect && earned > 0) {
                     resultLabel = `(${earned}/${totalParts} TO'G'RI QISMAN)`;
@@ -401,9 +401,8 @@ export const generateSoloQuizPDF = (
                 }
             } else {
                 const earned = countCorrectParts(studentAns, q.acceptedAnswers || []);
-                isCorrect = earned === (q.acceptedAnswers?.length || 1);
-                
-                const totalParts = q.acceptedAnswers?.length || 1;
+                const totalParts = (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || '')) ? (q.acceptedAnswers?.length || 1) : 1;
+                isCorrect = earned === totalParts;
                 if (!isCorrect && earned > 0) {
                     resultLabel = `(${earned}/${totalParts} TO'G'RI)`;
                 } else {
@@ -416,9 +415,9 @@ export const generateSoloQuizPDF = (
             doc.fontSize(10).font(fontRegular).fillColor(statusColor).text(`Sizning javobingiz: ${displayAns} ${resultLabel}`);
             
             if (!isCorrect) {
-                const correct = (q.type === 'multiple-choice' || q.type === 'true-false') 
-                    ? (q.options ? q.options[q.correctIndex] : 'N/A')
-                    : (q.acceptedAnswers?.join(' | ') || 'N/A');
+                const correct = (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(q.type || '')) 
+                    ? (q.acceptedAnswers?.join(' | ') || 'N/A')
+                    : (q.options ? q.options[q.correctIndex] : 'N/A');
                 doc.fillColor('#4b5563').text(`To'g'ri javob: ${correct}`);
             }
 

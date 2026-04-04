@@ -814,9 +814,9 @@ export function initSocket(io: Server) {
             const prevPartialScore = (player as any).partialScoreMap[qIdx] || 0;
 
             let currentScore = 0;
-            const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching', 'vocabulary'];
+            const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching', 'vocabulary', 'inline-blank', 'inline-choice'];
             
-            if (question.type === 'matching' || question.type === 'word-box') {
+            if (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(question.type || '')) {
                 currentScore = countCorrectParts(String(answer), question.acceptedAnswers || []);
             } else if (textTypes.includes(question.type || '')) {
                 if (checkAnswer(String(answer), question.acceptedAnswers || [])) {
@@ -928,9 +928,9 @@ export function initSocket(io: Server) {
                 if (!question) continue;
                 
                 let currentScore = 0;
-                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching', 'vocabulary'];
+                const textTypes = ['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'word-box', 'matching', 'vocabulary', 'inline-blank', 'inline-choice'];
                 
-                if (question.type === 'matching' || question.type === 'word-box') {
+                if (['matching', 'word-box', 'inline-blank', 'inline-choice'].includes(question.type || '')) {
                     currentScore = countCorrectParts(String(answer), question.acceptedAnswers || []);
                 } else if (textTypes.includes(question.type || '')) {
                     if (checkAnswer(String(answer), question.acceptedAnswers || [])) {
