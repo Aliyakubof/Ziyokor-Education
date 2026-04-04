@@ -13,7 +13,7 @@ interface QuestionData {
     questionIndex: number;
     totalQuestions: number;
     correctIndex: number;
-    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching' | 'vocabulary';
+    type?: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching' | 'vocabulary' | 'inline-blank' | 'inline-choice';
     acceptedAnswers?: string[];
 }
 
@@ -809,6 +809,126 @@ export default function PlayerGame() {
                                 To'g'ri tartib: {question.acceptedAnswers?.join(', ')}
                             </div>
                         )}
+                    </div>
+                </div>
+            );
+        }
+
+        if (question.type === 'inline-blank') {
+            const regex = /\[_{3,}\]/g;
+            const parts = question.text.split(regex);
+            const currentAnswersList = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
+            const earned = countCorrectParts(playerAns, question.acceptedAnswers || []);
+            const total = question.acceptedAnswers?.length || 0;
+            const isAllCorrect = earned === total && total > 0;
+
+            return (
+                <div className="w-full max-w-4xl mx-auto rounded-[2.5rem] p-8 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                    {isReview && (
+                        <div className={`mb-6 p-4 rounded-2xl text-center font-black ${isAllCorrect ? 'bg-emerald-50 text-emerald-600' : (earned > 0 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600')}`}>
+                            NATIJA: {earned}/{total}
+                        </div>
+                    )}
+                    <h2 className="text-center text-xl font-bold opacity-30 italic mb-8" style={{ color: 'var(--text-color)' }}>Fill in the blanks [_______]</h2>
+                    <div className="text-xl md:text-2xl leading-loose text-center" style={{ color: 'var(--text-color)' }}>
+                        {parts.map((part, i) => (
+                            <span key={i}>
+                                {part}
+                                {i < parts.length - 1 && (
+                                    <input
+                                        type="text"
+                                        value={currentAnswersList[i] || ''}
+                                        readOnly={isReview}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            const newAns = [...currentAnswersList];
+                                            while (newAns.length < parts.length - 1) newAns.push('');
+                                            newAns[i] = val;
+                                            setTextAnswer(newAns.join('+'));
+                                        }}
+                                        onBlur={() => isUnitMode && !isReview && saveUnitAnswer(textAnswer)}
+                                        className={`mx-2 border-b-4 bg-transparent text-center font-bold outline-none align-middle transition-all ${isReview ? (normalizeAnswer(currentAnswersList[i]) === normalizeAnswer(question.acceptedAnswers?.[i] || '') ? 'border-emerald-400 text-emerald-600' : 'border-red-400 text-red-600') : 'border-indigo-300 focus:border-indigo-600'}`}
+                                        style={{ width: '120px', color: 'var(--text-color)' }}
+                                        placeholder="..."
+                                    />
+                                )}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        if (question.type === 'inline-choice') {
+            const regex = /\[(.*?)\]/g;
+            const parts = question.text.split(regex);
+            const currentAnswersList = (isReview ? playerAns : textAnswer)?.split('+').map((s: string) => s.trim()) || [];
+            
+            return (
+                <div className="w-full max-w-4xl mx-auto rounded-[2.5rem] p-8 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                    <h2 className="text-center text-xl font-bold opacity-30 italic mb-8" style={{ color: 'var(--text-color)' }}>Choose the correct option</h2>
+                    <div className="text-xl md:text-2xl leading-loose text-center" style={{ color: 'var(--text-color)' }}>
+                        {parts.map((part, i) => {
+                            if (i % 2 === 0) return <span key={i}>{part}</span>;
+                            
+                            const idx = (i - 1) / 2;
+                            const rawOptions = part.split('/').map(s => s.trim());
+                            const selectedOption = currentAnswersList[idx];
+
+                            return (
+                                <span key={i} className="inline-flex flex-wrap gap-1 mx-1 align-middle">
+                                    {rawOptions.map((opt, oIdx) => {
+                                        const isCorrect = opt.endsWith('*');
+                                        const label = isCorrect ? opt.slice(0, -1) : opt;
+                                        const isSelected = selectedOption === label;
+                                        const hasSelection = !!selectedOption;
+
+                                        let backgroundColor = 'var(--bg-color)';
+                                        let borderColor = 'var(--border-color)';
+                                        let textColor = 'var(--text-color)';
+
+                                        if (hasSelection) {
+                                            if (isSelected) {
+                                                if (isCorrect) {
+                                                    backgroundColor = '#10b981'; // Emerald
+                                                    borderColor = '#fbbf24'; // Yellow
+                                                    textColor = 'white';
+                                                } else {
+                                                    backgroundColor = '#ef4444'; // Red
+                                                    borderColor = '#ef4444';
+                                                    textColor = 'white';
+                                                }
+                                            } else if (isCorrect) {
+                                                // Always highlight correct answer if something was selected
+                                                backgroundColor = 'rgba(16, 185, 129, 0.1)';
+                                                borderColor = '#10b981';
+                                                textColor = '#10b981';
+                                            }
+                                        }
+
+                                        return (
+                                            <button
+                                                key={oIdx}
+                                                disabled={hasSelection || isReview}
+                                                onClick={() => {
+                                                    const newAns = [...currentAnswersList];
+                                                    // Ensure array is filled up to idx
+                                                    while (newAns.length <= idx) newAns.push('');
+                                                    newAns[idx] = label;
+                                                    const finalVal = newAns.join('+');
+                                                    setTextAnswer(finalVal);
+                                                    if (isUnitMode) saveUnitAnswer(finalVal);
+                                                }}
+                                                className={`px-3 py-1 rounded-xl text-sm font-bold border-2 transition-all ${!hasSelection && !isReview ? 'hover:border-indigo-500 active:scale-95' : 'cursor-default'}`}
+                                                style={{ backgroundColor, borderColor, color: textColor }}
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </span>
+                            );
+                        })}
                     </div>
                 </div>
             );

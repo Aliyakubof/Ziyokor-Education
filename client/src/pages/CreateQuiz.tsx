@@ -10,7 +10,7 @@ interface QuestionDraft {
     options: string[];
     correctIndex: number;
     timeLimit: number;
-    type: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching' | 'vocabulary';
+    type: 'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching' | 'vocabulary' | 'inline-blank' | 'inline-choice';
     acceptedAnswers: string[];
 }
 
@@ -83,7 +83,7 @@ export default function CreateQuiz() {
 
     const [qInfo, setQInfo] = useState('');
     const [qText, setQText] = useState('');
-    const [qType, setQType] = useState<'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching' | 'vocabulary'>('multiple-choice');
+    const [qType, setQType] = useState<'multiple-choice' | 'text-input' | 'true-false' | 'fill-blank' | 'find-mistake' | 'rewrite' | 'word-box' | 'info-slide' | 'matching' | 'vocabulary' | 'inline-blank' | 'inline-choice'>('multiple-choice');
     const [opts, setOpts] = useState(['', '', '', '']);
     const [correctIdx, setCorrectIdx] = useState(0);
     const [acceptedAnswers, setAcceptedAnswers] = useState('');
@@ -712,6 +712,26 @@ export default function CreateQuiz() {
                                                     <div className="w-1.5 h-3 border border-current rounded-sm"></div>
                                                 </div>
                                             </button>
+                                            <button
+                                                onClick={() => setQType('inline-blank')}
+                                                className={`p-2 rounded-lg transition-all ${qType === 'inline-blank' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                                title="Inline Blank [_______]"
+                                            >
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <span className="text-[10px] font-black leading-none mb-0.5">___</span>
+                                                    <Type size={16} />
+                                                </div>
+                                            </button>
+                                            <button
+                                                onClick={() => setQType('inline-choice')}
+                                                className={`p-2 rounded-lg transition-all ${qType === 'inline-choice' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                                title="Inline Choice [A/B*/C]"
+                                            >
+                                                <div className="flex items-center gap-0.5">
+                                                    <div className="w-2 h-2 rounded-full border border-current"></div>
+                                                    <div className="w-2 h-2 rounded-full border border-indigo-500 bg-indigo-500"></div>
+                                                </div>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -785,13 +805,15 @@ export default function CreateQuiz() {
                                             </div>
                                         )}
 
-                                        {['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'vocabulary'].includes(qType) && (
+                                        {['text-input', 'fill-blank', 'find-mistake', 'rewrite', 'vocabulary', 'inline-blank', 'inline-choice'].includes(qType) && (
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">
                                                     {qType === 'fill-blank' ? "Correct Answer (missing word)" :
                                                         qType === 'find-mistake' ? "Mistake Word (or corrected version)" :
                                                             qType === 'rewrite' ? "Full Correct Sentence" :
-                                                                "Correct Answers (+ bilan ajrating)"}
+                                                                qType === 'inline-blank' ? "Bo'sh joyga tushadigan so'z(lar) (+ bilan ajrating)" :
+                                                                    qType === 'inline-choice' ? "Matn ichidagi to'g'ri variantlar (+ bilan ajrating)" :
+                                                                        "Correct Answers (+ bilan ajrating)"}
                                                 </label>
                                                 <textarea
                                                     className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 min-h-[80px]"
@@ -800,6 +822,16 @@ export default function CreateQuiz() {
                                                     onChange={e => setAcceptedAnswers(e.target.value)}
                                                 />
                                                 <p className="text-xs text-slate-400 ml-4">Student answer matching any of these will be correct.</p>
+                                                {qType === 'inline-blank' && (
+                                                    <div className="bg-amber-50 text-amber-700 p-4 rounded-xl text-xs font-medium">
+                                                        <strong>Eslatma:</strong> Savol matnida bo'sh joyni <code>[_______]</code> (kamida 3ta chiziq) shaklida yozing.
+                                                    </div>
+                                                )}
+                                                {qType === 'inline-choice' && (
+                                                    <div className="bg-blue-50 text-blue-700 p-4 rounded-xl text-xs font-medium">
+                                                        <strong>Eslatma:</strong> Matn ichida variantlarni <code>[A / B* / C]</code> shaklida yozing. To'g'ri variant oxiriga asterisk (*) qo'ying.
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
