@@ -172,7 +172,7 @@ export const submitVocabBattle = async (req: Request, res: Response) => {
         const battle = battleRes.rows[0];
 
         const coinsEarned = score;
-        await query('UPDATE students SET coins = coins + $1 WHERE id = $2', [coinsEarned, studentId]);
+        await query('UPDATE students SET coins = coins + $1, total_vocab_score = total_vocab_score + $1 WHERE id = $2', [coinsEarned, studentId]);
 
         const studentGroupIdRes = await query('SELECT group_id FROM students WHERE id = $1', [studentId]);
         if ((studentGroupIdRes.rowCount ?? 0) > 0) {

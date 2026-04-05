@@ -82,12 +82,26 @@ app.use(cors({
     credentials: true
 }));
 
-// Apply basic security headers
 app.use(helmet());
 
+// Global Rate Limiter: 1000 requests per 15 mins (Prevents basic DoS)
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    message: { error: "Haddan tashqari ko'p so'rovlar yuborildi. Iltimos, birozdan keyin urinib ko'ring." }
+});
+app.use(globalLimiter);
 
+// Specific Login Limiter: 10 attempts per 15 mins (Prevents brute-force)
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: "Kirish urinishlari juda ko'payib ketdi. 15 daqiqadan so'ng qayta urinib ko'ring." }
+});
+app.use('/api/login', loginLimiter);
+app.use('/api/auth/login', loginLimiter);
 
-// Limit payload size to 50mb (increased to allow saving large quizzes)
+// Standard payload limit for regular API routes (50mb as requested)
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 
@@ -175,7 +189,25 @@ async function initDb() {
         await query('ALTER TABLE teachers ADD COLUMN IF NOT EXISTS plain_password TEXT;');
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS plain_password TEXT;');
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS parent_id TEXT UNIQUE;');
+        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS total_vocab_score INT DEFAULT 0;');
+        await query("CREATE INDEX IF NOT EXISTS idx_students_vocab_score ON students(total_vocab_score DESC);");
         await query("ALTER TABLE groups ADD COLUMN IF NOT EXISTS level TEXT DEFAULT 'Beginner';");
+
+        // One-time backfill for total_vocab_score from existing game_results
+        await query(`
+            WITH vocab_scores AS (
+                SELECT player->>'id' as student_id, SUM((player->>'score')::int) as vocab_score
+                FROM game_results gr, jsonb_array_elements(
+                    CASE WHEN jsonb_typeof(gr.player_results) = 'array' THEN gr.player_results ELSE '[]'::jsonb END
+                ) as player
+                WHERE gr.quiz_title LIKE 'Vocab Battle: %'
+                GROUP BY player->>'id'
+            )
+            UPDATE students s
+            SET total_vocab_score = COALESCE(v.vocab_score, 0)
+            FROM vocab_scores v
+            WHERE s.id = v.student_id AND s.total_vocab_score = 0;
+        `);
 
         await query(`
             CREATE TABLE IF NOT EXISTS duel_quizzes (
@@ -235,8 +267,8 @@ async function ensureAdminExists() {
             const adminPassword = process.env.ADMIN_PASSWORD || '4567';
             const hashedPassword = await bcrypt.hash(adminPassword, 10);
             await query(
-                'INSERT INTO teachers (id, name, phone, password, plain_password) VALUES ($1, $2, $3, $4, $5)',
-                [ADMIN_ID, 'Admin', adminPhone, hashedPassword, adminPassword]
+                'INSERT INTO teachers (id, name, phone, password) VALUES ($1, $2, $3, $4)',
+                [ADMIN_ID, 'Admin', adminPhone, hashedPassword]
             );
             console.log('Admin teacher record created');
         }
@@ -253,8 +285,8 @@ async function ensureManagerExists() {
             const managerPassword = process.env.MANAGER_PASSWORD || '2531';
             const hashedPassword = await bcrypt.hash(managerPassword, 10);
             await query(
-                'INSERT INTO teachers (id, name, phone, password, plain_password) VALUES ($1, $2, $3, $4, $5)',
-                [MANAGER_ID, 'Menejer', managerPhone, hashedPassword, managerPassword]
+                'INSERT INTO teachers (id, name, phone, password) VALUES ($1, $2, $3, $4)',
+                [MANAGER_ID, 'Menejer', managerPhone, hashedPassword]
             );
             console.log('Manager record created in teachers table');
         }

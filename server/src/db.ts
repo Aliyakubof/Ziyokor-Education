@@ -5,11 +5,11 @@ dotenv.config();
 
 const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString) {
-    console.warn('DATABASE_URL NOT found in environment! Falling back to Neon.');
-}
+const finalConnectionString = connectionString;
 
-const finalConnectionString = connectionString || 'postgresql://neondb_owner:npg_kBgUWp4oz2Dm@ep-cool-sound-ago9vnzl-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+if (!finalConnectionString) {
+    throw new Error('DATABASE_URL is missing! Server cannot start without a database connection.');
+}
 
 const isLocalhost = finalConnectionString.includes('localhost') || finalConnectionString.includes('127.0.0.1');
 

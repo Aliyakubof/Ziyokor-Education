@@ -12,47 +12,45 @@ export const getLeaderboard = async (req: Request, res: Response) => {
         let queryStr = '';
         const params: any[] = [];
 
-        if (type === 'vocab') {
-            queryStr = `
-                WITH vocab_scores AS (
-                    SELECT player->>'id' as student_id, SUM((player->>'score')::int) as vocab_score
-                    FROM game_results gr, jsonb_array_elements(
-                        CASE WHEN jsonb_typeof(gr.player_results) = 'array' THEN gr.player_results ELSE '[]'::jsonb END
-                    ) as player
-                    WHERE gr.quiz_title LIKE 'Vocab Battle: %'
-                    GROUP BY player->>'id'
-                )
-                SELECT s.id, s.name, s.coins, s.streak_count, s.avatar_url, g.name as group_name, g.level as group_level, COALESCE(v.vocab_score, 0) as stats_value
-                FROM students s
-                LEFT JOIN groups g ON s.group_id = g.id
-                LEFT JOIN vocab_scores v ON s.id = v.student_id
-            `;
-        } else {
-            queryStr = `
-                SELECT s.id, s.name, s.coins, s.streak_count, s.avatar_url, g.name as group_name, g.level as group_level, ${type === 'streaks' ? 's.streak_count' : 's.coins'} as stats_value
-                FROM students s
-                LEFT JOIN groups g ON s.group_id = g.id
-            `;
-        }
+        // Efficient real-time leaderboard using denormalized columns and indices
+        queryStr = `
+            SELECT 
+                s.id, s.name, s.coins, s.streak_count, s.avatar_url, 
+                s.total_vocab_score as vocab_score,
+                g.name as group_name, g.level as group_level, 
+                CASE 
+                    WHEN $1 = 'streaks' THEN s.streak_count 
+                    WHEN $1 = 'vocab' THEN s.total_vocab_score 
+                    ELSE s.coins 
+                END as stats_value
+            FROM students s
+            LEFT JOIN groups g ON s.group_id = g.id
+        `;
+        params.push(type);
 
+        const conditions: string[] = [];
         if (view === 'group' && groupId && groupId !== 'undefined' && groupId !== 'null') {
-            queryStr += ` WHERE s.group_id = $1`;
+            conditions.push(`s.group_id = $${params.length + 1}`);
             params.push(groupId);
         } else if (view === 'global' && groupId && groupId !== 'undefined' && groupId !== 'null') {
-            queryStr += ` WHERE g.level = (SELECT level FROM groups WHERE id = $1)`;
+            conditions.push(`g.level = (SELECT level FROM groups WHERE id = $${params.length + 1})`);
             params.push(groupId);
+        }
+
+        if (conditions.length > 0) {
+            queryStr += ` WHERE ` + conditions.join(' AND ');
         }
 
         if (type === 'streaks') {
             queryStr += ` ORDER BY s.streak_count DESC, s.coins DESC`;
         } else if (type === 'vocab') {
-            queryStr += ` ORDER BY stats_value DESC, s.coins DESC`;
+            queryStr += ` ORDER BY s.total_vocab_score DESC, s.coins DESC`;
         } else {
             queryStr += ` ORDER BY s.coins DESC, s.streak_count DESC`;
         }
 
-        queryStr += ` LIMIT $${params.length + 1} `;
-        params.push(parseInt(limit as string));
+        queryStr += ` LIMIT $${params.length + 1}`;
+        params.push(parseInt(limit as string) || 50);
 
         const result = await query(queryStr, params);
         res.json(result.rows);
@@ -131,7 +129,8 @@ export const getStats = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const studentRes = await query(`
+        // Consolidated query for all student stats to reduce DB round-trips
+        const result = await query(`
             SELECT
                 s.coins,
                 s.streak_count,
@@ -140,43 +139,21 @@ export const getStats = async (req: Request, res: Response) => {
                 COALESCE(s.is_hero, false) as is_hero,
                 COALESCE(s.weekly_battle_score, 0) as weekly_battle_score,
                 s.group_id,
+                s.total_vocab_score,
                 COALESCE(g.has_trophy, false) as has_trophy,
-                si.color as active_theme_color
+                si.color as active_theme_color,
+                (SELECT COUNT(*) FROM game_results gr, jsonb_array_elements(CASE WHEN jsonb_typeof(gr.player_results) = 'array' THEN gr.player_results ELSE '[]'::jsonb END) as player WHERE player ->> 'id' = s.id) as games_count,
+                (SELECT SUM((player ->> 'score')::int) FROM game_results gr, jsonb_array_elements(CASE WHEN jsonb_typeof(gr.player_results) = 'array' THEN gr.player_results ELSE '[]'::jsonb END) as player WHERE player ->> 'id' = s.id) as total_score,
+                (SELECT COUNT(*) + 1 FROM students WHERE coins > s.coins) as rank,
+                (SELECT 1 FROM student_purchases sp WHERE sp.student_id = s.id AND sp.item_id = 'avatar_unlock' LIMIT 1) as has_avatar_unlock
             FROM students s 
             LEFT JOIN groups g ON s.group_id = g.id 
             LEFT JOIN shop_items si ON s.active_theme_id = si.id
             WHERE s.id = $1
         `, [id]);
         
-        if (studentRes.rowCount === 0) return res.json(null);
-        const student = studentRes.rows[0];
-
-        const gamesRes = await query(`
-            SELECT COUNT(*) as games_count
-            FROM game_results, jsonb_array_elements(
-                CASE WHEN jsonb_typeof(player_results) = 'array' THEN player_results ELSE '[]'::jsonb END
-            ) as player
-            WHERE player ->> 'id' = $1
-        `, [id]);
-
-        const scoreRes = await query(`
-            SELECT SUM((player ->> 'score'):: int) as total_score
-            FROM game_results, jsonb_array_elements(
-                CASE WHEN jsonb_typeof(player_results) = 'array' THEN player_results ELSE '[]'::jsonb END
-            ) as player
-            WHERE player ->> 'id' = $1
-        `, [id]);
-
-        const rankRes = await query(`
-            SELECT COUNT(*) + 1 as rank
-            FROM students
-            WHERE coins > (SELECT coins FROM students WHERE id = $1)
-        `, [id]);
-
-        const unlockRes = await query(`
-            SELECT 1 FROM student_purchases 
-            WHERE student_id = $1 AND item_id = 'avatar_unlock'
-        `, [id]);
+        if (result.rowCount === 0) return res.json(null);
+        const student = result.rows[0];
 
         res.json({
             coins: student.coins || 0,
@@ -188,18 +165,17 @@ export const getStats = async (req: Request, res: Response) => {
             avatarUrl: student.avatar_url || null,
             active_theme_id: student.active_theme_id,
             active_theme_color: student.active_theme_color,
-            hasAvatarUnlock: (unlockRes.rowCount || 0) > 0,
-            gamesPlayed: parseInt(gamesRes.rows[0].games_count) || 0,
-            totalScore: parseInt(scoreRes.rows[0].total_score) || 0,
-            rank: parseInt(rankRes.rows[0].rank) || 1
+            hasAvatarUnlock: !!student.has_avatar_unlock,
+            gamesPlayed: parseInt(student.games_count) || 0,
+            totalScore: parseInt(student.total_score) || 0,
+            vocabScore: student.total_vocab_score || 0,
+            rank: parseInt(student.rank) || 1
         });
     } catch (err: any) {
         console.error('Stats error for ID:', req.params.id, err);
         res.status(500).json({ 
             error: 'Error fetching stats', 
-            details: err.message,
-            hint: err.hint,
-            position: err.position
+            details: err.message
         });
     }
 };

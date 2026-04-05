@@ -51,10 +51,10 @@ export const createTeacher = async (req: Request, res: Response) => {
         const hashedPassword = await bcrypt.hash(rawPassword, 10);
         const id = uuidv4();
         await query(
-            'INSERT INTO teachers (id, name, phone, password, plain_password) VALUES ($1, $2, $3, $4, $5)',
-            [id, name, phone, hashedPassword, rawPassword]
+            'INSERT INTO teachers (id, name, phone, password) VALUES ($1, $2, $3, $4)',
+            [id, name, phone, hashedPassword]
         );
-        res.json({ id, name, phone, password: rawPassword });
+        res.json({ id, name, phone });
     } catch (err) {
         console.error('Error creating teacher:', err);
         res.status(500).json({ error: 'Error creating teacher' });
@@ -68,10 +68,10 @@ export const updateTeacher = async (req: Request, res: Response) => {
         const finalPassword = password?.startsWith('$2') ? password : await bcrypt.hash(password, 10);
         const plainPass = password?.startsWith('$2') ? null : password;
 
-        if (plainPass) {
+        if (password) {
             await query(
-                'UPDATE teachers SET name = $1, phone = $2, password = $3, plain_password = $4 WHERE id = $5',
-                [name, phone, finalPassword, plainPass, id]
+                'UPDATE teachers SET name = $1, phone = $2, password = $3 WHERE id = $4',
+                [name, phone, finalPassword, id]
             );
         } else {
             await query(
@@ -79,7 +79,7 @@ export const updateTeacher = async (req: Request, res: Response) => {
                 [name, phone, id]
             );
         }
-        res.json({ id, name, phone, password: plainPass || password });
+        res.json({ id, name, phone });
     } catch (err) {
         console.error('Error updating teacher:', err);
         res.status(500).json({ error: 'Error updating teacher' });
@@ -115,7 +115,10 @@ export const getStudentsWithPagination = async (req: Request, res: Response) => 
         `, [limit, offset]);
 
         res.json({
-            students: result.rows.map(row => ({ ...row, password: row.plain_password || row.password })),
+            students: result.rows.map(row => {
+                const { password, plain_password, ...rest } = row;
+                return rest;
+            }),
             total,
             limit,
             offset
@@ -138,8 +141,8 @@ export const updateStudentPassword = async (req: Request, res: Response) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         
         const result = await query(
-            'UPDATE students SET password = $1, plain_password = $2 WHERE id = $3 RETURNING id',
-            [hashedPassword, password, id]
+            'UPDATE students SET password = $1 WHERE id = $2 RETURNING id',
+            [hashedPassword, id]
         );
 
         if (result.rowCount === 0) {

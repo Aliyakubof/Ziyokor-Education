@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS students (
     avatar_url TEXT,
     is_hero BOOLEAN DEFAULT FALSE,
     weekly_battle_score INT DEFAULT 0,
+    total_vocab_score INT DEFAULT 0,
     parent_id TEXT UNIQUE,
     active_theme_id UUID REFERENCES shop_items(id)
 );
@@ -192,6 +193,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
 -- Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_students_coins ON students(coins DESC);
 CREATE INDEX IF NOT EXISTS idx_students_streak ON students(streak_count DESC);
+CREATE INDEX IF NOT EXISTS idx_students_vocab_score ON students(total_vocab_score DESC);
 CREATE INDEX IF NOT EXISTS idx_students_group ON students(group_id);
 CREATE INDEX IF NOT EXISTS idx_group_battles_active ON group_battles(status) WHERE status = 'active';
 CREATE INDEX IF NOT EXISTS idx_group_battles_groups ON group_battles(group_a_id, group_b_id);

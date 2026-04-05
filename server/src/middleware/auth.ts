@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-export const JWT_SECRET = process.env.JWT_SECRET || 'ziyokor_fallback_secret';
+export const JWT_SECRET = process.env.JWT_SECRET as string;
+
+if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is missing! Server cannot start without a secure secret.');
+}
 
 export interface AuthRequest extends Request {
     user?: {
