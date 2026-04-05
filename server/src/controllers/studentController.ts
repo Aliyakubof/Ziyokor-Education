@@ -399,8 +399,49 @@ export const bookExtraClass = async (req: Request, res: Response) => {
         const now = new Date();
         const tashkentTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (5 * 60 * 60 * 1000));
         const todayStr = tashkentTime.toISOString().split('T')[0];
-        const currentMinutes = tashkentTime.getHours() * 60 + tashkentTime.getMinutes();
+        const currentHours = tashkentTime.getHours();
+        const currentMinutesValue = tashkentTime.getMinutes();
+        const totalMinutes = currentHours * 60 + currentMinutesValue;
         const cutoffMinutes = 17 * 60 + 30; // 17:30
+
+        // Fetch group settings for allowed days
+        const groupRes = await query('SELECT extra_class_days FROM groups WHERE id = $1', [groupId]);
+        const allowedDays = groupRes.rows[0]?.extra_class_days || [];
+
+        if (!allowedDays || allowedDays.length === 0) {
+            return res.status(400).json({ error: "Hali qo'shimcha dars kunlari belgilanmagan!" });
+        }
+
+        // Calculate absolute nearest valid date
+        const dayMap: Record<string, number> = {
+            'Yakshanba': 0, 'Dushanba': 1, 'Seshanba': 2, 'Chorshanba': 3, 'Payshanba': 4, 'Juma': 5, 'Shanba': 6
+        };
+
+        let nearestDate: string | null = null;
+        let minDiff = 8;
+        
+        allowedDays.forEach((dayName: string) => {
+            const dayIdx = dayMap[dayName];
+            if (dayIdx === undefined) return;
+            
+            let diff = (dayIdx - tashkentTime.getDay() + 7) % 7;
+            
+            // If today is an allowed day but it's past cutoff, the "nearest" occurrence of this day is next week
+            if (diff === 0 && totalMinutes >= cutoffMinutes) {
+                diff = 7;
+            }
+            
+            if (diff < minDiff) {
+                minDiff = diff;
+                const d = new Date(tashkentTime);
+                d.setDate(tashkentTime.getDate() + diff);
+                nearestDate = d.toISOString().split('T')[0];
+            }
+        });
+
+        if (bookingDate !== nearestDate) {
+            return res.status(400).json({ error: `Faqat eng yaqin dars kuni (${nearestDate}) uchun bron qilish mumkin!` });
+        }
 
         // 1. Broad Clean up stale/completed bookings (past date, NULL date, or is_completed)
         // This ensures the booking data is "daily updated" in the Tashkent context
@@ -408,7 +449,7 @@ export const bookExtraClass = async (req: Request, res: Response) => {
             `DELETE FROM extra_class_bookings WHERE (booking_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tashkent')::date) OR (booking_date IS NULL) OR (is_completed = TRUE)`
         );
 
-        if (bookingDate === todayStr && currentMinutes >= cutoffMinutes) {
+        if (bookingDate === todayStr && totalMinutes >= cutoffMinutes) {
             return res.status(400).json({ error: "Bugun uchun bron qilish vaqti (17:30) tugadi!" });
         }
 

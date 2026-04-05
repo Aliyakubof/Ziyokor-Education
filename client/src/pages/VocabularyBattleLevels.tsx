@@ -82,8 +82,8 @@ export default function VocabularyBattleLevels() {
                              <path d="M-20,95 Q40,55 80,85 T130,55 L130,100 L-20,100 Z" fill="var(--accent-color)"/>
                         </svg>
 
-                        {/* Magical Fireflies */}
-                        {Array.from({ length: 30 }).map((_, i) => (
+                        {/* Magical Fireflies - Reduced count for performance */}
+                        {Array.from({ length: 12 }).map((_, i) => (
                             <div key={i} className="absolute rounded-full bg-green-200 shadow-[0_0_12px_4px_rgba(7ade80,0.4)] animate-[float-up_10s_ease-in-out_infinite]" 
                                 style={{
                                     width: Math.random() * 4 + 2 + 'px', 
@@ -108,8 +108,8 @@ export default function VocabularyBattleLevels() {
                              <polygon points="-10,120 25,75 55,100 85,55 120,90 120,120" fill="var(--accent-color)"/>
                         </svg>
 
-                        {/* Mirage floating light specks */}
-                        {Array.from({ length: 15 }).map((_, i) => (
+                        {/* Mirage floating light specks - Reduced count */}
+                        {Array.from({ length: 6 }).map((_, i) => (
                             <div key={i} className="absolute rounded-full bg-orange-200 blur-[2px] animate-[platform-float_8s_ease-in-out_infinite]" style={{ width: Math.random()*8+4+'px', height: Math.random()*8+4+'px', left: Math.random()*100+'%', top: Math.random()*40+60+'%', animationDelay: `-${Math.random()*10}s` }} />
                         ))}
                     </div>
@@ -129,8 +129,8 @@ export default function VocabularyBattleLevels() {
                         {/* Scanning HUD Vertical Wave */}
                         <div className="absolute top-0 w-full h-[15vh] bg-gradient-to-b from-transparent to-[var(--primary-color)] opacity-40 animate-[scanline_4s_linear_infinite]" />
                         
-                        {/* Floating Digital Data Squares */}
-                        {Array.from({ length: 20 }).map((_, i) => (
+                        {/* Floating Digital Data Squares - Reduced count */}
+                        {Array.from({ length: 10 }).map((_, i) => (
                             <div key={i} className="absolute border flex items-center justify-center opacity-30 mix-blend-screen animate-pulse" 
                                 style={{ 
                                     left: Math.random()*100+'%', top: Math.random()*100+'%', 
@@ -155,8 +155,8 @@ export default function VocabularyBattleLevels() {
                              <circle cx="120" cy="80" r="50" fill="var(--primary-color)"/>
                         </svg>
 
-                        {/* Sakura Petals continuously falling */}
-                        {Array.from({ length: 40 }).map((_, i) => (
+                        {/* Sakura Petals continuously falling - Reduced count */}
+                        {Array.from({ length: 15 }).map((_, i) => (
                             <div key={i} className="absolute bg-[var(--accent-color)] opacity-50 rounded-tl-full rounded-br-full rounded-tr-md rounded-bl-md animate-[float-up_12s_linear_infinite]" 
                                 style={{ 
                                     width: Math.random()*8+6+'px', height: Math.random()*8+6+'px', 
@@ -184,8 +184,8 @@ export default function VocabularyBattleLevels() {
                              <path d="M-20,100 L-20,75 Q25,95 60,70 T130,85 L130,100 Z" fill="var(--secondary-color)"/>
                         </svg>
 
-                        {/* Rising Bubbles */}
-                        {Array.from({ length: 30 }).map((_, i) => (
+                        {/* Rising Bubbles - Reduced count */}
+                        {Array.from({ length: 12 }).map((_, i) => (
                             <div key={i} className="absolute rounded-full border-[2px] border-[var(--accent-color)] opacity-50 animate-[float-up_8s_ease-in_infinite]" 
                                 style={{ 
                                     width: Math.random()*12+4+'px', height: Math.random()*12+4+'px', 

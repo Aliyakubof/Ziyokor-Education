@@ -1325,26 +1325,54 @@ export default function PlayerGame() {
 
             <main className="flex-1 p-4 md:p-6 overflow-y-auto w-full max-w-5xl mx-auto flex flex-col">
                 <ArenaUI />
+                
+                {/* Unit Mode Navigation at the Top */}
+                {isUnitMode && (view === 'PLAYING' || view === 'UNIT_REVIEW') && (
+                    <div className="flex items-center justify-between mb-6 gap-4 shrink-0">
+                        <button 
+                            onClick={() => { if (currentUnitIndex > 0) goToQuestion(currentUnitIndex - 1); }} 
+                            disabled={currentUnitIndex === 0} 
+                            className="px-5 py-2.5 rounded-xl font-bold disabled:opacity-30 border transition-all active:scale-95 text-xs md:text-sm" 
+                            style={{ 
+                                backgroundColor: isDuel ? 'rgba(255,255,255,0.05)' : 'var(--card-bg)', 
+                                borderColor: isDuel ? 'rgba(255,255,255,0.1)' : 'var(--border-color)', 
+                                color: isDuel ? 'white' : 'var(--text-color)' 
+                            }}
+                        >
+                            ← Orqaga
+                        </button>
+
+                        <div className="flex-1 flex justify-center font-black text-xs md:text-sm uppercase tracking-widest" style={{ color: isDuel ? 'white' : 'var(--text-color)', opacity: 0.4 }}>
+                            {(() => {
+                                const nonInfoTotal = unitQuestions.filter(q => q.type !== 'info-slide').length;
+                                const nonInfoCurrent = unitQuestions.slice(0, currentUnitIndex + 1).filter(q => q.type !== 'info-slide').length;
+                                return `${nonInfoCurrent} / ${nonInfoTotal}`;
+                            })()}
+                        </div>
+
+                        {currentUnitIndex === unitQuestions.length - 1 ? (
+                            <button 
+                                onClick={() => setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY')} 
+                                className="px-5 py-2.5 rounded-xl font-black text-white shadow-lg text-xs md:text-sm active:scale-95 transition-transform" 
+                                style={{ backgroundColor: isDuel ? '#e11d48' : 'var(--primary-color)' }}
+                            >
+                                {view === 'UNIT_REVIEW' ? 'YAKUNLASH' : 'SUBMIT'}
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={() => goToQuestion(currentUnitIndex + 1)} 
+                                className="px-5 py-2.5 text-white rounded-xl font-bold shadow-lg text-xs md:text-sm active:scale-95 transition-transform" 
+                                style={{ backgroundColor: isDuel ? '#e11d48' : 'var(--primary-color)' }}
+                            >
+                                Keyingisi →
+                            </button>
+                        )}
+                    </div>
+                )}
+
                 <div className="flex-1 relative">{renderQuestionContent()}</div>
             </main>
 
-            {isUnitMode && (view === 'PLAYING' || view === 'UNIT_REVIEW') && (
-                <footer className="p-4 border-t flex items-center justify-between shrink-0 transition-colors" style={{ backgroundColor: isDuel ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.05)', borderColor: isDuel ? 'rgba(255,255,255,0.1)' : 'var(--border-color)' }}>
-                    <button onClick={() => { if (currentUnitIndex > 0) goToQuestion(currentUnitIndex - 1); }} disabled={currentUnitIndex === 0} className="px-6 py-3 rounded-2xl font-bold disabled:opacity-30 border transition-colors" style={{ backgroundColor: isDuel ? 'rgba(255,255,255,0.05)' : 'var(--card-bg)', borderColor: isDuel ? 'rgba(255,255,255,0.1)' : 'var(--border-color)', color: 'white' }}>← Orqaga</button>
-                    <div className="flex-1 flex justify-center font-black" style={{ color: isDuel ? 'white' : 'var(--text-color)', opacity: 0.5 }}>
-                        {(() => {
-                            const nonInfoTotal = unitQuestions.filter(q => q.type !== 'info-slide').length;
-                            const nonInfoCurrent = unitQuestions.slice(0, currentUnitIndex + 1).filter(q => q.type !== 'info-slide').length;
-                            return `${nonInfoCurrent} / ${nonInfoTotal}`;
-                        })()}
-                    </div>
-                    {currentUnitIndex === unitQuestions.length - 1 ? (
-                        <button onClick={() => setView(view === 'UNIT_REVIEW' ? 'FINISHED' : 'UNIT_SUMMARY')} className="px-6 py-3 rounded-2xl font-black text-white shadow-lg" style={{ backgroundColor: isDuel ? '#e11d48' : 'var(--primary-color)' }}>SUBMIT</button>
-                    ) : (
-                        <button onClick={() => goToQuestion(currentUnitIndex + 1)} className="px-6 py-3 text-white rounded-2xl font-bold shadow-lg" style={{ backgroundColor: isDuel ? '#e11d48' : 'var(--primary-color)' }}>Keyingisi →</button>
-                    )}
-                </footer>
-            )}
 
             {isBlockedByCheat && (
                 <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center">

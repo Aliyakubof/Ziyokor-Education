@@ -47,10 +47,20 @@ const BookingModal: React.FC<BookingModalProps> = ({ groupSettings, availableTop
         days.forEach(dayName => {
             const dayIdx = DAY_MAP[dayName];
             if (dayIdx === undefined) return;
-            // If today is the same day of the week, use today; otherwise find next occurrence
+            
+            // Find next occurrence (today counts if before cutoff)
+            let diff = (dayIdx - today.getDay() + 7) % 7;
+            
+            // Cutoff check for today: 17:30
+            const now = new Date();
+            const totalMinutes = now.getHours() * 60 + now.getMinutes();
+            if (diff === 0 && totalMinutes >= (17 * 60 + 30)) {
+                diff = 7; // Nearest occurrence is next week
+            }
+
             const candidate = new Date(today);
-            const diff = (dayIdx - today.getDay() + 7) % 7;
-            candidate.setDate(today.getDate() + diff); // diff=0 means today
+            candidate.setDate(today.getDate() + diff);
+            
             if (!nearestDate || candidate < nearestDate) {
                 nearestDate = candidate;
                 nearestDayName = dayName;
