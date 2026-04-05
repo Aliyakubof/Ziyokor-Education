@@ -188,6 +188,8 @@ async function initDb() {
         await query('ALTER TABLE game_results ADD COLUMN IF NOT EXISTS total_questions INT NOT NULL DEFAULT 0;');
         await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS total_vocab_score INT DEFAULT 0;');
         await query("CREATE INDEX IF NOT EXISTS idx_students_vocab_score ON students(total_vocab_score DESC);");
+        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS parent_id TEXT UNIQUE;');
+        await query("ALTER TABLE groups ADD COLUMN IF NOT EXISTS level TEXT DEFAULT 'Beginner';");
         
         // Safer backfill: Only run if total_vocab_score is 0 for matching records
         (async () => {
