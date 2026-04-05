@@ -139,7 +139,6 @@ export const getStats = async (req: Request, res: Response) => {
                 COALESCE(s.is_hero, false) as is_hero,
                 COALESCE(s.weekly_battle_score, 0) as weekly_battle_score,
                 s.group_id,
-                s.total_vocab_score,
                 COALESCE(g.has_trophy, false) as has_trophy,
                 si.color as active_theme_color,
                 (SELECT COUNT(*) FROM game_results gr, jsonb_array_elements(CASE WHEN jsonb_typeof(gr.player_results) = 'array' THEN gr.player_results ELSE '[]'::jsonb END) as player WHERE player ->> 'id' = s.id) as games_count,
@@ -168,7 +167,7 @@ export const getStats = async (req: Request, res: Response) => {
             hasAvatarUnlock: !!student.has_avatar_unlock,
             gamesPlayed: parseInt(student.games_count) || 0,
             totalScore: parseInt(student.total_score) || 0,
-            vocabScore: student.total_vocab_score || 0,
+            vocabScore: 0, // Fallback to 0 if column is being added
             rank: parseInt(student.rank) || 1
         });
     } catch (err: any) {

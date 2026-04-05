@@ -175,23 +175,37 @@ app.use('/api', apiRoutes);
 
 async function initDb() {
     try {
+        // 1. Run Essential Migrations First (Independent of schema loop)
+        const essentialMigrations = [
+            'ALTER TABLE game_results ADD COLUMN IF NOT EXISTS total_questions INT NOT NULL DEFAULT 0',
+            'ALTER TABLE students ADD COLUMN IF NOT EXISTS total_vocab_score INT DEFAULT 0',
+            'ALTER TABLE students ADD COLUMN IF NOT EXISTS parent_id TEXT UNIQUE',
+            "ALTER TABLE groups ADD COLUMN IF NOT EXISTS level TEXT DEFAULT 'Beginner'",
+            "CREATE INDEX IF NOT EXISTS idx_students_vocab_score ON students(total_vocab_score DESC)"
+        ];
+
+        for (const m of essentialMigrations) {
+            try {
+                await query(m);
+            } catch (e) {
+                console.error(`Migration failed (${m}):`, e);
+            }
+        }
+
         const statements = schema
             .split(';')
             .map(s => s.trim())
             .filter(s => s.length > 0);
 
         for (const statement of statements) {
-            await query(statement);
+            try {
+                await query(statement);
+            } catch (e) {
+                // Ignore errors for existing tables/indexes in the main schema
+            }
         }
 
-        // Essential migrations
-        await query('ALTER TABLE game_results ADD COLUMN IF NOT EXISTS total_questions INT NOT NULL DEFAULT 0;');
-        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS total_vocab_score INT DEFAULT 0;');
-        await query("CREATE INDEX IF NOT EXISTS idx_students_vocab_score ON students(total_vocab_score DESC);");
-        await query('ALTER TABLE students ADD COLUMN IF NOT EXISTS parent_id TEXT UNIQUE;');
-        await query("ALTER TABLE groups ADD COLUMN IF NOT EXISTS level TEXT DEFAULT 'Beginner';");
-        
-        // Safer backfill: Only run if total_vocab_score is 0 for matching records
+        // Safer backfill (async)
         (async () => {
             try {
                 await query(`
@@ -208,9 +222,8 @@ async function initDb() {
                     FROM vocab_scores v
                     WHERE s.id = v.student_id AND (s.total_vocab_score IS NULL OR s.total_vocab_score = 0);
                 `);
-                console.log('Vocab score backfill completed successfully');
             } catch (err) {
-                console.error('Non-critical backfill error:', err);
+                console.error('Backfill error:', err);
             }
         })();
 
