@@ -24,7 +24,10 @@ function formatDateUz(d: Date): string {
     return `${dayNames[d.getDay()]}, ${d.getDate()}-${MONTH_UZ[d.getMonth()]}`;
 }
 function toISO(d: Date): string {
-    return d.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({ groupSettings, availableTopics, otherBookings, onClose, onBook }) => {
