@@ -401,8 +401,8 @@ export const bookExtraClass = async (req: Request, res: Response) => {
             
             let diff = (dayIdx - tashkentTime.getDay() + 7) % 7;
             
-            // If today is an allowed day but it's past cutoff, the "nearest" occurrence of this day is next week
-            if (diff === 0 && totalMinutes >= cutoffMinutes) {
+            // Skip today as requested: "bugunga bron qilish ishlamasligi kerak"
+            if (diff === 0) {
                 diff = 7;
             }
             
