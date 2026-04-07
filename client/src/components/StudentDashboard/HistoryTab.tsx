@@ -13,9 +13,11 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ history }) => {
     };
 
     return (
-        <div className="space-y-3 pb-20">
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
-                <History className="text-indigo-600" />
+        <div className="space-y-4 pb-20 md:pb-6">
+            <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-indigo-50 rounded-xl">
+                    <History className="text-indigo-600" size={24} />
+                </div>
                 O'yinlar Tarixi
             </h2>
             {history.length > 0 ? (

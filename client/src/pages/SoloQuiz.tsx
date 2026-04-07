@@ -501,7 +501,7 @@ export default function SoloQuiz() {
 
     return (
         <div className="min-h-screen font-sans pb-10 transition-colors duration-500" style={{ backgroundColor: 'var(--bg-color)' }}>
-            <div className="max-w-5xl mx-auto px-6 pt-10">
+            <div className="max-w-7xl mx-auto px-6 pt-10">
                 <header className="flex justify-between items-center mb-12">
                     <div>
                         <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4">

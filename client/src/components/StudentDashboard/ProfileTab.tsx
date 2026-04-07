@@ -14,7 +14,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ user, stats, isUploadingAvatar,
     const navigate = useNavigate();
 
     return (
-        <div className="rounded-3xl p-6 shadow-sm border text-center relative transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+        <div className="rounded-3xl p-8 md:p-12 shadow-sm border text-center relative transition-colors max-w-2xl mx-auto" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
             {/* Avatar Section */}
             <div className="relative w-28 h-28 mx-auto mb-4 group inline-block">
                 <div 

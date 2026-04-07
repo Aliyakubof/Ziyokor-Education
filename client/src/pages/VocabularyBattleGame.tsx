@@ -273,7 +273,7 @@ export default function VocabularyBattleGame() {
                 </div>
 
                 {/* Results List */}
-                <div className="w-full max-w-2xl px-4 py-8 space-y-6">
+                <div className="w-full max-w-4xl px-6 py-12 space-y-8">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-black text-xl tracking-tight" style={{ color: 'var(--text-color)' }}>Xatolar tahlili</h3>
                         <span className="text-xs font-bold uppercase tracking-widest opacity-40" style={{ color: 'var(--text-color)' }}>{results.length} SAVOL</span>

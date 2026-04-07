@@ -178,7 +178,7 @@ export default function Shop() {
             </div>
 
             {/* Main Content */}
-            <div className="px-4 relative z-10 space-y-6">
+            <div className="px-4 relative z-10 space-y-6 max-w-6xl mx-auto -mt-10">
                 {/* Feedback Message */}
                 {message && (
                     <div className={`p-4 rounded-2xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${message.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
@@ -198,7 +198,7 @@ export default function Shop() {
                         <p className="text-slate-400 font-medium">Hozircha do'konda buyumlar yo'q</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {items.map((item) => {
                             const isPurchased = purchasedItems.includes(item.id);
                             const isThemeActive = item.type === 'theme' && activeThemeId === item.id;

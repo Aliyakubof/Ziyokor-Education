@@ -67,8 +67,11 @@ const RootRoute = () => {
   return <Home />;
 };
 
+import { usePullToRefresh } from './hooks/usePullToRefresh';
+
 function App() {
   const location = useLocation();
+  usePullToRefresh();
 
   useEffect(() => {
     // Configure StatusBar

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { apiFetch } from '../api';
 import imageCompression from 'browser-image-compression';
+import { LayoutDashboard, History, UserCircle, LogOut } from 'lucide-react';
 import logo from '../assets/logo.jpeg';
 
 // Modular Components
@@ -158,7 +159,7 @@ export default function StudentDashboard() {
             ></div>
 
             <div className="max-w-7xl mx-auto md:px-8 relative z-10">
-                <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-8 lg:pt-12">
+                <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-12 lg:pt-12">
 
                     {/* Left Column / Header Section (Mobile: Top, Laptop: Aside) */}
                     <header className="lg:col-span-4 px-6 pt-8 pb-6 h-fit lg:sticky lg:top-8 transition-colors" style={{ color: 'var(--text-color)' }}>
@@ -192,6 +193,42 @@ export default function StudentDashboard() {
 
                         <XPProgress totalScore={stats?.totalScore || 0} isLoading={isLoading} />
                         <BattleCard battle={battle} groupId={stats?.groupId || ''} isLoading={isLoading} />
+
+                        {/* Desktop Navigation */}
+                        <nav className="hidden lg:flex flex-col gap-2 mt-8">
+                            <button
+                                onClick={() => setActiveTab('home')}
+                                className={`flex items-center gap-4 px-6 py-4 rounded-2xl font-black transition-all ${activeTab === 'home' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'hover:bg-white/50 opacity-60 hover:opacity-100'}`}
+                                style={{ color: activeTab === 'home' ? 'white' : 'var(--text-color)' }}
+                            >
+                                <LayoutDashboard size={22} />
+                                <span>Asosiy Panel</span>
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('history')}
+                                className={`flex items-center gap-4 px-6 py-4 rounded-2xl font-black transition-all ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'hover:bg-white/50 opacity-60 hover:opacity-100'}`}
+                                style={{ color: activeTab === 'history' ? 'white' : 'var(--text-color)' }}
+                            >
+                                <History size={22} />
+                                <span>O'yinlar Tarixi</span>
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('profile')}
+                                className={`flex items-center gap-4 px-6 py-4 rounded-2xl font-black transition-all ${activeTab === 'profile' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'hover:bg-white/50 opacity-60 hover:opacity-100'}`}
+                                style={{ color: activeTab === 'profile' ? 'white' : 'var(--text-color)' }}
+                            >
+                                <UserCircle size={22} />
+                                <span>Shaxsiy Profil</span>
+                            </button>
+                            
+                            <button
+                                onClick={logout}
+                                className="flex items-center gap-4 px-6 py-4 rounded-2xl font-black transition-all hover:bg-rose-50 text-rose-500 mt-4 opacity-70 hover:opacity-100"
+                            >
+                                <LogOut size={22} />
+                                <span>Chiqish</span>
+                            </button>
+                        </nav>
                     </header>
 
                     {/* Right Column / Main Content Area */}

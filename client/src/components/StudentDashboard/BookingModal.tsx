@@ -51,11 +51,10 @@ const BookingModal: React.FC<BookingModalProps> = ({ groupSettings, availableTop
             // Find next occurrence (today counts if before cutoff)
             let diff = (dayIdx - today.getDay() + 7) % 7;
             
-            // Cutoff check for today: 17:30
-            const now = new Date();
-            const totalMinutes = now.getHours() * 60 + now.getMinutes();
-            if (diff === 0 && totalMinutes >= (17 * 60 + 30)) {
-                diff = 7; // Nearest occurrence is next week
+            // Cutoff check for today. User wants DO NOT allow today booking.
+            // "bron 1-2kun oldin qilinishi kerak" means nearest diff must be > 0.
+            if (diff === 0) {
+                diff = 7; // Next occurrence
             }
 
             const candidate = new Date(today);

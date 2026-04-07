@@ -95,7 +95,7 @@ export default function Leaderboard() {
             </div>
 
             {/* Controls */}
-            <div className="px-4 -mt-10 relative z-10 space-y-4">
+            <div className="px-4 -mt-10 relative z-10 space-y-4 max-w-5xl mx-auto">
                 {/* Tabs */}
                 <div className="p-1.5 rounded-2xl flex gap-2 transition-colors border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
                     <button

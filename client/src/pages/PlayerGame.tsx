@@ -829,7 +829,7 @@ export default function PlayerGame() {
                             NATIJA: {earned}/{total}
                         </div>
                     )}
-                    <h2 className="text-center text-xl font-bold opacity-30 italic mb-8" style={{ color: 'var(--text-color)' }}>Fill in the blanks [_______]</h2>
+
                     <div className="text-xl md:text-2xl leading-loose text-center" style={{ color: 'var(--text-color)' }}>
                         {parts.map((part, i) => (
                             <span key={i}>
@@ -866,7 +866,7 @@ export default function PlayerGame() {
             
             return (
                 <div className="w-full max-w-4xl mx-auto rounded-[2.5rem] p-8 shadow-xl border transition-colors" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
-                    <h2 className="text-center text-xl font-bold opacity-30 italic mb-8" style={{ color: 'var(--text-color)' }}>Choose the correct option</h2>
+
                     <div className="text-xl md:text-2xl leading-loose text-center" style={{ color: 'var(--text-color)' }}>
                         {parts.map((part, i) => {
                             if (i % 2 === 0) return <span key={i}>{part}</span>;

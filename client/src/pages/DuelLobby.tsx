@@ -166,7 +166,7 @@ export default function DuelLobby() {
                 </div>
             </div>
 
-            <div className="px-4 -mt-10 relative z-10 space-y-6">
+            <div className="px-4 -mt-10 relative z-10 space-y-6 max-w-4xl mx-auto">
                 {/* Status Alert */}
                 {status && (
                     <div className="p-4 bg-indigo-600 text-white rounded-2xl shadow-xl flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-300">
